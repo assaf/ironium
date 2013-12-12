@@ -104,8 +104,8 @@ class Workers extends EventEmitter {
     if (messageOrError instanceof Error)
       this.emit('error', messageOrError);
     else {
-      let error = new Error(messageOrError);
-      this.emit('error', error);
+      let message = format(message, ...args);
+      this.emit('error', new Error(message));
     }
   }
 }
