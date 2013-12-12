@@ -1,0 +1,33 @@
+{
+  "name": "ironium",
+  "version": "0.1.0",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha",
+    "build": "grunt build",
+    "prepublish": "grunt build"
+  },
+  "engines": {
+    "node": "0.10.x"
+  },
+  "main": "lib/index",
+  "dependencies": {
+    "async": "0.2.9",
+    "cron": "1.0.1",
+    "fivebeans": "1.1.0",
+    "lodash": "2.4.1",
+    "ms": "0.6.2",
+    "q": "0.9.7"
+  },
+  "devDependencies": {
+    "grunt": "0.4.2",
+    "grunt-cli": "0.1.11",
+    "mocha": "1.15.1",
+    "traceur": "0.0.8",
+    "grunt-traceur": "aaronfrost/grunt-traceur",
+    "grunt-contrib-clean": "~0.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/assaf/ironium"
+  }
+}
