@@ -365,15 +365,15 @@ class Queue {
     }
 
     this._logger.debug("Waiting for jobs on queue %s", this.name);
-    this._getSession.request('reserve_with_timeout', 0, (error, jobID, payload)=> {
-      if (error == 'TIMED_OUT')
-        callback(null, false);
-      else if (error)
+    this._getSession.request('reserve', (error, jobID, payload)=> {
+      if (error)
         callback(error);
-      else
+      else if (payload)
         this._processJob(jobID, payload, function(error) {
           callback(error, !error);
         });
+      else
+        callback(null, false);
     });
   }
 
@@ -386,7 +386,7 @@ class Queue {
         return;
 
       this._getSession.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000, (error, jobID, payload)=> {
-        if (error == 'DEADLINE_SOON')
+        if (error && error.message == 'DEADLINE_SOON')
           setImmediate(pickNextJob);
         else if (error) {
           this._logger.error(error)
@@ -478,7 +478,7 @@ class Queue {
     this._putSession._withClient(function(client) {
       function deleteNextJob() {
         client.reserve_with_timeout(0, function(error, jobID, payload) {
-          if (error == 'TIMED_OUT')
+          if (error && error.message == 'TIMED_OUT')
             callback();
           else if (error)
             callback(error);
