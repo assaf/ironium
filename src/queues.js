@@ -144,13 +144,14 @@ class Session {
   //
   // client   - Fivebeans client being setup
   // callback - Call with error or nothing
-  constructor({ name, host, port, authenticate }, setup) {
+  constructor({ name, host, port, authenticate, logger }, setup) {
     this.name         = name;
     this.host         = host;
     this.port         = port;
     this.authenticate = authenticate;
     this.setup        = setup;
     this.pending      = [];
+    this._logger      = logger;
   }
 
   // Make a request to the server.
@@ -295,13 +296,13 @@ class Queue {
 
     // Session for storing messages and other manipulations.
     // Setup: tell Beanstalkd which tube to use (persistent to session).
-    this._putSession = new Session({ name, host, port, authenticate }, function(client, callback) {
+    this._putSession = new Session({ name, host, port, authenticate, logger }, function(client, callback) {
       client.use(prefixedName, callback);
     });
 
     // Session for processing messages, continously blocks so don't use elsewhere.
     // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
-    this._getSession = new Session({ name, host, port, authenticate }, function(client, callback) {
+    this._getSession = new Session({ name, host, port, authenticate, logger }, function(client, callback) {
       client.ignore('default', function() {
         client.watch(prefixedName, callback);
       });
