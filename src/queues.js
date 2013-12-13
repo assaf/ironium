@@ -49,7 +49,7 @@ module.exports = class Queues {
     this._host        = host;
     this._port        = port;
     // Prefix used in certain environment, e.g. "test-"
-    this._prefix      = prefix;
+    this._prefix      = prefix || '';
     // Base URL for all Webhooks, queues set their name via interoplation.
     this._webhookURL  = 'https://' + host + '/1/projects/' + projectID +
                         '/queues/{queueName}/messages/webhook?oauth=' + token;
@@ -184,7 +184,7 @@ class Session {
     this.pending.push(oncomplete);
     // If command didn't complete within set timeout, fail the connection.
     let timeout = setTimeout(()=> {
-      oncomplete('TIMED_OUT');
+      oncomplete(new Error('TIMED_OUT'));
     }, TIMEOUT_REQUEST);
     // Get Fivebeans to execute this command.
     this._withClient(function(client) {
@@ -210,7 +210,7 @@ class Session {
     setImmediate(()=> {
       let oncomplete;
       while (oncomplete = pending.shift())
-        oncomplete('TIMED_OUT');
+        oncomplete(new Error('TIMED_OUT'));
     });
   }
 
@@ -370,7 +370,7 @@ class Queue {
 
     this._logger.debug("Waiting for jobs on queue %s", this.name);
     this._getSession.request('reserve_with_timeout', 0, (error, jobID, payload)=> {
-      if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT')
+      if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
         callback(null, false);
       else if (error)
         callback(error);
@@ -392,7 +392,7 @@ class Queue {
         return;
 
       this._getSession.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000, (error, jobID, payload)=> {
-        if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT')
+        if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
           setImmediate(pickNextJob);
         else if (error) {
           this._logger.error(error);
@@ -489,7 +489,7 @@ class Queue {
     this._putSession._withClient(function(client) {
       function deleteNextJob() {
         client.reserve_with_timeout(0, function(error, jobID, payload) {
-          if (error == 'TIMED_OUT')
+          if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
             callback();
           else if (error)
             callback(error);
