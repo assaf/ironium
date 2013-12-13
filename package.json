@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "scripts": {
     "test": "./node_modules/.bin/mocha",
     "build": "grunt build",
