@@ -395,10 +395,15 @@ class Queue {
         if (error == 'DEADLINE_SOON')
           setImmediate(pickNextJob);
         else if (error) {
-          this._logger.error(error)
+          this._logger.error(error);
           setTimeout(pickNextJob, ERROR_BACKOFF);
-        } else
-          this._processContinously(jobID, payload, pickNextJob);
+        } else {
+          this._processJob(jobID, payload, (error)=> {
+            if (error)
+              this._logger.error(error);
+            setImmediate(pickNextJob);
+          });
+        }
       });
     }
 
