@@ -370,7 +370,7 @@ class Queue {
 
     this._logger.debug("Waiting for jobs on queue %s", this.name);
     this._getSession.request('reserve_with_timeout', 0, (error, jobID, payload)=> {
-      if (error == 'TIMED_OUT')
+      if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT')
         callback(null, false);
       else if (error)
         callback(error);
@@ -392,7 +392,7 @@ class Queue {
         return;
 
       this._getSession.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000, (error, jobID, payload)=> {
-        if (error == 'DEADLINE_SOON')
+        if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT')
           setImmediate(pickNextJob);
         else if (error) {
           this._logger.error(error);
