@@ -23,6 +23,10 @@ const PROCESSING_TIMEOUT  = ms('2m');
 // test environment.
 const RELEASE_DELAY       = ms('1m');
 
+// Back-off in case of connection error, prevents continously failing to
+// reserve a job.
+const ERROR_BACKOFF       = ms('30s');
+
 
 
 // Abstracts an Iron.io project / Beanstalkd configuration.
@@ -392,7 +396,7 @@ class Queue {
           setImmediate(pickNextJob);
         else if (error) {
           this._logger.error(error)
-          setImmediate(pickNextJob);
+          setTimeout(pickNextJob, ERROR_BACKOFF);
         } else
           this._processContinously(jobID, payload, pickNextJob);
       });
