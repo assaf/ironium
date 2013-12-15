@@ -453,6 +453,9 @@ class Queue {
   // Called to process a job.  If successful, deletes job, otherwise returns job
   // to queue.
   _processJob(jobID, payload, callback) {
+    // Payload comes in the form of a buffer.
+    payload = payload.toString();
+
     // Ideally we call the handler, handler calls the callback, all is well.
     // But the handler may throw an exception, or suffer some other
     // catastrophic outcome: we use a domain to handle that.  It may also
@@ -507,15 +510,18 @@ class Queue {
     // function throws exception, calls callback with error, or otherwise
     // has uncaught exception, it emits an error event.
     domain.run(()=> {
+
       this.notify.info("Picked up job %s from queue %s", jobID, this.name);
-      this.notify.debug("Processing %s: %s", jobID, payload.toString());
+      this.notify.debug("Processing %s: %s", jobID, payload);
       // Typically we queue JSON objects, but the payload may be just a
       // string, e.g. some services send URL encoded name/value pairs, or MIME
       // messages.
-      let job = payload;
+      let job;
       try {
         job = JSON.parse(payload);
-      } catch(ex) { }
+      } catch(ex) {
+        job = payload;
+      }
       this._handler(job, domain.intercept(function() {
         // Successful completion.
         outcomeDeferred.resolve();

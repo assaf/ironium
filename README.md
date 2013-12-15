@@ -101,6 +101,11 @@ jobs into smaller chunks.  Also consider that time-outs are a necessary evil,
 given the likelihood of a bug resulting in jobs that never complete, and the
 halting problem being NP hard.
 
+Note: when processing Webhooks, some APIs send valid JSON objects, but many APIs
+send other format, form encoded is quite popular.  In this case, the job would
+be a string that needs to be parsed, often as simple as
+`require('querystring').parse(job)`.
+
 #### queue.name
 
 The queue name (property, not a method).  This name does not include the prefix.
