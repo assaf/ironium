@@ -30,7 +30,7 @@ Besides managed up-time and a management GUI, Iron.io can also handle Webhooks
 (sending and receiving updates) for you.
 
 
-### The How
+## The How
 
 Ironium has a simple API that exposes three primary methods:
 - `push` a job into a queue
@@ -200,7 +200,7 @@ server, you will need to set the hostname to `"mq-aws-us-east-1.iron.io"`, and
 set the `token` and `projectID` based on the Iron.io project's credentials.
 
 
-## Development
+## Contributing
 
 Ironium is written in ECMAScript 6, because better syntax.  Specifically you'll
 notice that `let` and `const` replaced all usage of `var`, class definitions are
