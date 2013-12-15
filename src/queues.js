@@ -309,8 +309,8 @@ class Session {
 //
 // name       - Queue name
 // webhookURL - URL for receiving Webhook posts (Iron.io only)
-// put        - Method for putting message in the queue
-// each       - Method for processing messages from the queue
+// push       - Method for pushing job to the queue
+// each       - Method for processing jobs from the queue
 class Queue {
 
   constructor(name, server) {
@@ -354,7 +354,7 @@ class Queue {
 
 
   // Push job to queue.
-  put(job, options, callback) {
+  push(job, options, callback) {
     assert(job, "Missing job to queue");
     if (typeof(options) == 'function') {
       callback = options;

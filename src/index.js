@@ -13,8 +13,8 @@ class Workers extends EventEmitter {
   }
 
 
-  // Returns the named queue.  Returned objects has the methods `put` and
-  // `process`.
+  // Returns the named queue.  Returned objects has the methods `push` and
+  // `each`.
   queue(name) {
     return this.queues.getQueue(name);
   }
