@@ -22,8 +22,7 @@ class Workers extends EventEmitter {
   get queues() {
     let queues = this._queues;
     if (!queues) {
-      let config = this._config || {};
-      queues = new Queues(this, config);
+      queues = new Queues(this);
       this._queues = queues;
     }
     return queues;

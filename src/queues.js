@@ -7,15 +7,15 @@ const ms                = require('ms');
 const Q                 = require('q');
 
 
-// How long to wait when reserving a job (in seconds).
+// How long to wait when reserving a job.
 const RESERVE_TIMEOUT     = ms('5m');
 
-// How long before we consider a request failed due to timeout (in seconds).
+// How long before we consider a request failed due to timeout.
 // Should be longer than RESERVE_TIMEOUT.
 const TIMEOUT_REQUEST     = RESERVE_TIMEOUT + ms('1s');
 
 // Timeout for processing job before we consider it failed and release it back
-// to the queue (in seconds).
+// to the queue.
 const PROCESSING_TIMEOUT  = ms('2m');
 
 // Delay before a released job is available for pickup again (in seconds).
@@ -28,33 +28,65 @@ const RELEASE_DELAY       = ms('1m');
 const ERROR_BACKOFF       = ms('30s');
 
 
+class Configuration {
+  constructor(workers) {
+    this._workers = workers;
+  }
 
-// Abstracts an Iron.io project / Beanstalkd configuration.
-//
-// Configured with:
-// host       - Host name (defaults to localhost)
-// port       - Port number (defaults to 11300)
-// projectID  - Iron.io project ID
-// token      - Iron.io authentication token
-// prefix     - Queue name prefix (e.g. test-)
-module.exports = class Queues {
+  get config() {
+    let config = this._config;
+    if (!config) {
+      let source = this._workers._config && this._workers._config.queues;
+      if (!source)
+        source = (process.env.NODE_ENV == 'test') ? { prefix: 'test-' } : {};
+      this._config = config = {
+        hostname: source.hostname || 'localhost',
+        port:     source.port     || 11300,
+        prefix:   source.prefix
+      };
+      if (source.token) {
+        config.authenticate = 'oauth ' + source.token + ' ' + source.projectID;
+        config.webhookURL   = 'https://' + source.hostname + '/1/projects/' + source.projectID +
+                              '/queues/{queueName}/messages/webhook?oauth=' + source.token;
+      } else {
+        config.authenticate = null;
+        config.webhookURL   = 'https://<host>/1/projects/<project>/queues/{queueName}/messages/webhook?oauth=<token>';
+      }
+    }
+    return config;
+  }
 
-  constructor(logger = console, { host = 'localhost', port = 11300, projectID, token, prefix }) {
-    this._logger      = logger;
-    // When using Iron.io, we send an authentication string based on the token.
-    // Not applicable with standalone Beanstalkd.
-    if (token)
-      this._authenticate = 'oauth ' + token + ' ' + projectID;
-    // These are used to connect the client.
-    this._host        = host;
-    this._port        = port;
-    // Prefix used in certain environment, e.g. "test-"
-    this._prefix      = prefix || '';
-    // Base URL for all Webhooks, queues set their name via interoplation.
-    this._webhookURL  = 'https://' + host + '/1/projects/' + projectID +
-                        '/queues/{queueName}/messages/webhook?oauth=' + token;
-    // Map (un-prefixed) queue name to queue.
-    this._queues      = Object.create({});
+  get hostname() {
+    return this.config.hostname;
+  }
+
+  get port() {
+    return this.config.port;
+  }
+
+  prefixedName(queueName) {
+    return (this.config.prefix || '') + queueName;
+  }
+
+  // When using Iron.io, we send an authentication string based on the token.
+  // Not applicable with standalone Beanstalkd.
+  get authenticate() {
+    return this.config.authenticate;
+  }
+
+  webhookURL(queueName) {
+    return this.config.webhookURL.replace('{queueName}', queueName);
+  }
+}
+
+
+// Abstracts a queue server, Beanstalkd or compatible, specifically Iron.io.
+module.exports = class Server {
+
+  constructor(workers) {
+    this.notify   = workers;
+    this.config   = new Configuration(workers);
+    this._queues  = Object.create({});
   }
 
   // Returns a new queue.
@@ -62,39 +94,31 @@ module.exports = class Queues {
     assert(name, "Missing queue name");
     let queue = this._queues[name];
     if (!queue) {
-      queue = new Queue({
-        name,
-        prefixedName: this._prefix + name,
-        host:         this._host,
-        port:         this._port,
-        authenticate: this._authenticate,
-        webhookURL:   this._webhookURL.replace('{queueName}', name),
-        logger:       this._logger
-      });
+      queue = new Queue(name, this);
       this._queues[name] = queue;
     }
     return queue;
   }
 
   start() {
-    this._logger.debug("Start all queues");
+    this.notify.debug("Start all queues");
     this._foreachQueue((queue)=> queue.start());
   }
 
   stop(callback) {
-    this._logger.debug("Stop all queues");
+    this.notify.debug("Stop all queues");
     this._foreachQueue((queue)=> queue.stop());
   }
 
   // This method only used when testing, will empty the contents of all queues.
   reset(callback) {
-    this._logger.debug("Clear all queues");
+    this.notify.debug("Clear all queues");
     this._foreachQueue((queue, done)=> queue.reset(done), callback);
   }
 
   // This method only used when testing, waits for all jobs to complete.
   once(callback) {
-    this._logger.debug("Process all queued jobs");
+    this.notify.debug("Process all queued jobs");
     let queues = _.values(this._queues);
     function iterate() {
       Async.reduce(queues, false,
@@ -148,14 +172,12 @@ class Session {
   //
   // client   - Fivebeans client being setup
   // callback - Call with error or nothing
-  constructor({ name, host, port, authenticate, logger }, setup) {
+  constructor(name, server, setup) {
     this.name         = name;
-    this.host         = host;
-    this.port         = port;
-    this.authenticate = authenticate;
+    this.config       = server.config;
+    this.notify       = server.notify;
     this.setup        = setup;
     this.pending      = [];
-    this._logger      = logger;
   }
 
   // Make a request to the server.
@@ -187,7 +209,7 @@ class Session {
       oncomplete(new Error('TIMED_OUT'));
     }, TIMEOUT_REQUEST);
     // Get Fivebeans to execute this command.
-    this._withClient(function(client) {
+    this.withClient(function(client) {
       client[command].call(client, ...args, oncomplete);
     });
   }
@@ -197,12 +219,12 @@ class Session {
   fail(error) {
     let message = error.toString();
     if (message != "Error: Connection closed")
-      this._logger.error("Client error in queue %s: %s", this.name, message);
+      this.notify.error("Client error in queue %s: %s", this.name, message);
     // If we're in the process of setting up a connection, reject the promise.
     // Discard the promise, next/recursive call to use(fn) will re-connect.
-    if (this._deferred) {
-      this._deferred.reject(error);
-      this._deferred = null;
+    if (this.deferred) {
+      this.deferred.reject(error);
+      this.deferred = null;
     }
     // Fail all pending requests.
     let pending = this.pending.slice();
@@ -217,10 +239,10 @@ class Session {
   // Call this method when you need access to the Beanstalked server.  It will
   // initialize a Fivebeans client, setup the session, and pass it to the
   // function.
-  _withClient(fn) {
-    if (!this._deferred)
-      this._connect();
-    this._deferred.promise.then(fn, (error)=> {
+  withClient(fn) {
+    if (!this.deferred)
+      this.connect();
+    this.deferred.promise.then(fn, (error)=> {
       this.fail(error);
       this.use(fn);
     });
@@ -228,16 +250,16 @@ class Session {
 
   // Called to establish a new connection, returns a promise that would resolve
   // to a fully setup Fivebeans client.
-  _connect() {
+  connect() {
     // This is the Fivebeans client is essentially a session.
-    let client    = new fivebeans.client(this.host, this.port);
+    let client    = new fivebeans.client(this.config.hostname, this.config.port);
     let deferred  = Q.defer();
 
     // When working with iron.io, need to authenticate each connection before
     // it can be used.  This setup is followed by the setup.
     let authenticateAndSetup = ()=> {
-      if (this.authenticate) {
-        client.put(0, 0, 0, this.authenticate, function(error) {
+      if (this.config.authenticate) {
+        client.put(0, 0, 0, this.config.authenticate, function(error) {
           if (error) {
             deferred.reject(error);
             client.destroy();
@@ -276,7 +298,7 @@ class Session {
     // Nothing happens until we start the connection.
     client.connect();
     // Make sure use/fail methods have access to the promise.
-    this._deferred = deferred;
+    this.deferred = deferred;
   }
 
 }
@@ -291,26 +313,43 @@ class Session {
 // each       - Method for processing messages from the queue
 class Queue {
 
-  constructor({ name, prefixedName, host, port, authenticate, webhookURL, logger }) {
-    this.name         = name;
-    this.webhookURL   = webhookURL;
-    this._logger      = logger;
+  constructor(name, server) {
+    this.name           = name;
+    this.notify         = server.notify;
+    this.webhookURL     = server.config.webhookURL(name);
+    this._server        = server;
+    this._prefixedName  = server.config.prefixedName(name);
+
     this._processing  = false;
     this._handler     = null;
+  }
 
-    // Session for storing messages and other manipulations.
-    // Setup: tell Beanstalkd which tube to use (persistent to session).
-    this._putSession = new Session({ name, host, port, authenticate, logger }, function(client, callback) {
-      client.use(prefixedName, callback);
-    });
-
-    // Session for processing messages, continously blocks so don't use elsewhere.
-    // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
-    this._getSession = new Session({ name, host, port, authenticate, logger }, function(client, callback) {
-      client.ignore('default', function() {
-        client.watch(prefixedName, callback);
+  // Session for storing messages and other manipulations.
+  get _put() {
+    let session = this._putSession;
+    if (!session) {
+      // Setup: tell Beanstalkd which tube to use (persistent to session).
+      session = new Session(this.name, this._server, (client, callback)=> {
+        client.use(this._prefixedName, callback);
       });
-    });
+      this._putSession = session;
+    }
+    return session;
+  }
+
+  // Session for processing messages, continously blocks so don't use elsewhere.
+  get _reserve() {
+    let session = this._reserveSession;
+    if (!session) {
+      // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
+      session = new Session(this.name, this._server, (client, callback)=> {
+        client.ignore('default', ()=> {
+          client.watch(this._prefixedName, callback);
+        });
+      });
+      this._reserveSession = session;
+    }
+    return session;
   }
 
 
@@ -325,14 +364,14 @@ class Queue {
     let payload = JSON.stringify(job);
     let delay   = (options && options.delay) || 0;
 
-    this._putSession.request('put', 0, delay, PROCESSING_TIMEOUT / 1000, payload, (error, jobID)=> {
+    this._put.request('put', 0, delay, PROCESSING_TIMEOUT / 1000, payload, (error, jobID)=> {
       // Don't pass jobID to callback, easy to use in test before hook, like
       // this:
       //   before((done)=> queue.put(MESSAGE, done));
       if (callback)
         callback(error);
       else if (error)
-        this._logger.error("Error talking to Beanstalkd, queue %s: %s", this.name, error);
+        this.notify.error("Error talking to Beanstalkd, queue %s: %s", this.name, error);
     });
   }
 
@@ -368,8 +407,8 @@ class Queue {
       return;
     }
 
-    this._logger.debug("Waiting for jobs on queue %s", this.name);
-    this._getSession.request('reserve_with_timeout', 0, (error, jobID, payload)=> {
+    this.notify.debug("Waiting for jobs on queue %s", this.name);
+    this._reserve.request('reserve_with_timeout', 0, (error, jobID, payload)=> {
       if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
         callback(null, false);
       else if (error)
@@ -391,23 +430,23 @@ class Queue {
       if (!this._processing)
         return;
 
-      this._getSession.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000, (error, jobID, payload)=> {
+      this._reserve.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000, (error, jobID, payload)=> {
         if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
           setImmediate(pickNextJob);
         else if (error) {
-          this._logger.error(error);
+          this.notify.error(error);
           setTimeout(pickNextJob, ERROR_BACKOFF);
         } else {
           this._processJob(jobID, payload, (error)=> {
             if (error)
-              this._logger.error(error);
+              this.notify.error(error);
             setImmediate(pickNextJob);
           });
         }
       });
     }
 
-    this._logger.debug("Waiting for jobs on queue %s", this.name);
+    this.notify.debug("Waiting for jobs on queue %s", this.name);
     pickNextJob();
   }
 
@@ -440,11 +479,11 @@ class Queue {
 
     outcomeDeferred.promise.then(()=> {
       // Promise resolved on successful completion; we destroy the job.
-      this._getSession.request('destroy', jobID, (error)=> {
+      this._reserve.request('destroy', jobID, (error)=> {
         if (error)
-          this._logger.error(error.stack);
+          this.notify.error(error.stack);
       });
-      this._logger.info("Completed job %s from queue %s", jobID, this.name);
+      this.notify.info("Completed job %s from queue %s", jobID, this.name);
       // Move on to process next job.
       clearTimeout(errorOnTimeout);
       callback();
@@ -454,11 +493,11 @@ class Queue {
       // down), we let it sit in the queue for a while before it becomes
       // available again.
       let delay = (process.env.NODE_ENV == 'test' ? 0 : RELEASE_DELAY);
-      this._getSession.request('release', jobID, 0, delay / 1000, (error)=> {
+      this._reserve.request('release', jobID, 0, delay / 1000, (error)=> {
         if (error)
-          this._logger.error(error.stack);
+          this.notify.error(error.stack);
       });
-      this._logger.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
+      this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
       // Move on to process next job.
       clearTimeout(errorOnTimeout);
       callback(error);
@@ -468,8 +507,8 @@ class Queue {
     // function throws exception, calls callback with error, or otherwise
     // has uncaught exception, it emits an error event.
     domain.run(()=> {
-      this._logger.info("Picked up job %s from queue %s", jobID, this.name);
-      this._logger.debug("Processing %s: %s", jobID, payload.toString());
+      this.notify.info("Picked up job %s from queue %s", jobID, this.name);
+      this.notify.debug("Processing %s: %s", jobID, payload.toString());
       // Typically we queue JSON objects, but the payload may be just a
       // string, e.g. some services send URL encoded name/value pairs, or MIME
       // messages.
@@ -486,7 +525,7 @@ class Queue {
 
   // Delete all messages from the queue.
   reset(callback) {
-    this._putSession._withClient(function(client) {
+    this._put.withClient(function(client) {
       function deleteNextJob() {
         client.reserve_with_timeout(0, function(error, jobID, payload) {
           if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))

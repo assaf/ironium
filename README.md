@@ -1,131 +1,223 @@
-# Job Queues
+**[Ironium](https://github.com/assaf/ironium)** A simple API for working with
+job queues and scheduled jobs, using
+[Beanstalkd](http://kr.github.io/beanstalkd/) and/or
+[Iron.io](http://www.iron.io/).
 
-A simple API for working with job queues.  Can use
-[Iron.io](http://www.iron.io/) or Beanstalkd.
+
+## The Why
+
+Building a modern Web application involves a lot of workload that runs outside
+the application request/response cycle.
+
+Some tasks take a long time to complete (e.g. updating 3rd party APIs), and you
+want to run after you've sent the response back to the user.  But since you send
+back a response, you better get the task to complete, by retrying if necessary.
+
+This is where job queues become useful:
+- They can distribute the workload over multiple servers, and in time
+- They can smooth out transient errors by retrying every joy
+- They can be used for jobs queued by the application and 3rd party
+  ([Webhooks](http://www.webhooks.org/))
+
+Since high quality job queues exists, might as well use them.  One option is
+[Beanstalkd](http://kr.github.io/beanstalkd/) which is easy to install and use,
+and battle tested.
+
+Another option is [Iron.io](http://www.iron.io/), a paid service that supports
+the same API and can be used interchangeable with Beanstalkd.  This allows you
+to use Beanstalkd for development/testing, and Iron.io for production instances.
+Besides managed up-time and a management GUI, Iron.io can also handle Webhooks
+(sending and receiving updates) for you.
 
 
-## Accessing Queues
+### The How
 
-The API consists of a single function that returns the named queue:
+Ironium has a simple API that exposes three primary methods:
+- `push` a job into a queue
+- `each` to process each job from a queue
+- `schedule` a job to run at given schedule
+
+There's more than that, so let's explore it.  The main object provides access to
+all the workers, and in particular has the following methods:
+
+
+#### queue(name)
+
+Returns the named queue.  Calling this method with the same name will always
+return the same queue.  Queues are created on-the-fly, you don't need to setup
+anything before accessing a queue.
+
+You can immediately push new jobs into the queue.  To process all jobs, you need
+to first start the workers.  This distinction allows you to push jobs from any
+Node.js servers, but only process jobs from specific nodes.
+
+For example, your code may have:
 
 ```
-var queues  = require("./lib/queues");
-var myQueue = queues("my-queue");
+var workers          = require('ironium');
+var sendWelcomeEmail = workers.queue('send-welcome-email');
+
+// If this is a new customer, queue sending welcome email.
+customer.on('save', function(next) {
+  if (this.isNew)
+    sendWelcomeEmail.push(this.id, next);
+  else
+    next();
+});
+
+sendWelcomeEmail.each(function(id, callback) {
+  // Do something to render and send email
+  callback();
+});
+
 ```
 
-Pushing and processing messages is done via the returned queue object (see
-below).
+As you can see from this example, each queue has two interesting methods, `push`
+and `each`.
 
-An additional method is available in test environment only, to discard of all
-queues before/after running test:
+#### queue.push(job, callback)
+
+Pushes a new job into the queue.  The job can be any JavaScript value that
+serializes into JSON, so object, arrays, string are all usable.
+
+If you call `push` with a callback, the callback will be notified after the job
+has been successfully added to the queue.  Use this to make sure the job is
+queued before proceeding.
+
+#### queue.each(fn)
+
+Processes each job from the queue.  The function is called with two arguments,
+the job (see `push` above) and a callback.  You must call that callback when
+done processing the job.
+
+If you call the callback with an error, the job is considered to have failed, is
+put back in the queue, and will be picked up again after a 1 minute delay.
+
+If you don't call the callback within a minute, the job will be considered to
+have failed, and will be put back in the queue as well.
+
+If one minute of processing doesn't sound like enough, consider breaking large
+jobs into smaller chunks.  Also consider that time-outs are a necessary evil,
+given the likelihood of a bug resulting in jobs that never complete, and the
+halting problem being NP hard.
+
+#### queue.name
+
+The queue name (property, not a method).  This name does not include the prefix.
+
+#### queue.webhookURL
+
+The URL for recieving Webhook requests and queuing them, using Iron.io.  This
+URL is only valid if your configured the workers with a project ID and token.
+
+
+#### schedule(name, time, job)
+
+TBD Schedules the named job to run at the given schedule.
+
+
+#### configure(object)
+
+Configure the workers (see below).
+
+
+#### start()
+
+You must call this method to start the workers.  Jobs can be queued, but will
+not be processed until the workers are started.
+
+This extra space allows you to load the same code in every environment, and
+queue jobs on any server, but only process jobs on dedicated worker servers.
+
+
+#### stop()
+
+You can call this method to stop the workers.
+
+
+#### once(callback)
+
+Use this when testing.  It will run all scheduled jobs exactly once (regardless
+of schedule), process all queued jobs, and finally call the callback.
+
+This method exists since you cannot reliably pair `start` and `stop`.
+
+
+#### reset(callback)
+
+Use this when testing (setup and/or teardown).  It will delete all queued jobs,
+then call the callback.
+
+
+
+## Configurations
+
+For development and testing you can typically get by with the default
+configuration.  For production, you may want to set the server in use, as simple
+as passing a configuration object to `workers.configure`:
 
 ```
-before(queues.clearAll);
+var workers = require('ironium');
+
+if (process.env.NODE_ENV == 'production')
+  workers.configure({
+    queues: {
+      hostname: 'my.beanstalkd.server'
+    }
+  });
 ```
 
+Or load it form a JSON configuration file:
 
-## Using Queues
+```
+var workers = require('ironium');
+var config  = require('./workers.json');
 
-### put(job, options, callback)
+if (process.env.NODE_ENV == 'production')
+  workers.configure(config);
+```
 
-Use the `put` method to put a job in the queue.
+The configuration options are:
 
-- job       - The object to place on the queue.  This object is serialized into
-  a JSON string, so must only contain data values, no circular references.
-- options   - Control how the job is processed (see below)
-- callback  - Optional
+* `queues.hostname`   - Hostname of the queue server (defaults to `localhost`)
+* `queues.port`       - Port number for the queue server (defaults to 11300)
+* `queues.prefix`     - Prefix all queue names (when `NODE_ENV == test`,
+  defaults to `test-`)
+* `queues.token`      - When using Iron.io, the API token (get it from the
+  project's credentials page)
+* `queues.projectID`  -  When using Iron.io, the API project ID (get it from the
+  project's credentials page)
 
-Currently supported options:
+If you're running in development or test environment with a local Beanstalkd
+server, you can use the default configuration, which points to `localhost` port
+`11300` and uses the prefix `test-` in test envrionment.
 
-- delay     - How long before the job is available, in seconds, defaults to 0
+If you're running in production against a Beanstalkd, you will likely need to
+set the hostname and port number.
 
-If you're queuing requests initiated by the end-user, you likely care whether
-the job was queued successfully.  Use a callback to determine that.
-
-
-### get(handler, concurrency)
-
-Use the `get` method to process jobs from the queue.
-
-- handler     - The function that will be called for each job
-
-The handler is called for each job with the following arguments:
-
-- job     - The job to process
-- done    - Called when done processing the job
-
-The job to process is typically an object de-serialized from the JSON
-representation (see `put` method).  However, it may also be a string, e.g.
-FullContact pushes URL-encoded name/value pairs to the queue.
-
-Once the job has been processed successfully, the handler must call then `done`
-method.
-
-If the job cannot be processed successfully, the handler calls `done` with an
-error: the error will be logged, and the job will be put back in the queue, from
-where it will be processed again after a short delay.
-
-If the handler does not complete in time (60 seconds), the job will be returned
-to the queue and the next job will be processed.
-
-Handlers are invoked sequentially, except for the case where a handler is
-considered to have timed-out.
+If you're running in production against an [Iron.io](https://hud.iron.io/)
+server, you will need to set the hostname to `"mq-aws-us-east-1.iron.io"`, and
+set the `token` and `projectID` based on the Iron.io project's credentials.
 
 
-### name
+## Development
 
-This property returns the queue name.
+Ironium is written in ECMAScript 6, because better syntax.  Specifically you'll
+notice that `let` and `const` replaced all usage of `var`, class definitions are
+easier to read in the new syntax, and fat arrows (`=>`) replace `that = this`.
+However, the code doesn't use any ES6 library improvements (`Map`, `startsWith`,
+etc), since these can't be added without polluting the global namespace.
 
+The source files live in the `src` directory, and compiled into the `lib`
+directory with Grunt.  Specifically:
 
-### webhookURL
+```
+grunt build  # Compile source files from src/ into lib/ directory
+grunt watch  # Continously compile source files on every change
+grunt clean  # Clean compiled files in lib/ directory
+grunt        # Shortcut for grunt build watch
+```
 
-This property returns the URL of a Webhook end-point associated with this queue.
-Messages posted to this URL will show up as jobs in the queue.
-
-
-### onDrain(callback)
-
-Called when there are no more messages to process.  This is only availabe in
-test environment.
-
-
-### clear(callback)
-
-Remove all jobs from the queue.  This is only availabe in test environment.
-
-
-## Iron.io
-
-To use [Iron.io](http://hud.iron.io/), the queue configuration must specify the
-following properties:
-
-* `host`      - The Iron.io host name
-* `projectID` - The project identifier
-* `token`     - The authentication token
-
-These can be specified in the configuration file, or by setting the environment
-variables `IRON_PROJECT_ID` and `IRONIO_TOKEN`.
-
-Please use the testing project ID when testing the Iron.io integration.
-
-
-## Testing/Development
-
-For regular testing and development, we use Beanstalkd.  The queue configuration
-need only specify:
-
-* `host` - The hostname (defaults to "localhost")
-* `port` - The port number (defaults to 11300)
-
-When testing, the `queues` function has two properties you can call on it that
-affect all queues.
-
-### onDrainAll(callback)
-
-Called when there are no more messages to process on any queue.
-
-### clearAll(callback)
-
-Remove all jobs from all queues.
-
+The test suite is non-existent at the moment, but if it were to exist, you would
+run it with `npm test` or `mocha`.
 
