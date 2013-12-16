@@ -1,31 +1,36 @@
 const assert            = require('assert');
-const Async             = require('async');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
+const Q                 = require('q');
 const Queues            = require('./queues');
 const Scheduler         = require('./scheduler');
+
+
+function returnPromiseOrCallback(promise, callback) {
+  if (callback)
+    promise.then(function() {
+      setImmediate(callback);
+    }, function(error) {
+      callback(error);
+    });
+  else
+    return promise;
+}
 
 
 class Workers extends EventEmitter {
 
   constructor() {
     EventEmitter.call(this);
+    this._queues = new Queues(this);
+    this._scheduler = new Scheduler(this, process.env.NODE_ENV == 'development');
   }
 
 
   // Returns the named queue.  Returned objects has the methods `push` and
   // `each`.
   queue(name) {
-    return this.queues.getQueue(name);
-  }
-
-  get queues() {
-    let queues = this._queues;
-    if (!queues) {
-      queues = new Queues(this);
-      this._queues = queues;
-    }
-    return queues;
+    return this._queues.getQueue(name);
   }
 
 
@@ -38,16 +43,7 @@ class Workers extends EventEmitter {
   // The job function is called with a callback, which it uses to report
   // completion or an error.
   schedule(name, time, job) {
-    this.scheduler.schedule(name, time, job);
-  }
-
-  get scheduler() {
-    let scheduler = this._scheduler;
-    if (!scheduler) {
-      scheduler = new Scheduler(this, process.env.NODE_ENV == 'development');
-      this._scheduler = scheduler;
-    }
-    return scheduler;
+    this._scheduler.schedule(name, time, job);
   }
 
 
@@ -57,33 +53,34 @@ class Workers extends EventEmitter {
 
   // Start running scheduled and queued jobs.
   start() {
-    this.scheduler.start();
-    this.queues.start();
+    this._scheduler.start();
+    this._queues.start();
   }
 
   // Stop running scheduled and queued jobs.
   stop() {
-    this.scheduler.stop();
-    this.queues.stop();
+    this._scheduler.stop();
+    this._queues.stop();
   }
 
 
   // Run all scheduled jobs once (immediately) and run all queued jobs, then
   // call callbacks.  Used during tests.
   once(callback) {
-    assert(callback, "Callback required");
-    this.scheduler.once((error)=> {
-      if (error)
-        callback(error);
-      else
-        this.queues.once(callback);
-    });
+    // Must run all scheduled jobs first, the run any (resulting) queued jobs
+    // to completion.
+    let promise = this._scheduler.once()
+      .then(()=> this._queues.once())
+      .then(()=> {
+        this.debug("Completed all jobs");
+      });
+    return returnPromiseOrCallback(promise, callback);
   }
 
   // Empty all queues.  Used duting tests.
   reset(callback) {
-    assert(callback, "Callback required");
-    this.queues.reset(callback);
+    let promise = this._queues.reset(callback);
+    return returnPromiseOrCallback(promise, callback);
   }
 
 

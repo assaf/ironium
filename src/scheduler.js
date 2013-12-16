@@ -1,8 +1,8 @@
 // Essentially cron for scheduling tasks in Node.
 
 const assert  = require('assert');
-const Async   = require('async');
 const CronJob = require('cron');
+const Q       = require('q');
 
 
 // In production we respect the cron schedule set by the application.
@@ -31,19 +31,7 @@ module.exports = class Scheduler {
   schedule(name, time, job) {
     assert(!this._cronJobs[name], "Attempt to schedule multiple jobs with same name (" + name + ")")
     let cronTime = this._development ? DEVELOPMENT_CRON_TIME : time;
-    let cronJob  = CronJob.job(cronTime, (callback)=> {
-
-      this._logger.info("Running cronjob %s", name);
-      job.call(null, (error)=> {
-        if (error)
-          this._logger.error(error);
-        else
-          this._logger.info("Completed cronjob %s", name);
-        if (callback)
-          callback(error);
-      });
-
-    });
+    let cronJob  = CronJob.job(cronTime, (callback)=> this._runJob(name, job, callback));
     cronJob.name = name;
     this._cronJobs[name] = cronJob;
     if (this._startJobs) {
@@ -52,37 +40,69 @@ module.exports = class Scheduler {
     }
   }
 
+  _runJob(name, job, callback) {
+    this._logger.info("Running cronjob %s", name);
+    let outcome = Q.defer();
+
+    outcome.promise
+      .then(()=> {
+        this._logger.info("Completed cronjob %s", name);
+        if (callback)
+          setImmediate(callback);
+      }, (error)=> {
+        this._logger.error(error);
+        if (callback)
+          callback(error);
+      });
+
+    function fulfill(error) {
+      if (error)
+        outcome.reject(error);
+      else
+        outcome.resolve();
+    }
+
+    let promise = job.call(null, fulfill);
+    if (promise && promise.then)
+      promise.then(()=> outcome.resolve(),
+                   (error)=> outcome.reject(error));
+
+  }
+
   start() {
     this._startJobs = true;
-    this._forEach((cronJob)=> {
+    for (let cronJob of this._allJobs) {
       this._logger.debug("Starting cronjob %s", cronJob.name);
       cronJob.start();
-    });
+    };
   }
 
   stop() {
     this._startJobs = false;
-    this._forEach((cronJob)=> {
+    for (let cronJob of this._allJobs) {
       this._logger.debug("Stopping cronjob %s", cronJob.name);
       cronJob.stop();
-    });
-  }
-
-  once(callback) {
-    assert(callback, "Callback required");
-    // Run job, provide our own completion function.
-    function runJob(cronJob, done) {
-      cronJob._callbacks[0].call(null, done);
     }
-    this._forEach(runJob, callback);
   }
 
-  _forEach(fn, callback) {
-    let cronJobs = Object.keys(this._cronJobs).map((name)=> this._cronJobs[name]);
-    if (arguments.length > 1)
-      Async.forEach(cronJobs, fn, callback);
-    else
-      cronJobs.forEach(fn);
+  once() {
+    // Run job, provide our own completion function.
+    function runJob(cronJob) {
+      let deferred = Q.defer();
+      cronJob._callbacks[0].call(null, function(error) {
+        if (error)
+          deferred.reject(error);
+        else
+          deferred.resolve();
+      });
+      return deferred.promise;
+    }
+    let promises = this._allJobs.map((cronJob)=> runJob(cronJob));
+    return Q.all(promises);
+  }
+
+  get _allJobs() {
+    return Object.keys(this._cronJobs).map((name)=> this._cronJobs[name]);
   }
 
 }

@@ -1,6 +1,5 @@
 const _                 = require('lodash');
 const assert            = require('assert');
-const Async             = require('async');
 const { createDomain }  = require('domain');
 const fivebeans         = require('fivebeans');
 const ms                = require('ms');
@@ -102,47 +101,48 @@ module.exports = class Server {
 
   start() {
     this.notify.debug("Start all queues");
-    this._foreachQueue((queue)=> queue.start());
+    for (let queue of this._allQueues)
+      queue.start();
   }
 
   stop(callback) {
     this.notify.debug("Stop all queues");
-    this._foreachQueue((queue)=> queue.stop());
+    for (let queue of this._allQueues)
+      queue.stop();
   }
 
-  // This method only used when testing, will empty the contents of all queues.
-  reset(callback) {
+  // This method only used when testing, will empty the contents of all queues.  Returns a promise.
+  reset() {
     this.notify.debug("Clear all queues");
-    this._foreachQueue((queue, done)=> queue.reset(done), callback);
+    let promises = this._allQueues.map((queue)=> queue.reset());
+    return Q.all(promises);
   }
 
   // This method only used when testing, waits for all jobs to complete.
-  once(callback) {
+  once() {
     this.notify.debug("Process all queued jobs");
-    let queues = _.values(this._queues);
-    function iterate() {
-      Async.reduce(queues, false,
-        function(processedAny, queue, done) {
-          queue.once(function(error, processed) {
-            done(error, processedAny || processed);
-          });
-        },
-        function(error, processedAny) {
-          if (processedAny)
-            iterate();
-          else
-            callback(error);
-        });
-    }
-    iterate();
+    let promises = this._allQueues.map((queue)=> queue.once());
+    let deferred = Q.defer();
+
+    Q.all(promises)
+      .then(
+        (processed)=> {
+          let anyProcessed = processed.indexOf(true) >= 0;
+          if (anyProcessed)
+            return this.once();
+        })
+      .then(function() {
+        deferred.resolve();
+      })
+      .catch(null, function(error) {
+        deferred.reject(error)
+      });
+
+    return deferred.promise;
   }
 
-  _foreachQueue(fn, callback) {
-    let queues = _.values(this._queues);
-    if (arguments.length > 1)
-      Async.forEach(queues, fn, callback);
-    else
-      queues.forEach(fn);
+  get _allQueues() {
+    return _.values(this._queues);
   }
 
 }
@@ -399,27 +399,31 @@ class Queue {
 
 
   // Called to process a single job.  Calls callback with error and flag that is
-  // true if one (or more) jobs were processed.
-  once(callback) {
+  // true if one (or more) jobs were processed.  Returns a promise which
+  // resolves to true if any job was processed.
+  once() {
     assert(!this._processing, "Cannot call once while continuously processing jobs");
-    if (!this._handler) {
-      setImmediate(callback);
-      return;
-    }
+    if (!this._handler)
+      return Q.resolve(false);
 
+    let deferred = Q.defer();
     this.notify.debug("Waiting for jobs on queue %s", this.name);
     this._reserve.request('reserve_with_timeout', 0, (error, jobID, payload)=> {
-      if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-        callback(null, false);
-      else if (error)
-        callback(error);
-      else if (payload)
-        this._processJob(jobID, payload, function(error) {
-          callback(error, !error);
+      if (error) {
+        if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+          deferred.resolve(false);
+        else
+          deferred.reject(error);
+      } else {
+        this._processJob(jobID, payload, (error)=> {
+          if (error)
+            deferred.reject(error);
+          else
+            deferred.resolve(true);
         });
-      else
-        callback(null, false);
+      }
     });
+    return deferred.promise;
   }
 
   // Calles to process all jobs, until this._processing is set to false.
@@ -487,9 +491,9 @@ class Queue {
           this.notify.error(error.stack);
       });
       this.notify.info("Completed job %s from queue %s", jobID, this.name);
+      setImmediate(callback);
       // Move on to process next job.
       clearTimeout(errorOnTimeout);
-      callback();
     }, (error)=> {
       // Promise rejected (error or timeout); we release the job back to the
       // queue.  Since this may be a transient error condition (e.g. server
@@ -529,21 +533,23 @@ class Queue {
     });
   }
 
-  // Delete all messages from the queue.
-  reset(callback) {
+  // Delete all messages from the queue.  Returns a promise.
+  reset() {
+    let deferred = Q.defer();
     this._put.withClient(function(client) {
       function deleteNextJob() {
-        client.reserve_with_timeout(0, function(error, jobID, payload) {
-          if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-            callback();
+        client.peek_ready(function(error, jobID) {
+          if (error == 'NOT_FOUND' || (error && error.message == 'NOT_FOUND'))
+            deferred.resolve();
           else if (error)
-            callback(error);
+            deferred.rejected(error);
           else
             client.destroy(jobID, deleteNextJob);
         });
       }
       deleteNextJob();
     });
+    return deferred.promise;
   }
 
 }

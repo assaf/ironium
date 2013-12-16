@@ -10,7 +10,6 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "async": "0.2.9",
     "cron": "1.0.1",
     "fivebeans": "1.1.0",
     "lodash": "2.4.1",
