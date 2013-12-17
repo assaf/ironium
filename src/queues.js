@@ -382,8 +382,10 @@ class Queue {
   start() {
     this._processing = true;
     this._count = this._count || this._server.config.workers || 1;
-    for (let i = 0; i < this._count; ++i)
-      this._processContinously();
+    for (let i = 0; i < this._count; ++i) {
+      let session = this._reserve(i);
+      this._processContinously(session);
+    }
   }
 
   // Stop processing jobs.
@@ -400,10 +402,11 @@ class Queue {
       return Q.resolve(false);
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
+    let session = this._reserve(0);
     let outcome = Q.defer();
-    this._reserve(0).request('reserve_with_timeout', 0)
+    session.request('reserve_with_timeout', 0)
       // If we reserved a job, this will run the job and delete it.
-      .then(([jobID, payload])=> this._runAndDestroy(jobID, payload) )
+      .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
       .then(
         function() {
           // Reserved/ran/deleted job, so resolve to true.
@@ -420,19 +423,19 @@ class Queue {
   }
 
   // Called to process all jobs, until this._processing is set to false.
-  _processContinously(index) {
+  _processContinously(session) {
     // Don't do anything without a handler, stop when processing is false.
     if (!(this._processing && this._handler))
       return;
 
     let repeat = ()=> {
-      this._processContinously(index);
+      this._processContinously(session);
     }
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    this._reserve(index).request('reserve_with_timeout', RESERVE_TIMEOUT / 1000)
+    session.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000)
       // If we reserved a job, this will run the job and delete it.
-      .then(([jobID, payload])=> this._runAndDestroy(jobID, payload) )
+      .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
       // Reserved/ran/deleted job, repeat to next job.
       .then(repeat, (error)=> {
         // No job, go back to wait for next job.
@@ -449,19 +452,19 @@ class Queue {
 
   // Called to process a job.  If successful, deletes job, otherwise returns job
   // to queue.  Returns a promise.
-  _runAndDestroy(jobID, payload) {
+  _runAndDestroy(session, jobID, payload) {
     // Payload comes in the form of a buffer, need to conver to a string.
     let promise = this._runJob(jobID, payload.toString());
 
     promise.then(
-      ()=> this._reserve(index).request('destroy', jobID),
+      ()=> session.request('destroy', jobID),
       (error)=> {
         // Promise rejected (error or timeout); we release the job back to the
         // queue.  Since this may be a transient error condition (e.g. server
         // down), we let it sit in the queue for a while before it becomes
         // available again.
         let delay = (process.env.NODE_ENV == 'test' ? 0 : RELEASE_DELAY);
-        this._reserve(index).request('release', jobID, 0, delay / 1000)
+        session.request('release', jobID, 0, delay / 1000)
           .catch((error)=> this.notify.error(error.stack) );
       });
 
@@ -533,14 +536,14 @@ class Queue {
     });
 
     // On completion, clear timeout and log.
-    let promise = outcome.promise
-      .then(()=> {
-        clearTimeout(errorOnTimeout);
-        this.notify.info("Completed job %s from queue %s", jobID, this.name);
-      }, (error)=> {
-        clearTimeout(errorOnTimeout);
-        this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
-      });
+    let promise = outcome.promise;
+    promise.then(()=> {
+      clearTimeout(errorOnTimeout);
+      this.notify.info("Completed job %s from queue %s", jobID, this.name);
+    }, (error)=> {
+      clearTimeout(errorOnTimeout);
+      this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
+    });
 
     return promise;
   }
