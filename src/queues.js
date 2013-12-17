@@ -43,7 +43,8 @@ class Configuration {
       this._config = config = {
         hostname: source.hostname || 'localhost',
         port:     source.port     || 11300,
-        prefix:   source.prefix
+        prefix:   source.prefix,
+        workers:  source.workers  || 1
       };
       if (source.token) {
         config.authenticate = 'oauth ' + source.token + ' ' + source.projectID;
@@ -73,6 +74,10 @@ class Configuration {
   // Not applicable with standalone Beanstalkd.
   get authenticate() {
     return this.config.authenticate;
+  }
+
+  get workers() {
+    return this.config.workers;
   }
 
   webhookURL(queueName) {
@@ -309,9 +314,11 @@ class Queue {
     this._server        = server;
     this._prefixedName  = server.config.prefixedName(name);
 
-    this._processing  = false;
-    this._handler     = null;
+    this._processing      = false;
+    this._handler         = null;
+    this._reserveSessions = [];
   }
+
 
   // Session for storing messages and other manipulations, created lazily
   get _put() {
@@ -328,8 +335,8 @@ class Queue {
 
   // Session for processing messages, created lazily.  This sessions is
   // blocked, so all other operations should happen on the _put session.
-  get _reserve() {
-    let session = this._reserveSession;
+  _reserve(index) {
+    let session = this._reserveSessions[index];
     if (!session) {
       // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
       session = new Session(this.name, this._server, (client, callback)=> {
@@ -337,10 +344,11 @@ class Queue {
           client.watch(this._prefixedName, callback);
         });
       });
-      this._reserveSession = session;
+      this._reserveSessions[index] = session;
     }
     return session;
   }
+
 
   // Push job to queue.
   push(job, callback) {
@@ -359,23 +367,30 @@ class Queue {
   }
 
   // Process jobs from queue.
-  each(handler) {
+  each(handler, workers) {
     assert(typeof handler == 'function', "Called each without a valid handler");
     assert(!this._handler, "Already set handler for the queue " + this.name);
     this._handler = handler;
-    this._processContinously();
+    if (workers)
+      this._count = workers;
+    if (this._processing)
+      this.start();
   }
+
 
   // Start processing jobs.
   start() {
     this._processing = true;
-    this._processContinously();
+    this._count = this._count || this._server.config.workers || 1;
+    for (let i = 0; i < this._count; ++i)
+      this._processContinously();
   }
 
   // Stop processing jobs.
   stop() {
     this._processing = false;
   }
+
 
   // Called to process a single job.  Returns a promise which resolves to true
   // if any job was processed.
@@ -386,9 +401,9 @@ class Queue {
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
     let outcome = Q.defer();
-    this._reserve.request('reserve_with_timeout', 0)
+    this._reserve(0).request('reserve_with_timeout', 0)
       // If there's a job, we process it and resolve to true.
-      .then(([jobID, payload])=> this._processJob(jobID, payload) )
+      .then(([jobID, payload])=> this._runAndDestroy(jobID, payload) )
       .then(()=> outcome.resolve(true))
       // If there's no job, we ignore the error (DEADLINE_SOON/TIMED_OUT) and resolve to false.
       .catch((error)=> {
@@ -401,42 +416,54 @@ class Queue {
   }
 
   // Called to process all jobs, until this._processing is set to false.
-  _processContinously() {
+  _processContinously(index) {
     // Don't do anything without a handler, stop when processing is false.
     if (!(this._processing && this._handler))
       return;
 
-    let repeat = (timeout)=> {
-      if (this._processing) {
-        if (timeout)
-          setTimeout(this._processContinously.bind(this), timeout);
-        else
-          setImmediate(this._processContinously.bind(this));
-      }
+    let repeat = ()=> {
+      this._processContinously(index);
     }
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    this._reserve.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000)
+    this._reserve(index).request('reserve_with_timeout', RESERVE_TIMEOUT / 1000)
       // If there's a job, we process and recurse.
-      .then(([jobID, payload])=> this._processJob(jobID, payload) )
+      .then(([jobID, payload])=> this._runAndDestroy(jobID, payload) )
       .then(repeat, (error)=> {
         // No job in queue, go back to wait for new job.
         if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-          repeat();
+          setImmediate(repeat);
         else {
           // Error, backoff for a bit.
           this.notify.error(error);
-          repeat(ERROR_BACKOFF);
+          setTimeout(repeat, ERROR_BACKOFF);
         }
       });
   }
 
+
   // Called to process a job.  If successful, deletes job, otherwise returns job
   // to queue.  Returns a promise.
-  _processJob(jobID, payload) {
-    // Payload comes in the form of a buffer.
-    payload = payload.toString();
+  _runAndDestroy(jobID, payload) {
+    // Payload comes in the form of a buffer, need to conver to a string.
+    let promise = this._runJob(jobID, payload.toString());
 
+    promise.then(
+      ()=> this._reserve(index).request('destroy', jobID),
+      (error)=> {
+        // Promise rejected (error or timeout); we release the job back to the
+        // queue.  Since this may be a transient error condition (e.g. server
+        // down), we let it sit in the queue for a while before it becomes
+        // available again.
+        let delay = (process.env.NODE_ENV == 'test' ? 0 : RELEASE_DELAY);
+        this._reserve(index).request('release', jobID, 0, delay / 1000)
+          .catch((error)=> this.notify.error(error.stack) );
+      });
+
+    return promise;
+  }
+
+  _runJob(jobID, payload) {
     // Ideally we call the handler, handler calls the callback, all is well.
     // But the handler may throw an exception, or suffer some other
     // catastrophic outcome: we use a domain to handle that.  It may also
@@ -500,34 +527,24 @@ class Queue {
       }
     });
 
-    outcome.promise
-      // Successfully performed job, destroy it.
-      .then(()=> this._reserve.request('destroy', jobID) )
-      .then(()=> {
-        this.notify.info("Completed job %s from queue %s", jobID, this.name);
-        clearTimeout(errorOnTimeout);
-      })
-      .catch((error)=> {
-        // Promise rejected (error or timeout); we release the job back to the
-        // queue.  Since this may be a transient error condition (e.g. server
-        // down), we let it sit in the queue for a while before it becomes
-        // available again.
-        let delay = (process.env.NODE_ENV == 'test' ? 0 : RELEASE_DELAY);
-        this._reserve.request('release', jobID, 0, delay / 1000)
-          .catch((error)=> this.notify.error(error.stack) );
-        this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
-        // Move on to process next job.
-        clearTimeout(errorOnTimeout);
-      });
+    // On completion, clear timeout and log.
+    outcome.promise.then(()=> {
+      clearTimeout(errorOnTimeout);
+      this.notify.info("Completed job %s from queue %s", jobID, this.name);
+    }, (error)=> {
+      clearTimeout(errorOnTimeout);
+      this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
+    });
 
     return outcome.promise;
   }
+
 
   // Delete all messages from the queue.  Returns a promise.
   reset() {
     // We're using the reserve session, so this will block indefinitely if
     // queues are started, and fail the test.
-    let session = this._reserve;
+    let session = this._reserve(0);
     let outcome = Q.defer();
     session.request('peek_ready')
       // peek_ready checks if there's any job waiting in the queue, it either
