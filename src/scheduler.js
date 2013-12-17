@@ -1,5 +1,6 @@
 // Essentially cron for scheduling tasks in Node.
 
+const _       = require('lodash');
 const assert  = require('assert');
 const CronJob = require('cron');
 const Q       = require('q');
@@ -15,94 +16,92 @@ const DEVELOPMENT_CRON_TIME = '*/5 * * * * *';
 
 module.exports = class Scheduler {
 
-  // Create a new scheduled.
-  //
-  // logger       - For logging debug, info and error messages
-  // development  - If true, all jobs run every few seconds
-  constructor(logger, development = false) {
-    this._logger      = logger;
-    this._development = development;
+  constructor(workers) {
+    this.notify       = workers;
+    this._development = process.env.NODE_ENV == 'development';
     this._cronJobs    = Object.create({});
     // If true, every new job is started automatically.  Necessary in case you
     // call schedule() after calling start().
     this._startJobs   = false;
   }
 
+  // Schedules a new job.
   schedule(name, time, job) {
-    assert(!this._cronJobs[name], "Attempt to schedule multiple jobs with same name (" + name + ")")
+    assert(job instanceof Function, "Third argument must be the job function");
+    assert(!this._cronJobs[name],   "Attempt to schedule multiple jobs with same name (" + name + ")")
+
     let cronTime = this._development ? DEVELOPMENT_CRON_TIME : time;
-    let cronJob  = CronJob.job(cronTime, (callback)=> this._runJob(name, job, callback));
+    let cronJob  = CronJob.job(cronTime, this._runJob.bind(this, name, job));
     cronJob.name = name;
     this._cronJobs[name] = cronJob;
+
     if (this._startJobs) {
-      this._logger.debug("Starting cronjob %s", name);
+      this.notify.debug("Starting cronjob %s", name);
       cronJob.start();
     }
   }
 
-  _runJob(name, job, callback) {
-    this._logger.info("Running cronjob %s", name);
-    let outcome = Q.defer();
-
-    outcome.promise
-      .then(()=> {
-        this._logger.info("Completed cronjob %s", name);
-        if (callback)
-          setImmediate(callback);
-      }, (error)=> {
-        this._logger.error(error);
-        if (callback)
-          callback(error);
-      });
-
-    function fulfill(error) {
-      if (error)
-        outcome.reject(error);
-      else
-        outcome.resolve();
-    }
-
-    let promise = job.call(null, fulfill);
-    if (promise && promise.then)
-      promise.then(()=> outcome.resolve(),
-                   (error)=> outcome.reject(error));
-
-  }
-
+  // Start all scheduled jobs.
   start() {
     this._startJobs = true;
-    for (let cronJob of this._allJobs) {
-      this._logger.debug("Starting cronjob %s", cronJob.name);
+    let cronJobs = _.values(this._cronJobs);
+    for (let cronJob of cronJobs) {
+      this.notify.debug("Starting cronjob %s", cronJob.name);
       cronJob.start();
     };
   }
 
+  // Stop all scheduled jobs.
   stop() {
     this._startJobs = false;
-    for (let cronJob of this._allJobs) {
-      this._logger.debug("Stopping cronjob %s", cronJob.name);
+    let cronJobs = _.values(this._cronJobs);
+    for (let cronJob of cronJobs) {
+      this.notify.debug("Stopping cronjob %s", cronJob.name);
       cronJob.stop();
     }
   }
 
+  // Run all schedules jobs in parallel.
   once() {
-    // Run job, provide our own completion function.
-    function runJob(cronJob) {
-      let deferred = Q.defer();
-      cronJob._callbacks[0].call(null, function(error) {
-        if (error)
-          deferred.reject(error);
-        else
-          deferred.resolve();
-      });
-      return deferred.promise;
-    }
-    let promises = this._allJobs.map((cronJob)=> runJob(cronJob));
+    let cronJobs = _.values(this._cronJobs);
+    let promises = cronJobs.map((cronJob)=> cronJob._callbacks[0]() );
     return Q.all(promises);
   }
 
-  get _allJobs() {
-    return Object.keys(this._cronJobs).map((name)=> this._cronJobs[name]);
+  // Runs the named job.  This is used to wrap the actual job function with
+  // logging messages, error notification, and returns a promise that `once()`
+  // uses to wait for all scheduled jobs to complete.
+  _runJob(name, job) {
+    let promise;
+
+    this.notify.info("Running cronjob %s", name);
+    if (job.length == 1) {
+
+      // Job accepts a callback.
+      let outcome = Q.defer();
+      job(function(error) {
+        if (error)
+          outcome.reject(error);
+        else
+          outcome.resolve();
+      });
+      promise = outcome.promise;
+
+    } else {
+
+      // Job returns a promise (maybe).
+      promise = job();
+      if (!(promise && promise.then))
+        promise = Q.resolve();
+
+    }
+
+    promise.then(()=> {
+      this.notify.info("Completed cronjob %s", name);
+    }, (error)=> {
+      this.notify.error(error);
+    });
+    return promise;
   }
 
 }

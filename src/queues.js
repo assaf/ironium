@@ -125,16 +125,16 @@ module.exports = class Server {
     let deferred = Q.defer();
 
     Q.all(promises)
-      .then(
-        (processed)=> {
-          let anyProcessed = processed.indexOf(true) >= 0;
-          if (anyProcessed)
-            return this.once();
-        })
+      .then((processed)=> {
+        let anyProcessed = processed.indexOf(true) >= 0;
+        if (anyProcessed)
+          return this.once();
+      })
       .then(function() {
         deferred.resolve();
       })
-      .catch(null, function(error) {
+      .catch(function(error) {
+        console.dir(error)
         deferred.reject(error)
       });
 
@@ -190,6 +190,44 @@ class Session {
   // requests that are never going to complete.  It fails requests whenever the
   // connection is reported to error/close, or after a fairly long timeout.
   request(command, ...args) {
+    let deferred = Q.defer();
+
+    // Called when command executed, connection closed/error, or timeout.
+    // We reset the callback to make sure we only call it once.
+    let oncomplete = (...args)=> {
+      clearTimeout(timeout);
+      this.pending.splice(this.pending.indexOf(oncomplete), 1);
+      let error = args.shift();
+      if (error)
+        deferred.reject(error);
+      else if (args.length > 1)
+        deferred.resolve(args);
+      else
+        deferred.resolve(args[0]);
+    }
+    // The fail method will call this completion function.
+    this.pending.push(deferred);
+    // If command didn't complete within set timeout, fail the connection.
+    let timeout = setTimeout(()=> {
+      deferred.reject('TIMED_OUT');
+    }, TIMEOUT_REQUEST);
+
+    if (!this.deferred)
+      this.connect();
+    // Get Fivebeans to execute this command.
+    this.deferred.promise
+      .then(function(client) {
+        client[command].call(client, ...args, oncomplete);
+      })
+      .catch((error)=> {
+        this.fail(error);
+        deferred.reject(error);
+      });
+
+    return deferred.promise;
+  }
+
+  _request(command, ...args) {
     let callback = args.pop();
 
     // Called when command executed, connection closed/error, or timeout.
@@ -208,10 +246,18 @@ class Session {
     let timeout = setTimeout(()=> {
       oncomplete(new Error('TIMED_OUT'));
     }, TIMEOUT_REQUEST);
+
+    if (!this.deferred)
+      this.connect();
     // Get Fivebeans to execute this command.
-    this.withClient(function(client) {
-      client[command].call(client, ...args, oncomplete);
-    });
+    this.deferred.promise
+      .then(function(client) {
+        client[command].call(client, ...args, oncomplete);
+      })
+      .catch(function(error) {
+        this.fail(error);
+        oncomplete(error);
+      });
   }
 
   // Called when an error is detected with the underlying connection, forgets
@@ -233,18 +279,6 @@ class Session {
       let oncomplete;
       while (oncomplete = pending.shift())
         oncomplete(new Error('TIMED_OUT'));
-    });
-  }
-
-  // Call this method when you need access to the Beanstalked server.  It will
-  // initialize a Fivebeans client, setup the session, and pass it to the
-  // function.
-  withClient(fn) {
-    if (!this.deferred)
-      this.connect();
-    this.deferred.promise.then(fn, (error)=> {
-      this.fail(error);
-      this.use(fn);
     });
   }
 
@@ -364,15 +398,15 @@ class Queue {
     let payload = JSON.stringify(job);
     let delay   = (options && options.delay) || 0;
 
-    this._put.request('put', 0, delay, PROCESSING_TIMEOUT / 1000, payload, (error, jobID)=> {
+    let promise = this._put.request('put', 0, delay, PROCESSING_TIMEOUT / 1000, payload);
+    if (callback) {
       // Don't pass jobID to callback, easy to use in test before hook, like
       // this:
       //   before((done)=> queue.put(MESSAGE, done));
-      if (callback)
-        callback(error);
-      else if (error)
-        this.notify.error("Error talking to Beanstalkd, queue %s: %s", this.name, error);
-    });
+      promise.then(()=> setImmediate(callback),
+                   (error)=> callback(error));
+    } else
+      return promise;
   }
 
 
@@ -406,24 +440,21 @@ class Queue {
     if (!this._handler)
       return Q.resolve(false);
 
-    let deferred = Q.defer();
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    this._reserve.request('reserve_with_timeout', 0, (error, jobID, payload)=> {
-      if (error) {
+    let outcome = Q.defer();
+    let promise = this._reserve.request('reserve_with_timeout', 0);
+    promise
+      // If there's a job, we process it and resolve to true.
+      .then(([jobID, payload])=> this._processJob(jobID, payload) )
+      .then((x)=> outcome.resolve(true))
+      // If there's no job, we ignore the error (DEADLINE_SOON/TIMED_OUT) and resolve to false.
+      .catch((error)=> {
         if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-          deferred.resolve(false);
+          outcome.resolve(false);
         else
-          deferred.reject(error);
-      } else {
-        this._processJob(jobID, payload, (error)=> {
-          if (error)
-            deferred.reject(error);
-          else
-            deferred.resolve(true);
-        });
-      }
-    });
-    return deferred.promise;
+          outcome.reject(error);
+      });
+    return outcome.promise;
   }
 
   // Calles to process all jobs, until this._processing is set to false.
@@ -434,7 +465,7 @@ class Queue {
       if (!this._processing)
         return;
 
-      this._reserve.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000, (error, jobID, payload)=> {
+      this._reserve._request('reserve_with_timeout', RESERVE_TIMEOUT / 1000, (error, jobID, payload)=> {
         if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
           setImmediate(pickNextJob);
         else if (error) {
@@ -456,7 +487,7 @@ class Queue {
 
   // Called to process a job.  If successful, deletes job, otherwise returns job
   // to queue.
-  _processJob(jobID, payload, callback) {
+  _processJob(jobID, payload) {
     // Payload comes in the form of a buffer.
     payload = payload.toString();
 
@@ -486,12 +517,11 @@ class Queue {
 
     outcomeDeferred.promise.then(()=> {
       // Promise resolved on successful completion; we destroy the job.
-      this._reserve.request('destroy', jobID, (error)=> {
+      this._reserve._request('destroy', jobID, (error)=> {
         if (error)
           this.notify.error(error.stack);
       });
       this.notify.info("Completed job %s from queue %s", jobID, this.name);
-      setImmediate(callback);
       // Move on to process next job.
       clearTimeout(errorOnTimeout);
     }, (error)=> {
@@ -500,14 +530,13 @@ class Queue {
       // down), we let it sit in the queue for a while before it becomes
       // available again.
       let delay = (process.env.NODE_ENV == 'test' ? 0 : RELEASE_DELAY);
-      this._reserve.request('release', jobID, 0, delay / 1000, (error)=> {
+      this._reserve._request('release', jobID, 0, delay / 1000, (error)=> {
         if (error)
           this.notify.error(error.stack);
       });
       this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
       // Move on to process next job.
       clearTimeout(errorOnTimeout);
-      callback(error);
     });
 
     // Run the handler within the domain.  We use domain.intercept, so if
@@ -531,25 +560,28 @@ class Queue {
         outcomeDeferred.resolve();
       }));
     });
+
+    return outcomeDeferred.promise;
   }
 
   // Delete all messages from the queue.  Returns a promise.
   reset() {
-    let deferred = Q.defer();
-    this._put.withClient(function(client) {
-      function deleteNextJob() {
-        client.peek_ready(function(error, jobID) {
-          if (error == 'NOT_FOUND' || (error && error.message == 'NOT_FOUND'))
-            deferred.resolve();
-          else if (error)
-            deferred.rejected(error);
-          else
-            client.destroy(jobID, deleteNextJob);
-        });
-      }
-      deleteNextJob();
-    });
-    return deferred.promise;
+    let session = this._put;
+    let outcome = Q.defer();
+    session.request('peek_ready')
+      // peek_ready checks if there's any job waiting in the queue, it either
+      // gets a job ID, or the error `NOT_FOUND`, which we gently ignore.
+      .then((jobID)=> session.request('destroy', jobID) )
+      // If there's a job ID, we need to delete it, and promise recurse.
+      .then(()=> this.reset() )
+      // We're done recursing when error is `NOT_FOUND`.
+      .catch((error)=> {
+        if (error == 'NOT_FOUND')
+          outcome.resolve();
+        else
+          outcome.reject(error);
+      });
+    return outcome.promise;
   }
 
 }
