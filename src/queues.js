@@ -402,16 +402,20 @@ class Queue {
     this.notify.debug("Waiting for jobs on queue %s", this.name);
     let outcome = Q.defer();
     this._reserve(0).request('reserve_with_timeout', 0)
-      // If there's a job, we process it and resolve to true.
+      // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(jobID, payload) )
-      .then(()=> outcome.resolve(true))
-      // If there's no job, we ignore the error (DEADLINE_SOON/TIMED_OUT) and resolve to false.
-      .catch((error)=> {
-        if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-          outcome.resolve(false);
-        else
-          outcome.reject(error);
-      });
+      .then(
+        function() {
+          // Reserved/ran/deleted job, so resolve to true.
+          outcome.resolve(true);
+        },
+        function(error) {
+          // No job, resolve to false; reject on any other error.
+          if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+            outcome.resolve(false);
+          else
+            outcome.reject(error);
+        });
     return outcome.promise;
   }
 
@@ -427,14 +431,15 @@ class Queue {
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
     this._reserve(index).request('reserve_with_timeout', RESERVE_TIMEOUT / 1000)
-      // If there's a job, we process and recurse.
+      // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(jobID, payload) )
+      // Reserved/ran/deleted job, repeat to next job.
       .then(repeat, (error)=> {
-        // No job in queue, go back to wait for new job.
-        if (error == 'DEADLINE_SOON' || error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+        // No job, go back to wait for next job.
+        if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
           setImmediate(repeat);
         else {
-          // Error, backoff for a bit.
+          // Report on any other error, and back off for a few.
           this.notify.error(error);
           setTimeout(repeat, ERROR_BACKOFF);
         }
@@ -528,37 +533,53 @@ class Queue {
     });
 
     // On completion, clear timeout and log.
-    outcome.promise.then(()=> {
-      clearTimeout(errorOnTimeout);
-      this.notify.info("Completed job %s from queue %s", jobID, this.name);
-    }, (error)=> {
-      clearTimeout(errorOnTimeout);
-      this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
-    });
+    let promise = outcome.promise
+      .then(()=> {
+        clearTimeout(errorOnTimeout);
+        this.notify.info("Completed job %s from queue %s", jobID, this.name);
+      }, (error)=> {
+        clearTimeout(errorOnTimeout);
+        this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
+      });
 
-    return outcome.promise;
+    return promise;
   }
 
 
   // Delete all messages from the queue.  Returns a promise.
   reset() {
-    // We're using the reserve session, so this will block indefinitely if
-    // queues are started, and fail the test.
-    let session = this._reserve(0);
+    // We're using the _put session (use), the _reserve session (watch) doesn't
+    // return any jobs.
+    let session = this._put;
     let outcome = Q.defer();
-    session.request('peek_ready')
-      // peek_ready checks if there's any job waiting in the queue, it either
-      // gets a job ID, or the error `NOT_FOUND`, which we gently ignore.
-      .then((jobID)=> session.request('destroy', jobID) )
-      // If there's a job ID, we need to delete it, and promise recurse.
-      .then(()=> this.reset() )
-      // We're done recursing when error is `NOT_FOUND`.
-      .catch((error)=> {
-        if (error == 'NOT_FOUND')
-          outcome.resolve();
-        else
-          outcome.reject(error);
-      });
+
+    // Delete all ready jobs, then call deleteDelayed.
+    function deleteReady() {
+      session.request('peek_ready')
+        .then(([jobID, payload])=> session.request('destroy', jobID) )
+        .then(deleteReady)
+        .catch((error)=> {
+          if (error == 'NOT_FOUND')
+            deleteDelayed();
+          else
+            outcome.reject(error);
+        });
+    }
+
+    // Delete all delayed job, then resolve promise.
+    function deleteDelayed() {
+      session.request('peek_delayed')
+        .then(([jobID, payload])=> session.request('destroy', jobID) )
+        .then(deleteDelayed)
+        .catch((error)=> {
+          if (error == 'NOT_FOUND')
+            outcome.resolve();
+          else
+            outcome.reject(error);
+        });
+    }
+
+    deleteReady();
     return outcome.promise;
   }
 
