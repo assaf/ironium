@@ -102,17 +102,17 @@ module.exports = class Server {
   // Starts processing jobs from all queues.
   start() {
     this.notify.debug("Start all queues");
-    let queues = _.values(this._queues);
-    for (let queue of queues)
+    _.values(this._queues).forEach(function(queue) {
       queue.start();
+    });
   }
 
   // Stops processing jobs from all queues.
   stop(callback) {
     this.notify.debug("Stop all queues");
-    let queues = _.values(this._queues);
-    for (let queue of queues)
+    _.values(this._queues).forEach(function(queue) {
       queue.stop();
+    });
   }
 
   // Use when testing to empty contents of all queues.  Returns a promise.
@@ -414,7 +414,7 @@ class Queue {
     }
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    this._reserve.request('reserve_with_timeout', 0)
+    this._reserve.request('reserve_with_timeout', 30)
       // If there's a job, we process and recurse.
       .then(([jobID, payload])=> this._processJob(jobID, payload) )
       .then(repeat, (error)=> {

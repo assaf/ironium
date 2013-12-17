@@ -44,21 +44,19 @@ module.exports = class Scheduler {
   // Start all scheduled jobs.
   start() {
     this._startJobs = true;
-    let cronJobs = _.values(this._cronJobs);
-    for (let cronJob of cronJobs) {
+    _.values(this._cronJobs).forEach((cronJob)=> {
       this.notify.debug("Starting cronjob %s", cronJob.name);
       cronJob.start();
-    };
+    });
   }
 
   // Stop all scheduled jobs.
   stop() {
     this._startJobs = false;
-    let cronJobs = _.values(this._cronJobs);
-    for (let cronJob of cronJobs) {
+    _.values(this._cronJobs).forEach((cronJob)=> {
       this.notify.debug("Stopping cronjob %s", cronJob.name);
       cronJob.stop();
-    }
+    });
   }
 
   // Run all schedules jobs in parallel.
