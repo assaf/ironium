@@ -6,12 +6,14 @@ const ms                = require('ms');
 const Q                 = require('q');
 
 
-// How long to wait when reserving a job.
-const RESERVE_TIMEOUT     = ms('5m');
+// How long to wait when reserving a job.  Iron.io terminates connection after
+// 1 minute, so that's the longest we can wait without having to continously
+// reopen connctions.
+const RESERVE_TIMEOUT     = ms('50s');
 
 // How long before we consider a request failed due to timeout.
 // Should be longer than RESERVE_TIMEOUT.
-const TIMEOUT_REQUEST     = RESERVE_TIMEOUT + ms('1s');
+const TIMEOUT_REQUEST     = RESERVE_TIMEOUT + ms('10s');
 
 // Timeout for processing job before we consider it failed and release it back
 // to the queue.
@@ -414,7 +416,7 @@ class Queue {
     }
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    this._reserve.request('reserve_with_timeout', 30)
+    this._reserve.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000)
       // If there's a job, we process and recurse.
       .then(([jobID, payload])=> this._processJob(jobID, payload) )
       .then(repeat, (error)=> {
