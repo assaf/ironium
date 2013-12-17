@@ -6,39 +6,29 @@ job queues and scheduled jobs, using
 
 ## The Why
 
-Building a modern Web application involves a lot of workload that runs outside
-the application request/response cycle.
+Because you've got workload that you want to run outside the Web app's
+request/respose cycle, and you need job queues and/or scheduling.
 
-Some tasks take a long time to complete (e.g. updating 3rd party APIs), and you
-want to run after you've sent the response back to the user.  But since you send
-back a response, you better get the task to complete, by retrying if necessary.
+[Beanstalkd](http://kr.github.io/beanstalkd/) is great for queuing and
+processing jobs.  It's easy to setup (`brew install beanstalkd`), easy to test
+with (at least with [Codeship](http://codeship.io/)), easy to tinker with
+(Memcached-like text protocol), and persistently reliable.
 
-This is where job queues become useful:
-- They can distribute the workload over multiple servers, and in time
-- They can smooth out transient errors by retrying every joy
-- They can be used for jobs queued by the application and 3rd party
-  ([Webhooks](http://www.webhooks.org/))
-
-Since high quality job queues exists, might as well use them.  One option is
-[Beanstalkd](http://kr.github.io/beanstalkd/) which is easy to install and use,
-and battle tested.
-
-Another option is [Iron.io](http://www.iron.io/), a paid service that supports
-the same API and can be used interchangeable with Beanstalkd.  This allows you
-to use Beanstalkd for development/testing, and Iron.io for production instances.
-Besides managed up-time and a management GUI, Iron.io can also handle Webhooks
-(sending and receiving updates) for you.
+There's also [Iron.io](http://www.iron.io/), a paid service that talks the
+Beanstalkd protocol, so you can run tests against one, production against the
+other.  Iron.io adds a nice management GUI, and can handle
+[Webhooks](http://www.webhooks.org/) Webhooks for you.
 
 
 ## The How
 
-Ironium has a simple API that exposes three primary methods:
-- `push` a job into a queue
-- `each` to process each job from a queue
-- `schedule` a job to run at given schedule
+Ironium has a simple API with three primary methods:
+- `push` to push a job into a queue
+- `each` to process all jobs from the queue
+- `schedule` to run a job on a given schedule
 
-There's more than that, so let's explore it.  The main object provides access to
-all the workers, and in particular has the following methods:
+There are a few more methods to help you with managing workers, running tests,
+and working with Webhooks.
 
 
 #### queue(name)
@@ -75,45 +65,108 @@ sendWelcomeEmail.each(function(id, callback) {
 As you can see from this example, each queue has two interesting methods, `push`
 and `each`.
 
-#### queue.push(job, callback)
 
-Pushes a new job into the queue.  The job can be any JavaScript value that
-serializes into JSON, so object, arrays, string are all usable.
+#### queue.push(job, callback?)
 
-If you call `push` with a callback, the callback will be notified after the job
-has been successfully added to the queue.  Use this to make sure the job is
-queued before proceeding.
+Pushes a new job into the queue.  The job is serialized as JSON, so objects,
+arrays and strings all work as expected.
 
-#### queue.each(fn)
+If the second argument is a callback, called after the job has been queued.
+Otherwise, returns a promise that resolves when the job has been queued. 
 
-Processes each job from the queue.  The function is called with two arguments,
-the job (see `push` above) and a callback.  You must call that callback when
-done processing the job.
+For example:
 
-If you call the callback with an error, the job is considered to have failed, is
-put back in the queue, and will be picked up again after a 1 minute delay.
+```
+var job = {
+  message: 'wow, such workers, much concurrency'
+};
 
-If you don't call the callback within a minute, the job will be considered to
-have failed, and will be put back in the queue as well.
+queues('echo').push(job, function(error) {
+  if (error)
+    console.error('No echo for you!');
+});
+```
 
-If one minute of processing doesn't sound like enough, consider breaking large
-jobs into smaller chunks.  Also consider that time-outs are a necessary evil,
-given the likelihood of a bug resulting in jobs that never complete, and the
-halting problem being NP hard.
 
-Note: when processing Webhooks, some APIs send valid JSON objects, but many APIs
-send other format, form encoded is quite popular.  In this case, the job would
-be a string that needs to be parsed, often as simple as
-`require('querystring').parse(job)`.
+#### queue.each(handler, workers?)
+
+Processes jobs from the queue. In addition to calling this method, you need to
+either start the workers (see `start` method), or run all queued jobs (see
+`once` method).
+
+The first argument is the job handler, a function that takes either one or two
+arguments.  The second argument is the number of workers you want processing the
+queue, you can set this for each queue, or for all queues in the configuration
+file.
+
+The first argument is the job, a JavaScript object or primitive.  The second
+argument is a callback that you must call when the job completes, to discard the
+job.  If you call with an error, the error is logged and the job returns to the
+queue, from where it will be picked up after a short delay.
+
+For example:
+
+```
+workers.queue('echo').each(job, callback) {
+  console.log('Echo', job.message);
+  callback();
+});
+```
+
+Alternatively, the function can return a promise, in which case the job is
+discarded when the promise resolved, or returned to the queue if the promise is
+rejected.
+
+For example:
+
+```
+workers.queue('delayed-echo').each(job) {
+  var defered = new Promise();
+
+  setTimeout(function() {
+    console.log('Echo', job.message);
+    promise.resolve();
+  }, 5000);
+
+  return promise;
+});
+```
+
+You must use either callback or promise to indicate completion, and do so within
+1 minute.  Jobs that don't complete within that time frame are considered to
+have failed, and returned to the queue.  Timeouts are necessary evil, given that
+jobs may fail to report completion and the halting problem is still NP hard.
+
+If a failed job is returned to the queue, it will go into the 'delayed' state
+and stay there for a few minutes, before it can be picked up again.  This delay
+prevents processing bugs and transient errors (e.g. connection issues) from
+resulting in a DoS attack on your error log.
+
+When processing Webhooks, some services send valid JSON object, other services
+send text strings, so be ready to process those as well.  For example, some
+services send form encoded pairs, so you may need to handle them like this:
+
+```
+var QS = require('querystring');
+
+workers.queue('webhook').each(function(job, callback) {
+  var params = QS.parse(job);
+  console.log(params.message);
+  callback();
+});
+```
 
 #### queue.name
 
-The queue name (property, not a method).  This name does not include the prefix.
+This property returns the queue name.
+
+This name does not include the prefix.
 
 #### queue.webhookURL
 
-The URL for recieving Webhook requests and queuing them, using Iron.io.  This
-URL is only valid if your configured the workers with a project ID and token.
+This property returns the Webhook URL.  Only available when using Iron.io.  You
+can pass this URL to a service, and any messages it will post to this URL will
+be queued.
 
 
 #### schedule(name, time, job)
@@ -128,11 +181,11 @@ Configure the workers (see below).
 
 #### start()
 
-You must call this method to start the workers.  Jobs can be queued, but will
-not be processed until the workers are started.
+You must call this method to start the workers.  Until you call this method, no
+scheduled or queued jobs are processed.
 
-This extra space allows you to load the same code in every environment, and
-queue jobs on any server, but only process jobs on dedicated worker servers.
+The `start` method allows you to run the same codebase in multiple environments,
+but only enable processing on select servers.  For testing, have a look at `once`.
 
 
 #### stop()
@@ -140,19 +193,68 @@ queue jobs on any server, but only process jobs on dedicated worker servers.
 You can call this method to stop the workers.
 
 
-#### once(callback)
+#### once(callback?)
 
-Use this when testing.  It will run all scheduled jobs exactly once (regardless
-of schedule), process all queued jobs, and finally call the callback.
+Use this method when testing.  It will run all schedules jobs exactly once, and
+then process all queued jobs until the queues are empty.
 
-This method exists since you cannot reliably pair `start` and `stop`.
+You can either call `once` with a callback, to be notified when all jobs have
+been processed, or with no arguments and wait on the promise it returns.
+
+This method exists since there's no reliable way to use `start` and `stop` for
+running automated tests.
+
+For example:
+
+```
+var queue = workers.queue('echo');
+var echo  = [];
+
+// Scheduled worker will queue a job
+workers.schedule('echo-foo', '* * * *', function(callback) {
+  queue.push('foo', callback);
+});
+
+before(function(done) {
+  // Queue another job
+  queue.push('bar', done);
+});
+
+before(function(done) {
+  queue.each(function(text, callback) {
+    echo.push(text);
+    callback();
+  });
+
+  // Running the scheduled job, followed by the two queued jobs
+  workers.once(done);
+});
+
+it("should have run the foo scheduled job", function() {
+  assert(echo.indexOf('foo') >= 0);
+});
+
+it("should have run the bar job", function() {
+  assert(echo.indexOf('bar') >= 0);
+});
+```
 
 
 #### reset(callback)
 
-Use this when testing (setup and/or teardown).  It will delete all queued jobs,
-then call the callback.
+Use this method when testing.  It will delete all queued jobs.
 
+You can either call `reset` with a callback, to be notified when all jobs have
+been deleted, or with no arguments and wait on the promise it returns.
+
+For example:
+
+```
+before(function(done) {
+  promise = workers.reset();
+  promise.then(done, done);
+});
+```
 
 
 ## Configurations
@@ -190,8 +292,9 @@ The configuration options are:
   defaults to `test-`)
 * `queues.token`      - When using Iron.io, the API token (get it from the
   project's credentials page)
-* `queues.projectID`  -  When using Iron.io, the API project ID (get it from the
+* `queues.projectID`  - When using Iron.io, the API project ID (get it from the
   project's credentials page)
+* `queues.workers`    - Number of workers processing each queue (default to 1)
 
 If you're running in development or test environment with a local Beanstalkd
 server, you can use the default configuration, which points to `localhost` port
@@ -207,14 +310,19 @@ set the `token` and `projectID` based on the Iron.io project's credentials.
 
 ## Contributing
 
-Ironium is written in ECMAScript 6, because better syntax.  Specifically you'll
-notice that `let` and `const` replaced all usage of `var`, class definitions are
+Ironium is written in ECMAScript 6, because future.  Specifically you'll notice
+that `let` and `const` replaced all usage of `var`, class definitions are
 easier to read in the new syntax, and fat arrows (`=>`) replace `that = this`.
-However, the code doesn't use any ES6 library improvements (`Map`, `startsWith`,
-etc), since these can't be added without polluting the global namespace.
 
-The source files live in the `src` directory, and compiled into the `lib`
-directory with Grunt.  Specifically:
+However, the code doesn't depend on any of the new ES6 libraries (`Map`, `find`,
+etc), since these can only be added to the global namespace, which would be bad,
+bad, bad.  We use [lodash](http://lodash.com/) instead.
+
+The ES6 source lives in `src` and gets compiled into ES5 legacy in `lib`.  And
+[Grunt](http://gruntjs.com/) because it has good support for watched compiling
+and OS X notifying.
+
+Specifically:
 
 ```
 grunt build  # Compile source files from src/ into lib/ directory
@@ -223,6 +331,6 @@ grunt clean  # Clean compiled files in lib/ directory
 grunt        # Shortcut for grunt build watch
 ```
 
-The test suite is non-existent at the moment, but if it were to exist, you would
-run it with `npm test` or `mocha`.
+The tests are non-existent at the moment, but if they were to exist, you would
+run them with `npm test` or `mocha`.
 
