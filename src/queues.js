@@ -11,6 +11,10 @@ const Q                 = require('q');
 // reopen connctions.
 const RESERVE_TIMEOUT     = ms('30s');
 
+// Back-off in case of connection error, prevents continously failing to
+// reserve a job.
+const RESERVE_BACKOFF       = ms('30s');
+
 // How long before we consider a request failed due to timeout.
 // Should be longer than RESERVE_TIMEOUT.
 const TIMEOUT_REQUEST     = RESERVE_TIMEOUT + ms('10s');
@@ -24,9 +28,6 @@ const PROCESSING_TIMEOUT  = ms('10m');
 // Ignored in test environment.
 const RELEASE_DELAY       = ms('1m');
 
-// Back-off in case of connection error, prevents continously failing to
-// reserve a job.
-const RESERVE_BACKOFF       = ms('30s');
 
 
 class Configuration {
@@ -491,7 +492,7 @@ class Queue {
     // This timer trigger if the job doesn't complete in time and rejects
     // the promise.  Server gets a longer timeout than we do.
     let errorOnTimeout = setTimeout(function() {
-      outcome.reject(new Error("Timeout processing job"));
+      outcome.reject(new Error("Timeout processing job " + jobID));
     }, PROCESSING_TIMEOUT - ms('1s'));
     domain.add(errorOnTimeout);
 
@@ -501,7 +502,7 @@ class Queue {
     domain.run(()=> {
 
       this.notify.info("Picked up job %s from queue %s", jobID, this.name);
-      this.notify.debug("Processing %s: %s", jobID, payload);
+      this.notify.debug("Processing job %s", jobID, payload);
       // Typically we queue JSON objects, but the payload may be just a
       // string, e.g. some services send URL encoded name/value pairs, or MIME
       // messages.
