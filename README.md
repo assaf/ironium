@@ -133,7 +133,7 @@ workers.queue('delayed-echo').each(job) {
 ```
 
 You must use either callback or promise to indicate completion, and do so within
-1 minute.  Jobs that don't complete within that time frame are considered to
+10 minutes.  Jobs that don't complete within that time frame are considered to
 have failed, and returned to the queue.  Timeouts are necessary evil, given that
 jobs may fail to report completion and the halting problem is still NP hard.
 
@@ -325,10 +325,11 @@ and OS X notifying.
 Specifically:
 
 ```
-grunt build  # Compile source files from src/ into lib/ directory
-grunt watch  # Continously compile source files on every change
-grunt clean  # Clean compiled files in lib/ directory
-grunt        # Shortcut for grunt build watch
+grunt         # Run this in development (same as grunt build watch)
+grunt build   # Compile source files from src/ into lib/ directory
+grunt watch   # Continously compile source files on every change
+grunt clean   # Clean compiled files in lib/ directory
+grunt release # Publish new release (also grunt release:minor/major)
 ```
 
 The tests are non-existent at the moment, but if they were to exist, you would
