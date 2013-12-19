@@ -13,7 +13,7 @@ const RESERVE_TIMEOUT     = ms('30s');
 
 // Back-off in case of connection error, prevents continously failing to
 // reserve a job.
-const RESERVE_BACKOFF       = ms('30s');
+const RESERVE_BACKOFF     = ms('30s');
 
 // How long before we consider a request failed due to timeout.
 // Should be longer than RESERVE_TIMEOUT.
@@ -357,8 +357,11 @@ class Queue {
   push(job, callback) {
     assert(job, "Missing job to queue");
 
-    let payload = JSON.stringify(job);
-    let promise = this._put.request('put', priority = 0, delay = 0, timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000), payload);
+    let priority  = 0;
+    let delay     = 0;
+    let timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000);
+    let payload   = JSON.stringify(job);
+    let promise   = this._put.request('put', priority, delay, timeToRun, payload);
     if (callback) {
       // Don't pass jobID to callback, easy to use in test before hook, like
       // this:
@@ -405,9 +408,10 @@ class Queue {
       return Q.resolve(false);
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    let session = this._reserve(0);
     let outcome = Q.defer();
-    session.request('reserve_with_timeout', timeout = 0)
+    let session = this._reserve(0);
+    let timeout = 0;
+    session.request('reserve_with_timeout', timeout)
       // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
       .then(
@@ -436,7 +440,8 @@ class Queue {
     }
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    session.request('reserve_with_timeout', timeout = RESERVE_TIMEOUT / 1000)
+    let timeout = RESERVE_TIMEOUT / 1000;
+    session.request('reserve_with_timeout', timeout)
       // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
       // Reserved/ran/deleted job, repeat to next job.
@@ -466,8 +471,9 @@ class Queue {
         // queue.  Since this may be a transient error condition (e.g. server
         // down), we let it sit in the queue for a while before it becomes
         // available again.
-        let delay = (process.env.NODE_ENV == 'test' ? 0 : RELEASE_DELAY);
-        session.request('release', jobID, priority = 0, delay = Math.floor(delay / 1000))
+        let priority = 0;
+        let delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
+        session.request('release', jobID, priority, delay)
           .catch((error)=> this.notify.error(error) );
       });
 
