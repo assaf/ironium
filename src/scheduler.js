@@ -3,7 +3,6 @@
 const _       = require('lodash');
 const assert  = require('assert');
 const CronJob = require('cron');
-const Q       = require('q');
 
 
 // In production we respect the cron schedule set by the application.
@@ -63,7 +62,7 @@ module.exports = class Scheduler {
   once() {
     let cronJobs = _.values(this._cronJobs);
     let promises = cronJobs.map((cronJob)=> cronJob._callbacks[0]() );
-    return Q.all(promises);
+    return Promise.all(promises);
   }
 
   // Runs the named job.  This is used to wrap the actual job function with
@@ -76,21 +75,20 @@ module.exports = class Scheduler {
     if (job.length == 1) {
 
       // Job accepts a callback.
-      let outcome = Q.defer();
-      job(function(error) {
-        if (error)
-          outcome.reject(error);
-        else
-          outcome.resolve();
+      promise = new Promise(function(resolve, reject) {
+        job(function(error) {
+          if (error)
+            reject(error);
+          else
+            resolve();
+        });
       });
-      promise = outcome.promise;
 
     } else {
 
       // Job returns a promise (maybe).
-      promise = job();
-      if (!(promise && promise.then))
-        promise = Q.resolve();
+      let jobPromise = job();
+      promise = (jobPromise && jobPromise.then) ? jobPromise : Promise.resolve();
 
     }
 

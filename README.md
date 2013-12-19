@@ -1,23 +1,35 @@
-**[Ironium](https://github.com/assaf/ironium)** A simple API for working with
-job queues and scheduled jobs, using
+# [Ironium](https://github.com/assaf/ironium)
+
+Job queues and scheduled jobs for Node.js,
 [Beanstalkd](http://kr.github.io/beanstalkd/) and/or
 [Iron.io](http://www.iron.io/).
 
 
 ## The Why
 
-Because you've got workload that you want to run outside the Web app's
-request/respose cycle, and you need job queues and/or scheduling.
+You've got a workload that runs outside the Web app's request/response cycle.
+Some jobs are queued, some are scheduled.  You decided to use Beanstalkd and/or
+Iron.io.  Now you need a simple API to code against, that will handle all the
+run-time intricacies for you.
 
-[Beanstalkd](http://kr.github.io/beanstalkd/) is great for queuing and
-processing jobs.  It's easy to setup (`brew install beanstalkd`), easy to test
-with (at least with [Codeship](http://codeship.io/)), easy to tinker with
-(Memcached-like text protocol), and persistently reliable.
+[Beanstalkd](http://kr.github.io/beanstalkd/) is "a simple, fast work queue".
+It's easy to setup (`brew install beanstalkd` on the Mac), easy to tinker with
+(`telnet localhost 11300`), and persistenly reliable.  And it's available on
+[Codeship](http://codeship.io/), our preferred CI service.
 
-There's also [Iron.io](http://www.iron.io/), a paid service that talks the
-Beanstalkd protocol, so you can run tests against one, production against the
-other.  Iron.io adds a nice management GUI, and can handle
-[Webhooks](http://www.webhooks.org/) Webhooks for you.
+[Iron.io](http://www.iron.io/) is "the Message Queue for the Cloud".  It's a
+managed queue service with a nice UI, an excellent choice for production
+systems.  And can handle much of the [Webhooks](http://www.webhooks.org/)
+workload for you.
+
+The thing is, standalone Beanstalkd is great for development and testing, I just
+don't want to manage a production server.  Iron.io is a wonderful service, but
+you can't use it for development/testing.  Fortunately, they both speak the
+Beanstalkd protocol.
+
+**Ironium** lets you use both services, while taking care of all the pesky
+details, like connection management and restart, timing out failed jobs,
+retries, etc.
 
 
 ## The How

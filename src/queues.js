@@ -3,7 +3,6 @@ const assert            = require('assert');
 const { createDomain }  = require('domain');
 const fivebeans         = require('fivebeans');
 const ms                = require('ms');
-const Q                 = require('q');
 
 
 // How long to wait when reserving a job.  Iron.io terminates connection after
@@ -128,34 +127,25 @@ module.exports = class Server {
     this.notify.debug("Clear all queues");
     let queues    = _.values(this._queues);
     let promises  = queues.map((queue)=> queue.reset());
-    return Q.all(promises);
+    return Promise.all(promises);
   }
 
-  // Use when testing to wait for all jobs to be processed.  Returns a promise. 
+  // Use when testing to wait for all jobs to be processed.  Returns a promise.
   once() {
     this.notify.debug("Process all queued jobs");
     let queues   = _.values(this._queues);
-    let promises = queues.map((queue)=> queue.once());
-    let outcome  = Q.defer();
-
     // Run one job from each queue, resolve to an array with true if queue had
     // processed a job.
-    Q.all(promises)
-      // If any queue has processed a job, run queues.once() again and wait
-      // for it to resolve.
+    let promise  = Promise.all( queues.map((queue)=> queue.once()) );
+    // If any queue has processed a job, run queues.once() again and wait
+    // for it to resolve.
+    promise
       .then((processed)=> {
         let anyProcessed = processed.indexOf(true) >= 0;
         if (anyProcessed)
           return this.once();
-      })
-      // When done runing all jobs, resolve/reject.
-      .then(function() {
-        outcome.resolve();
-      }, function(error) {
-        outcome.reject(error)
       });
-
-    return outcome.promise;
+    return promise;
   }
 
 }
@@ -201,40 +191,42 @@ class Session {
   // handling.  It returns a promise that resolves, depending on the arity of
   // the API response, to either single value or array.
   request(command, ...args) {
-    let outcome = Q.defer();
+    let promise = new Promise((resolve, reject)=> {
 
-    function makeRequest(client) {
-      try {
+      function makeRequest(client) {
+        try {
 
-        // Catch commands that don't complete in time.  If the connection
-        // breaks for any reason, Fivebeans never calls the callback, the only
-        // way we can handle this condition is with a timeout.
-        let requestTimeout = setTimeout(function() {
-          outcome.reject('TIMED_OUT');
-        }, TIMEOUT_REQUEST);
+          // Catch commands that don't complete in time.  If the connection
+          // breaks for any reason, Fivebeans never calls the callback, the only
+          // way we can handle this condition is with a timeout.
+          let requestTimeout = setTimeout(function() {
+            reject('TIMED_OUT');
+          }, TIMEOUT_REQUEST);
 
-        client[command].call(client, ...args, function(error, ...results) {
-          clearTimeout(requestTimeout);
-          if (error)
-            outcome.reject(error);
-          else if (results.length > 1)
-            outcome.resolve(results);
-          else
-            outcome.resolve(results[0]);
-        });
+          client[command].call(client, ...args, function(error, ...results) {
+            clearTimeout(requestTimeout);
+            if (error)
+              reject(error);
+            else if (results.length > 1)
+              resolve(results);
+            else
+              resolve(results[0]);
+          });
 
-      } catch (error) {
-        // e.g. command doesn't exist so client[command] is undefined
-        outcome.reject(error);
+        } catch (error) {
+          // e.g. command doesn't exist so client[command] is undefined
+          reject(error);
+        }
       }
-    }
 
-    // Wait for open connection, then execute the command.
-    this.connect().then(makeRequest, (error)=> {
-      this.promise = null; // will connect again next time
-      outcome.reject(error);
+      // Wait for open connection, then execute the command.
+      this.connect().then(makeRequest, (error)=> {
+        this.promise = null; // will connect again next time
+        reject(error);
+      });
     });
-    return outcome.promise;
+
+    return promise;
   }
 
   // Called to establish a new connection, returns a promise that would resolve
@@ -246,61 +238,63 @@ class Session {
       return this.promise;
 
     // This is the Fivebeans client is essentially a session.
-    let client    = new fivebeans.client(this.config.hostname, this.config.port);
-    let outcome  = Q.defer();
+    let client  = new fivebeans.client(this.config.hostname, this.config.port);
+    let promise = new Promise((resolve, reject)=> {
 
-    // When working with iron.io, need to authenticate each connection before
-    // it can be used.  This is the first setup step, followed by the
-    // session-specific setup.
-    let authenticateAndSetup = ()=> {
-      if (this.config.authenticate) {
-        client.put(0, 0, 0, this.config.authenticate, function(error) {
+      // When working with iron.io, need to authenticate each connection before
+      // it can be used.  This is the first setup step, followed by the
+      // session-specific setup.
+      let authenticateAndSetup = ()=> {
+        if (this.config.authenticate) {
+          client.put(0, 0, 0, this.config.authenticate, function(error) {
+            if (error) {
+              reject(error);
+              client.destroy();
+            } else
+              setupAndResolve();
+          });
+        } else
+          setupAndResolve();
+      }
+
+      // Get/put clients have different setup requirements, this are handled by
+      // an externally supplied method.  Once completed, the promise is resolved.
+      let setupAndResolve = ()=> {
+        this.setup(client, (error)=> {
           if (error) {
-            outcome.reject(error);
+            reject(error);
             client.destroy();
           } else
-            setupAndResolve();
+            resolve(client);
         });
-      } else
-        setupAndResolve();
-    }
+      }
 
-    // Get/put clients have different setup requirements, this are handled by
-    // an externally supplied method.  Once completed, the promise is resolved.
-    let setupAndResolve = ()=> {
-      this.setup(client, (error)=> {
-        if (error) {
-          outcome.reject(error);
-          client.destroy();
-        } else
-          outcome.resolve(client);
-      });
-    }
+      // First listen to the connection events, then attempt to connect.  This
+      // will take us through the authenticate, setup and resolve path.
+      client
+        .on('connect', authenticateAndSetup)
+        .on('error', (error)=> {
+          // Discard this connection
+          this.promise = null; // will connect again next time
+          reject(error);
+          this.notify.error("Client error in queue %s: %s", this.name, error.toString());
+          client.end();
+        })
+        .on('close', ()=> {
+          // Discard this connection
+          this.promise = null; // will connect again next time
+          this.notify.error("Connection closed for %s", this.name);
+          client.end();
+        });
 
-    // First listen to the connection events, then attempt to connect.  This
-    // will take us through the authenticate, setup and resolve path.
-    client
-      .on('connect', authenticateAndSetup)
-      .on('error', (error)=> {
-        // Discard this connection
-        this.promise = null; // will connect again next time
-        outcome.reject(error);
-        this.notify.error("Client error in queue %s: %s", this.name, error.toString());
-        client.end();
-      })
-      .on('close', ()=> {
-        // Discard this connection
-        this.promise = null; // will connect again next time
-        this.notify.error("Connection closed for %s", this.name);
-        client.end();
-      });
+      // Nothing happens until we start the connection.
+      client.connect();
 
-    // Nothing happens until we start the connection.
-    client.connect();
+    });
 
     // Every call to `connect` should be able to access this promise.
-    this.promise = outcome.promise;
-    return this.promise;
+    this.promise = promise;
+    return promise;
   }
 
 }
@@ -405,28 +399,31 @@ class Queue {
   once() {
     assert(!this._processing, "Cannot call once while continuously processing jobs");
     if (!this._handler)
-      return Q.resolve(false);
+      return Promise.resolve(false);
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    let outcome = Q.defer();
-    let session = this._reserve(0);
-    let timeout = 0;
-    session.request('reserve_with_timeout', timeout)
-      // If we reserved a job, this will run the job and delete it.
-      .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
-      .then(
-        function() {
-          // Reserved/ran/deleted job, so resolve to true.
-          outcome.resolve(true);
-        },
-        function(error) {
-          // No job, resolve to false; reject on any other error.
-          if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-            outcome.resolve(false);
-          else
-            outcome.reject(error);
-        });
-    return outcome.promise;
+    let promise = new Promise((resolve, reject)=> {
+
+      let session = this._reserve(0);
+      let timeout = 0;
+      session.request('reserve_with_timeout', timeout)
+        // If we reserved a job, this will run the job and delete it.
+        .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
+        .then(
+          function() {
+            // Reserved/ran/deleted job, so resolve to true.
+            resolve(true);
+          },
+          function(error) {
+            // No job, resolve to false; reject on any other error.
+            if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+              resolve(false);
+            else
+              reject(error);
+          });
+
+    });
+    return promise;
   }
 
   // Called to process all jobs, until this._processing is set to false.
@@ -486,66 +483,62 @@ class Queue {
     // catastrophic outcome: we use a domain to handle that.  It may also
     // never halt, so we set a timer to force early completion.  And, of
     // course, handler may call callback multiple times, because.
-    let outcome = Q.defer();
     let domain  = createDomain();
+    let promise = new Promise((resolve, reject)=> {
 
-    // Uncaught exception in the handler's domain will also reject the
-    // promise.
-    domain.on('error', function(error) {
-      outcome.reject(error);
-    });
+      // Uncaught exception in the handler's domain will also reject the
+      // promise.
+      domain.on('error', reject);
 
-    // This timer trigger if the job doesn't complete in time and rejects
-    // the promise.  Server gets a longer timeout than we do.
-    let errorOnTimeout = setTimeout(function() {
-      outcome.reject(new Error("Timeout processing job " + jobID));
-    }, PROCESSING_TIMEOUT - ms('1s'));
-    domain.add(errorOnTimeout);
+      // This timer trigger if the job doesn't complete in time and rejects
+      // the promise.  Server gets a longer timeout than we do.
+      let errorOnTimeout = setTimeout(function() {
+        reject(new Error("Timeout processing job " + jobID));
+      }, PROCESSING_TIMEOUT - ms('1s'));
+      domain.add(errorOnTimeout);
 
-    // Run the handler within the domain.  We use domain.intercept, so if
-    // function throws exception, calls callback with error, or otherwise
-    // has uncaught exception, it emits an error event.
-    domain.run(()=> {
+      // Run the handler within the domain.  We use domain.intercept, so if
+      // function throws exception, calls callback with error, or otherwise
+      // has uncaught exception, it emits an error event.
+      domain.run(()=> {
 
-      this.notify.info("Picked up job %s from queue %s", jobID, this.name);
-      this.notify.debug("Processing job %s", jobID, payload);
-      // Typically we queue JSON objects, but the payload may be just a
-      // string, e.g. some services send URL encoded name/value pairs, or MIME
-      // messages.
-      let job;
-      try {
-        job = JSON.parse(payload);
-      } catch(ex) {
-        job = payload;
-      }
-      if (this._handler.length == 1) {
-
-        // Single argument, we pass a job and expect a promise, or treat the
-        // outcome as successful.
+        this.notify.info("Picked up job %s from queue %s", jobID, this.name);
+        this.notify.debug("Processing job %s", jobID, payload);
+        // Typically we queue JSON objects, but the payload may be just a
+        // string, e.g. some services send URL encoded name/value pairs, or MIME
+        // messages.
+        let job;
         try {
-          let promise = this._handler(job);
-          if (promise && promise.then) {
-            promise.then(()=> outcome.resolve(),
-                         (error)=> outcome.reject(error));
-          } else
-            outcome.resolve();
-        } catch (error) {
-          outcome.reject(error);
+          job = JSON.parse(payload);
+        } catch(ex) {
+          job = payload;
         }
+        if (this._handler.length == 1) {
 
-      } else {
+          // Single argument, we pass a job and expect a promise, or treat the
+          // outcome as successful.
+          try {
+            let jobPromise = this._handler(job);
+            if (jobPromise && jobPromise.then) {
+              jobPromise.then(resolve, reject);
+            } else
+              resolve();
+          } catch (error) {
+            reject(error);
+          }
 
-        // Multiple arguments.
-        this._handler(job, domain.intercept(function() {
+        } else {
+
+          // Multiple arguments.
           // Successful completion, error taken care of by on('error')
-          outcome.resolve();
-        }));
+          this._handler(job, domain.intercept(resolve));
 
-      }
+        }
+      });
+
     });
 
     // On completion, clear timeout and log.
-    let promise = outcome.promise;
     promise.then(()=> {
       clearTimeout(errorOnTimeout);
       this.notify.info("Completed job %s from queue %s", jobID, this.name);
@@ -563,36 +556,39 @@ class Queue {
     // We're using the _put session (use), the _reserve session (watch) doesn't
     // return any jobs.
     let session = this._put;
-    let outcome = Q.defer();
+    let promise = new Promise(function(resolve, reject) {
 
-    // Delete all ready jobs, then call deleteDelayed.
-    function deleteReady() {
-      session.request('peek_ready')
-        .then(([jobID, payload])=> session.request('destroy', jobID) )
-        .then(deleteReady)
-        .catch((error)=> {
-          if (error == 'NOT_FOUND')
-            deleteDelayed();
-          else
-            outcome.reject(error);
-        });
-    }
+      // Delete all ready jobs, then call deleteDelayed.
+      function deleteReady() {
+        session.request('peek_ready')
+          .then(([jobID, payload])=> session.request('destroy', jobID) )
+          .then(deleteReady)
+          .catch((error)=> {
+            if (error == 'NOT_FOUND')
+              deleteDelayed();
+            else
+              reject(error);
+          });
+      }
 
-    // Delete all delayed job, then resolve promise.
-    function deleteDelayed() {
-      session.request('peek_delayed')
-        .then(([jobID, payload])=> session.request('destroy', jobID) )
-        .then(deleteDelayed)
-        .catch((error)=> {
-          if (error == 'NOT_FOUND')
-            outcome.resolve();
-          else
-            outcome.reject(error);
-        });
-    }
+      // Delete all delayed job, then resolve promise.
+      function deleteDelayed() {
+        session.request('peek_delayed')
+          .then(([jobID, payload])=> session.request('destroy', jobID) )
+          .then(deleteDelayed)
+          .catch((error)=> {
+            if (error == 'NOT_FOUND')
+              resolve();
+            else
+              reject(error);
+          });
+      }
 
-    deleteReady();
-    return outcome.promise;
+      deleteReady();
+
+    });
+
+    return promise;
   }
 
 }

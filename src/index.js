@@ -1,7 +1,6 @@
 const assert            = require('assert');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
-const Q                 = require('q');
 const Queues            = require('./queues');
 const Scheduler         = require('./scheduler');
 
