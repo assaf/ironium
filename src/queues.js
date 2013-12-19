@@ -9,7 +9,7 @@ const Q                 = require('q');
 // How long to wait when reserving a job.  Iron.io terminates connection after
 // 1 minute, so that's the longest we can wait without having to continously
 // reopen connctions.
-const RESERVE_TIMEOUT     = ms('50s');
+const RESERVE_TIMEOUT     = ms('30s');
 
 // How long before we consider a request failed due to timeout.
 // Should be longer than RESERVE_TIMEOUT.
@@ -17,16 +17,16 @@ const TIMEOUT_REQUEST     = RESERVE_TIMEOUT + ms('10s');
 
 // Timeout for processing job before we consider it failed and release it back
 // to the queue.
-const PROCESSING_TIMEOUT  = ms('2m');
+const PROCESSING_TIMEOUT  = ms('10m');
 
 // Delay before a released job is available for pickup again (in seconds).
-// This is our primary mechanism for dealing with back-pressure.  Ignored in
-// test environment.
+// This is our primary mechanism for dealing with load during failures.
+// Ignored in test environment.
 const RELEASE_DELAY       = ms('1m');
 
 // Back-off in case of connection error, prevents continously failing to
 // reserve a job.
-const ERROR_BACKOFF       = ms('30s');
+const RESERVE_BACKOFF       = ms('30s');
 
 
 class Configuration {
@@ -446,7 +446,7 @@ class Queue {
         else {
           // Report on any other error, and back off for a few.
           this.notify.error(error);
-          setTimeout(repeat, ERROR_BACKOFF);
+          setTimeout(repeat, RESERVE_BACKOFF);
         }
       });
   }
