@@ -208,7 +208,9 @@ class Session {
         // Catch commands that don't complete in time.  If the connection
         // breaks for any reason, Fivebeans never calls the callback, the only
         // way we can handle this condition is with a timeout.
-        let requestTimeout = setTimeout(()=> outcome.reject('TIMED_OUT'), TIMEOUT_REQUEST);
+        let requestTimeout = setTimeout(function() {
+          outcome.reject('TIMED_OUT');
+        }, TIMEOUT_REQUEST);
 
         client[command].call(client, ...args, function(error, ...results) {
           clearTimeout(requestTimeout);
@@ -355,7 +357,7 @@ class Queue {
     assert(job, "Missing job to queue");
 
     let payload = JSON.stringify(job);
-    let promise = this._put.request('put', 0, 0, PROCESSING_TIMEOUT / 1000, payload);
+    let promise = this._put.request('put', priority = 0, delay = 0, timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000), payload);
     if (callback) {
       // Don't pass jobID to callback, easy to use in test before hook, like
       // this:
@@ -404,7 +406,7 @@ class Queue {
     this.notify.debug("Waiting for jobs on queue %s", this.name);
     let session = this._reserve(0);
     let outcome = Q.defer();
-    session.request('reserve_with_timeout', 0)
+    session.request('reserve_with_timeout', timeout = 0)
       // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
       .then(
@@ -433,7 +435,7 @@ class Queue {
     }
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    session.request('reserve_with_timeout', RESERVE_TIMEOUT / 1000)
+    session.request('reserve_with_timeout', timeout = RESERVE_TIMEOUT / 1000)
       // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
       // Reserved/ran/deleted job, repeat to next job.
@@ -464,8 +466,8 @@ class Queue {
         // down), we let it sit in the queue for a while before it becomes
         // available again.
         let delay = (process.env.NODE_ENV == 'test' ? 0 : RELEASE_DELAY);
-        session.request('release', jobID, 0, delay / 1000)
-          .catch((error)=> this.notify.error(error.stack) );
+        session.request('release', jobID, priority = 0, delay = Math.floor(delay / 1000))
+          .catch((error)=> this.notify.error(error) );
       });
 
     return promise;
@@ -487,10 +489,10 @@ class Queue {
     });
 
     // This timer trigger if the job doesn't complete in time and rejects
-    // the promise.
+    // the promise.  Server gets a longer timeout than we do.
     let errorOnTimeout = setTimeout(function() {
       outcome.reject(new Error("Timeout processing job"));
-    }, PROCESSING_TIMEOUT);
+    }, PROCESSING_TIMEOUT - ms('1s'));
     domain.add(errorOnTimeout);
 
     // Run the handler within the domain.  We use domain.intercept, so if
