@@ -317,7 +317,7 @@ For example, Mongoose finders return promises, but the save method doesn't, so
 you'll need to write your code like this:
 
 ```
-workers.queue('update-name').each(function* updateName(job) {
+workers.queue('update-name').each(function*(job) {
   // You must call exec() to turn query into a promise
   var customer = yield Customer.findById(job.customerID).exec();
 
@@ -338,7 +338,7 @@ workers.queue('update-name').each(function* updateName(job) {
 Another example:
 
 ```
-workers.queue('echo-file').each(function* writeFile(job) {
+workers.queue('echo-file').each(function*(job) {
   var contents = yield workers.fulfill(function(callback) {
     File.readFile(job.filename, callback);
   });

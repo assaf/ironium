@@ -1,3 +1,8 @@
+# 0.5.2
+
+Using [co](https://github.com/visionmedia/co).
+
+
 # 0.5.1
 
 Added `workers.fulfill` to ease using generators with callbacks.

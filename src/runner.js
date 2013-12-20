@@ -1,4 +1,5 @@
 const assert            = require('assert');
+const co                = require('co');
 const { createDomain }  = require('domain');
 
 
@@ -6,8 +7,8 @@ const { createDomain }  = require('domain');
 // notify  - Notify when job starts and completes, and of any error
 // timeout - Force job to fail if past timeout (optional)
 // fn      - The function to execute
-function runJob({ id, notify, timeout, fn }) {
-  notify.notify("Processing job %s", id);
+module.exports.runJob = function({ id, notify, timeout, fn }) {
+  notify.info("Processing job %s", id);
   // Ideally we call the function, function calls the callback, all is well.
   // But the handler may throw an exception, or suffer some other
   // catastrophic outcome: we use a domain to handle that.  It may also
@@ -46,7 +47,12 @@ function runJob({ id, notify, timeout, fn }) {
           // job.
           result.then(resolve, reject);
         } else if (result.next && result.throw) {
-          resolveWithGenerator(result, resolve, reject);
+          co(result)(function(error) {
+            if (error)
+              reject(error);
+            else
+              resolve();
+          });
         }
       }
 
@@ -67,35 +73,7 @@ function runJob({ id, notify, timeout, fn }) {
 }
 
 
-function resolveWithGenerator(generator, resolve, reject) {
-
-  // Call generator.next().  If we just resolved a promise, then we'll pass that
-  // value to yield.  Repeat until we're done with the generator.
-  function nextFromYield(valueToYield) {
-    try {
-
-      let { value, done } = generator.next(valueToYield);
-      if (done) {
-        resolve();
-      } else if (value && typeof(value.then) == 'function') {
-        // It's a promise! Resolve it and pass result back to generator
-        value.then(nextFromYield, (error)=> generator.throw(error));
-      } else {
-        generator.throw(new Error("Expected yield promise, received " + value));
-      }
-
-    } catch (error) {
-      reject(error);
-    }
-  }
-
-  // Get the party started.
-  nextFromYield();
-
-}
-
-
-function fulfill(...args) {
+module.exports.fulfill = function(...args) {
   let fn;
   if (args.length > 1) {
     let [object, method] = args;
@@ -122,11 +100,5 @@ function fulfill(...args) {
 
   });
   return promise;
-}
-
-
-module.exports = {
-  runJob,
-  fulfill
 }
 
