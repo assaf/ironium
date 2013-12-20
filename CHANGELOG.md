@@ -2,6 +2,9 @@
 
 Allow multiple queue handlers.
 
+Added `workers.push`, `workers.each` and `workers.webhookURL` convenience
+methods.
+
 
 # 0.5.2
 
