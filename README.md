@@ -351,7 +351,7 @@ workers.queue('echo-file').each(function*(job) {
 
 Don't work blind!  There are three events you can listen to:
 
-`error` - Emitted on any error (processing job, connection, etc)
+`error` - Emit errors from failed jobs
 `info`  - Logs job getting processed and successful completion
 `debug` - Way more information, useful for troubleshooting
 

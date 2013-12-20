@@ -277,13 +277,13 @@ class Session {
           // Discard this connection
           this.promise = null; // will connect again next time
           reject(error);
-          this.notify.error("Client error in queue %s: %s", this.name, error.toString());
+          this.notify.info("Client error in queue %s: %s", this.name, error.toString());
           client.end();
         })
         .on('close', ()=> {
           // Discard this connection
           this.promise = null; // will connect again next time
-          this.notify.error("Connection closed for %s", this.name);
+          this.notify.info("Connection closed for %s", this.name);
           client.end();
         });
 
