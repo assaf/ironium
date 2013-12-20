@@ -78,7 +78,6 @@ As you can see from this example, each queue has two interesting methods, `push`
 and `each`.
 
 
-#### push(queue, job, callback?)
 #### queue.push(job, callback?)
 
 Pushes a new job into the queue.  The job is serialized as JSON, so objects,
@@ -101,7 +100,6 @@ queues('echo').push(job, function(error) {
 ```
 
 
-#### each(queue, handler, workers?)
 #### queue.each(handler, workers?)
 
 Processes jobs from the queue. In addition to calling this method, you need to
@@ -165,7 +163,6 @@ This property returns the queue name.
 
 This name does not include the prefix.
 
-#### webhookURL(queue)
 #### queue.webhookURL
 
 This method / property returns the Webhook URL.  Only available when using

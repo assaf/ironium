@@ -32,21 +32,6 @@ class Workers extends EventEmitter {
     return this._queues.getQueue(name);
   }
 
-  // Push job to queue.
-  push(queue, job, callback) {
-    return this.queue(queue).push(job, callback);
-  }
-
-  // Process jobs from queue.
-  each(queue, handler, workers) {
-    this.queue(queue).each(handler, workers);
-  }
-
-  // Webhook URL for the given queue.
-  webhookURL(queue) {
-    return this.queue(queue).webhookURL;
-  }
-
   // Schedules a new job to run periodically/once.
   //
   // name - Job name, used for reporting / monitoring
