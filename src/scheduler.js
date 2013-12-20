@@ -3,6 +3,7 @@
 const _       = require('lodash');
 const assert  = require('assert');
 const CronJob = require('cron');
+const runJob  = require('./runner');
 
 
 // In production we respect the cron schedule set by the application.
@@ -30,7 +31,12 @@ module.exports = class Scheduler {
     assert(!this._cronJobs[name],   "Attempt to schedule multiple jobs with same name (" + name + ")")
 
     let cronTime = this._development ? DEVELOPMENT_CRON_TIME : time;
-    let cronJob  = CronJob.job(cronTime, this._runJob.bind(this, name, job));
+    let jobSpec = {
+      id:     name,
+      notify: this.notify,
+      fn:     job
+    };
+    let cronJob  = CronJob.job(cronTime, runJob.bind(null, jobSpec));
     cronJob.name = name;
     this._cronJobs[name] = cronJob;
 
@@ -69,35 +75,6 @@ module.exports = class Scheduler {
   // logging messages, error notification, and returns a promise that `once()`
   // uses to wait for all scheduled jobs to complete.
   _runJob(name, job) {
-    let promise;
-
-    this.notify.info("Running cronjob %s", name);
-    if (job.length == 1) {
-
-      // Job accepts a callback.
-      promise = new Promise(function(resolve, reject) {
-        job(function(error) {
-          if (error)
-            reject(error);
-          else
-            resolve();
-        });
-      });
-
-    } else {
-
-      // Job returns a promise (maybe).
-      let jobPromise = job();
-      promise = (jobPromise && jobPromise.then) ? jobPromise : Promise.resolve();
-
-    }
-
-    promise.then(()=> {
-      this.notify.info("Completed cronjob %s", name);
-    }, (error)=> {
-      this.notify.error(error);
-    });
-    return promise;
   }
 
 }

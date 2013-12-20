@@ -1,8 +1,8 @@
 const _                 = require('lodash');
 const assert            = require('assert');
-const { createDomain }  = require('domain');
 const fivebeans         = require('fivebeans');
 const ms                = require('ms');
+const runJob            = require('./runner');
 
 
 // How long to wait when reserving a job.  Iron.io terminates connection after
@@ -478,76 +478,23 @@ class Queue {
   }
 
   _runJob(jobID, payload) {
-    // Ideally we call the handler, handler calls the callback, all is well.
-    // But the handler may throw an exception, or suffer some other
-    // catastrophic outcome: we use a domain to handle that.  It may also
-    // never halt, so we set a timer to force early completion.  And, of
-    // course, handler may call callback multiple times, because.
-    let domain  = createDomain();
-    let promise = new Promise((resolve, reject)=> {
-
-      // Uncaught exception in the handler's domain will also reject the
-      // promise.
-      domain.on('error', reject);
-
-      // This timer trigger if the job doesn't complete in time and rejects
-      // the promise.  Server gets a longer timeout than we do.
-      let errorOnTimeout = setTimeout(function() {
-        reject(new Error("Timeout processing job " + jobID));
-      }, PROCESSING_TIMEOUT - ms('1s'));
-      domain.add(errorOnTimeout);
-
-      // Run the handler within the domain.  We use domain.intercept, so if
-      // function throws exception, calls callback with error, or otherwise
-      // has uncaught exception, it emits an error event.
-      domain.run(()=> {
-
-        this.notify.info("Picked up job %s from queue %s", jobID, this.name);
-        this.notify.debug("Processing job %s", jobID, payload);
-        // Typically we queue JSON objects, but the payload may be just a
-        // string, e.g. some services send URL encoded name/value pairs, or MIME
-        // messages.
-        let job;
-        try {
-          job = JSON.parse(payload);
-        } catch(ex) {
-          job = payload;
-        }
-        if (this._handler.length == 1) {
-
-          // Single argument, we pass a job and expect a promise, or treat the
-          // outcome as successful.
-          try {
-            let jobPromise = this._handler(job);
-            if (jobPromise && jobPromise.then) {
-              jobPromise.then(resolve, reject);
-            } else
-              resolve();
-          } catch (error) {
-            reject(error);
-          }
-
-        } else {
-
-          // Multiple arguments.
-          // Successful completion, error taken care of by on('error')
-          this._handler(job, domain.intercept(resolve));
-
-        }
-      });
-
-    });
-
-    // On completion, clear timeout and log.
-    promise.then(()=> {
-      clearTimeout(errorOnTimeout);
-      this.notify.info("Completed job %s from queue %s", jobID, this.name);
-    }, (error)=> {
-      clearTimeout(errorOnTimeout);
-      this.notify.error("Error processing job %s from queue %s: %s", jobID, this.name, error.stack);
-    });
-
-    return promise;
+    let jobSpec = {
+      id:       [this.name, jobID].join(':'),
+      notify:   this.notify,
+      timeout:  PROCESSING_TIMEOUT - ms('1s')
+    };
+    // Typically we queue JSON objects, but the payload may be just a
+    // string, e.g. some services send URL encoded name/value pairs, or MIME
+    // messages.
+    try {
+      let job = JSON.parse(payload);
+      jobSpec.fn = (callback)=> this._handler(job, callback);
+      this.notify.debug("Processing job %s", jobSpec.id, job);
+    } catch(ex) {
+      jobSpec.fn = (callback)=> this._handler(payload, callback);
+      this.notify.debug("Processing job %s", jobSpec.id, payload);
+    }
+    return runJob(jobSpec);
   }
 
 
