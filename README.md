@@ -128,16 +128,20 @@ workers.queue('echo').each(job, callback) {
 Alternatively, the function can return a promise or a generator.  We discuss
 promises and generators later on.
 
-
-You must use either callback or promise to indicate completion, and do so within
-10 minutes.  Jobs that don't complete within that time frame are considered to
-have failed, and returned to the queue.  Timeouts are necessary evil, given that
-jobs may fail to report completion and the halting problem is still NP hard.
+You must use either callback, resolve promise, or return from generator to
+indicate completion, and do so within 10 minutes.  Jobs that don't complete
+within that time frame are considered to have failed, and returned to the queue.
+Timeouts are necessary evil, given that jobs may fail to report completion and
+the halting problem is still NP hard.
 
 If a failed job is returned to the queue, it will go into the 'delayed' state
 and stay there for a few minutes, before it can be picked up again.  This delay
 prevents processing bugs and transient errors (e.g. connection issues) from
 resulting in a DoS attack on your error log.
+
+You can attach multiple handlers to the same queue, and each job will go to all
+the handlers.  If any handler fails to process the job, it will return to the
+queue.
 
 When processing Webhooks, some services send valid JSON object, other services
 send text strings, so be ready to process those as well.  For example, some

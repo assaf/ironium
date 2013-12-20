@@ -1,3 +1,8 @@
+# 0.5.3
+
+Allow multiple queue handlers.
+
+
 # 0.5.2
 
 Using [co](https://github.com/visionmedia/co).

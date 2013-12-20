@@ -32,11 +32,11 @@ module.exports = class Scheduler {
 
     let cronTime = this._development ? DEVELOPMENT_CRON_TIME : time;
     let jobSpec = {
-      id:     name,
-      notify: this.notify,
-      fn:     job
+      id:       name,
+      notify:   this.notify,
+      handlers: [job]
     };
-    let cronJob  = CronJob.job(cronTime, runJob.bind(null, jobSpec));
+    let cronJob  = CronJob.job(cronTime, ()=> runJob(jobSpec));
     cronJob.name = name;
     this._cronJobs[name] = cronJob;
 

@@ -312,7 +312,7 @@ class Queue {
     this._prefixedName  = server.config.prefixedName(name);
 
     this._processing      = false;
-    this._handler         = null;
+    this._handlers        = [];
     this._reserveSessions = [];
   }
 
@@ -369,8 +369,7 @@ class Queue {
   // Process jobs from queue.
   each(handler, workers) {
     assert(typeof handler == 'function', "Called each without a valid handler");
-    assert(!this._handler, "Already set handler for the queue " + this.name);
-    this._handler = handler;
+    this._handlers.push(handler);
     if (workers)
       this._count = workers;
     if (this._processing)
@@ -398,7 +397,7 @@ class Queue {
   // if any job was processed.
   once() {
     assert(!this._processing, "Cannot call once while continuously processing jobs");
-    if (!this._handler)
+    if (!this._handlers.length)
       return Promise.resolve(false);
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
@@ -429,7 +428,7 @@ class Queue {
   // Called to process all jobs, until this._processing is set to false.
   _processContinously(session) {
     // Don't do anything without a handler, stop when processing is false.
-    if (!(this._processing && this._handler))
+    if (!(this._processing && this._handlers.length))
       return;
 
     let repeat = ()=> {
@@ -481,6 +480,7 @@ class Queue {
     let jobSpec = {
       id:       [this.name, jobID].join(':'),
       notify:   this.notify,
+      handlers: this._handlers,
       timeout:  PROCESSING_TIMEOUT - ms('1s')
     };
     // Typically we queue JSON objects, but the payload may be just a
@@ -488,13 +488,12 @@ class Queue {
     // messages.
     try {
       let job = JSON.parse(payload);
-      jobSpec.fn = (callback)=> this._handler(job, callback);
       this.notify.debug("Processing job %s", jobSpec.id, job);
+      return runJob(jobSpec, job);
     } catch(ex) {
-      jobSpec.fn = (callback)=> this._handler(payload, callback);
       this.notify.debug("Processing job %s", jobSpec.id, payload);
+      return runJob(jobSpec, payload);
     }
-    return runJob(jobSpec);
   }
 
 

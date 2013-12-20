@@ -3,65 +3,71 @@ const co                = require('co');
 const { createDomain }  = require('domain');
 
 
-// id      - Job identifier, used for logging and errors
-// notify  - Notify when job starts and completes, and of any error
-// timeout - Force job to fail if past timeout (optional)
-// fn      - The function to execute
-module.exports.runJob = function({ id, notify, timeout, fn }) {
+// id       - Job identifier, used for logging and errors
+// notify   - Notify when job starts and completes, and of any error
+// timeout  - Force job to fail if past timeout (optional)
+// handlers - The functions to execute
+// args     - Arguments to pass to each handler
+module.exports.runJob = function({ id, notify, timeout, handlers }, ...args) {
   notify.info("Processing job %s", id);
   // Ideally we call the function, function calls the callback, all is well.
   // But the handler may throw an exception, or suffer some other
   // catastrophic outcome: we use a domain to handle that.  It may also
   // never halt, so we set a timer to force early completion.  And, of
   // course, handler may call callback multiple times, because.
-  let domain  = createDomain();
+  let domain = createDomain();
+
   let errorOnTimeout;
-  let promise = new Promise(function(resolve, reject) {
+  if (timeout) {
+    // This timer trigger if the job doesn't complete in time and rejects the
+    // promise.  Server gets a longer timeout than we do.
+    errorOnTimeout = setTimeout(function() {
+      domain.emit('error', new Error("Timeout processing job " + id));
+    }, timeout);
+    domain.add(errorOnTimeout);
+  }
 
-    // Uncaught exception in the handler's domain will also reject the promise.
-    domain.on('error', reject);
+  // Each run is a promise, we sequence them.
+  let sequence = handlers.reduce(function(promise, handler) {
+    return promise.then(()=> promiseFromHandler(handler));
+  }, Promise.resolve());
 
-    if (timeout) {
-      // This timer trigger if the job doesn't complete in time and rejects the
-      // promise.  Server gets a longer timeout than we do.
-      errorOnTimeout = setTimeout(function() {
-        reject(new Error("Timeout processing job " + id));
-      }, timeout);
-      domain.add(errorOnTimeout);
-    }
-    
-    
-    // Run the handler within the domain.  We use domain.intercept, so if
-    // function throws exception, calls callback with error, or otherwise
-    // has uncaught exception, it emits an error event.
-    domain.run(function() {
+  function promiseFromHandler(handler) {
+    let promise = new Promise(function(resolve, reject) {
 
-      // Good old callback, let's resolve the job.  Since we intercept it, errors
-      // are handled by on('error'), successful callbacks would resolve the job.
-      let result = fn(domain.intercept(resolve));
+      // Uncaught exception in the handler's domain will also reject the promise.
+      domain.on('error', reject);
+      domain.run(function() {
 
-      // Job may have returned a promise or a generator, let's see …
-      if (result) {
-        if (result.then && result) {
-          // A thenable object == promise, let's use it to resolve/reject this
-          // job.
-          result.then(resolve, reject);
-        } else if (result.next && result.throw) {
-          co(result)(function(error) {
-            if (error)
-              reject(error);
-            else
-              resolve();
-          });
+        // Good old callback, let's resolve the job.  Since we intercept it,
+        // errors are handled by on('error'), successful callbacks would resolve
+        // the job.
+        let result = handler(...args, domain.intercept(resolve));
+
+        // Job may have returned a promise or a generator, let's see …
+        if (result) {
+          if (typeof(result.then) == 'function') {
+            // A thenable object == promise, let's use it to resolve/reject this
+            // job.
+            result.then(resolve, reject);
+          } else {
+            co(result)(function(error) {
+              if (error)
+                reject(error);
+              else
+                resolve();
+            });
+          }
         }
-      }
 
+      });
     });
 
-  });
+    return promise;
+  }
 
   // On completion, clear timeout and log.
-  promise.then(function() {
+  sequence.then(function() {
     clearTimeout(errorOnTimeout);
     notify.info("Completed job %s", id);
   }, function(error) {
@@ -69,7 +75,7 @@ module.exports.runJob = function({ id, notify, timeout, fn }) {
     notify.error("Error processing job %s: %s", id, error.stack);
   });
 
-  return promise;
+  return sequence;
 }
 
 
