@@ -1,3 +1,4 @@
+const assert            = require('assert');
 const { createDomain }  = require('domain');
 
 
@@ -5,8 +6,8 @@ const { createDomain }  = require('domain');
 // notify  - Notify when job starts and completes, and of any error
 // timeout - Force job to fail if past timeout (optional)
 // fn      - The function to execute
-module.exports = function runJob({ id, notify, timeout, fn }) {
-  notify.debug("Processing job %s", id);
+function runJob({ id, notify, timeout, fn }) {
+  notify.notify("Processing job %s", id);
   // Ideally we call the function, function calls the callback, all is well.
   // But the handler may throw an exception, or suffer some other
   // catastrophic outcome: we use a domain to handle that.  It may also
@@ -72,11 +73,17 @@ function resolveWithGenerator(generator, resolve, reject) {
   // value to yield.  Repeat until we're done with the generator.
   function nextFromYield(valueToYield) {
     try {
+
       let { value, done } = generator.next(valueToYield);
-      if (done)
+      if (done) {
         resolve();
-      else
-        nextValue(value);
+      } else if (value && typeof(value.then) == 'function') {
+        // It's a promise! Resolve it and pass result back to generator
+        value.then(nextFromYield, (error)=> generator.throw(error));
+      } else {
+        generator.throw(new Error("Expected yield promise, received " + value));
+      }
+
     } catch (error) {
       reject(error);
     }
@@ -85,44 +92,41 @@ function resolveWithGenerator(generator, resolve, reject) {
   // Get the party started.
   nextFromYield();
 
+}
 
-  // Handle the result of a yield, which can be one of:
-  // - We're done with this generator, resolve this job.
-  // - It's a promise! resolve it and pass the result back to the
-  //   generator.
-  // - Empty yield is our cue to provide a callback.
-  // - Ignore any other value
-  function nextValue(value) {
-    if (value && value.then && value) {
-      // It's a promise! Resolve it and pass result back to generator
-      value.then((resolvedValue)=> nextFromYield(resolvedValue),
-                 (error)=> generator.throw(error));
-    } else if (value === undefined) {
-      // The generator does something like:
-      //    var callback = yield;
-      //    setTimeout(callback, 1000);
-      //
-      // This is the callback function that we pass through yield,
-      // and we do so by calling next, which executes the code that
-      // includes setTimeout.  We're going to wait on the callback to
-      // complete before doing anything with the value provided by
-      // the generator.
-      try {
-        function callback(error) {
-          if (error)
-            generator.throw(error);
-          else
-            nextValue(value, done);
-        }
-        let { value, done } = generator.next(callback);
-      } catch (error) {
+
+function fulfill(...args) {
+  let fn;
+  if (args.length > 1) {
+    let [object, method] = args;
+    if (typeof(method) == 'function')
+      fn = method.bind(object);
+    else
+      fn = object[method].bind(object);
+  } else
+    fn = args[0];
+
+  assert(typeof(fn) == 'function', "Must call callback with a function");
+  let promise = new Promise(function(resolve, reject) {
+
+    function callback(error, value) {
+      if (error)
         reject(error);
-      }
-    } else {
-      // yield noop essentially, useful for waiting for callbacks.
-      nextFromYield();
+      else
+        resolve(value);
     }
-  }
+    // Make sure to call function *after* we returned the promise.
+    setImmediate(function() {
+      fn(callback);
+    })
 
+  });
+  return promise;
+}
+
+
+module.exports = {
+  runJob,
+  fulfill
 }
 

@@ -2,7 +2,7 @@ const _                 = require('lodash');
 const assert            = require('assert');
 const fivebeans         = require('fivebeans');
 const ms                = require('ms');
-const runJob            = require('./runner');
+const { runJob }        = require('./runner');
 
 
 // How long to wait when reserving a job.  Iron.io terminates connection after

@@ -125,24 +125,9 @@ workers.queue('echo').each(job, callback) {
 });
 ```
 
-Alternatively, the function can return a promise, in which case the job is
-discarded when the promise resolved, or returned to the queue if the promise is
-rejected.
+Alternatively, the function can return a promise or a generator.  We discuss
+promises and generators later on.
 
-For example:
-
-```
-workers.queue('delayed-echo').each(job) {
-  var defered = new Promise();
-
-  setTimeout(function() {
-    console.log('Echo', job.message);
-    promise.resolve();
-  }, 5000);
-
-  return promise;
-});
-```
 
 You must use either callback or promise to indicate completion, and do so within
 10 minutes.  Jobs that don't complete within that time frame are considered to
@@ -251,6 +236,20 @@ it("should have run the bar job", function() {
 });
 ```
 
+#### fulfill(fn)
+
+Calls the function with a callback that fulfills a promise, returns that
+promise.
+
+Use this with yield expressions to wrap a function that takes a callback, and
+yield its promise.  For example:
+
+```
+var contents = yield workers.fulfill(function(callback) {
+  File.readFile(filename, callback);
+});
+```
+
 
 #### reset(callback)
 
@@ -265,6 +264,112 @@ For example:
 before(function(done) {
   promise = workers.reset();
   promise.then(done, done);
+});
+```
+
+
+## Using Promises
+
+If you prefer, your jobs can return promises instead of using callbacks.  The
+job is considered complete when the promise resolves, and failed if the promise
+gets rejected.  In the case of queues, the failed job will return to the queue
+and processed again.
+
+For example:
+
+```
+workers.queue('delayed-echo').each(function(job) {
+  var promise = new Promise(function(resolve, reject) {
+
+    console.log('Echo', job.message);
+    resolve();
+
+  });
+  return promise;
+});
+```
+
+## Using Generators
+
+Jobs that have multiple steps can also use generators in combination with
+promises and callback.  At each step the job can yield with a promise, and act
+on the value of that promise.  For example:
+
+```
+workers.queue('update-name').each(function(job) {
+  var customer = yield Customer.findById(job.customerID);
+
+  // At this point customer is set
+  customer.set('firstName', job.firstName);
+  customer.set('lastName',  job.lastName);
+  assert(customer.isModified());
+
+  yield customer.save();
+  // Customer has been saved in the database
+  assert(!customer.isModified());
+});
+```
+
+If you need to use callbacks, you can call `workers.fulfill()` to get a promise,
+and run code with a callback that fulfills that promise.
+
+For example, Mongoose finders return promises, but the save method doesn't, so
+you'll need to write your code like this:
+
+```
+workers.queue('update-name').each(function* updateName(job) {
+  // You must call exec() to turn query into a promise
+  var customer = yield Customer.findById(job.customerID).exec();
+
+  // At this point customer is set
+  customer.set('firstName', job.firstName);
+  customer.set('lastName',  job.lastName);
+  assert(customer.isModified());
+
+  // customer.save needs a callback, yields needs a promise
+  yield workers.fulfill(function(callback) {
+    customer.save(callback);
+  });
+  // Customer has been saved in the database
+  assert(!customer.isModified());
+});
+```
+
+Another example:
+
+```
+workers.queue('echo-file').each(function* writeFile(job) {
+  var contents = yield workers.fulfill(function(callback) {
+    File.readFile(job.filename, callback);
+  });
+  console.log(contents);
+});
+```
+
+
+## Logging
+
+Don't work blind!  There are three events you can listen to:
+
+`error` - Emitted on any error (processing job, connection, etc)
+`info`  - Logs job getting processed and successful completion
+`debug` - Way more information, useful for troubleshooting
+
+For example:
+
+```
+if (process.env.DEBUG)
+  workers.on('debug', function(message) {
+    console.log(message);
+  });
+
+workers.on('info', function(message) {
+  console.log(message);
+});
+
+workers.on('error', function(error) {
+  console.error(error.stack);
+  errorService.notify(error);
 });
 ```
 

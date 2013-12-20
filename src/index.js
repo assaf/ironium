@@ -3,6 +3,7 @@ const { EventEmitter }  = require('events');
 const { format }        = require('util');
 const Queues            = require('./queues');
 const Scheduler         = require('./scheduler');
+const runner            = require('./runner');
 
 
 function returnPromiseOrCallback(promise, callback) {
@@ -57,6 +58,12 @@ class Workers extends EventEmitter {
   stop() {
     this._scheduler.stop();
     this._queues.stop();
+  }
+
+  // Calls the function with a callback that fulfills a promise, returns that
+  // promise.
+  fulfill(...args) {
+    return runner.fulfill(...args);
   }
 
   // Used in testing: run all scheduled jobs once (immediately), run all queued
