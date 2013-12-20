@@ -134,17 +134,25 @@ module.exports = class Server {
   once() {
     this.notify.debug("Process all queued jobs");
     let queues   = _.values(this._queues);
-    // Run one job from each queue, resolve to an array with true if queue had
-    // processed a job.
-    let promise  = Promise.all( queues.map((queue)=> queue.once()) );
-    // If any queue has processed a job, run queues.once() again and wait
-    // for it to resolve.
-    promise
-      .then((processed)=> {
-        let anyProcessed = processed.indexOf(true) >= 0;
-        if (anyProcessed)
-          return this.once();
-      });
+    let promise  = new Promise(function(resolve, reject) {
+
+      function runAllJobsOnce () {
+        // Run one job from each queue, which resolves to an array collecting
+        // which queues ran some job.
+        let all  = Promise.all( queues.map((queue)=> queue.once()) );
+        all.then((processed)=> {
+          // If any queue has processed a job, repeat, otherwise all queues are
+          // empty.
+          let anyProcessed = processed.indexOf(true) >= 0;
+          if (anyProcessed)
+            setImmediate(runAllJobsOnce);
+          else
+            resolve();
+        }, reject);
+      }
+      runAllJobsOnce();
+
+    });
     return promise;
   }
 
@@ -408,18 +416,15 @@ class Queue {
       session.request('reserve_with_timeout', timeout)
         // If we reserved a job, this will run the job and delete it.
         .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
-        .then(
-          function() {
-            // Reserved/ran/deleted job, so resolve to true.
-            resolve(true);
-          },
-          function(error) {
-            // No job, resolve to false; reject on any other error.
-            if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-              resolve(false);
-            else
-              reject(error);
-          });
+        // Reserved/ran/deleted job, so resolve to true.
+        .then(()=> resolve(true),
+              (error)=> {
+                // No job, resolve to false; reject on any other error.
+                if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+                  resolve(false);
+                else
+                  reject(error);
+              });
 
     });
     return promise;
