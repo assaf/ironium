@@ -1,3 +1,13 @@
+# 0.6.0
+
+Removed `workers.push` and `workers.each`, referencing queues is better for
+testing.
+
+Renamed count to width (number of workers used in parallel).
+
+Tests!
+
+
 # 0.5.3
 
 Allow multiple queue handlers.

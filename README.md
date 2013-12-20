@@ -100,7 +100,7 @@ queues('echo').push(job, function(error) {
 ```
 
 
-#### queue.each(handler, workers?)
+#### queue.each(handler, width?)
 
 Processes jobs from the queue. In addition to calling this method, you need to
 either start the workers (see `start` method), or run all queued jobs (see
@@ -415,7 +415,7 @@ The configuration options are:
   project's credentials page)
 * `queues.projectID`  - When using Iron.io, the API project ID (get it from the
   project's credentials page)
-* `queues.workers`    - Number of workers processing each queue (default to 1)
+* `queues.width`      - Number of workers processing each queue (default to 1)
 
 If you're running in development or test environment with a local Beanstalkd
 server, you can use the default configuration, which points to `localhost` port

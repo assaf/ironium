@@ -44,7 +44,7 @@ class Configuration {
         hostname: source.hostname || 'localhost',
         port:     source.port     || 11300,
         prefix:   source.prefix,
-        workers:  source.workers  || 1
+        width:    source.width    || 1
       };
       if (source.token) {
         config.authenticate = 'oauth ' + source.token + ' ' + source.projectID;
@@ -76,8 +76,8 @@ class Configuration {
     return this.config.authenticate;
   }
 
-  get workers() {
-    return this.config.workers;
+  get width() {
+    return this.config.width;
   }
 
   webhookURL(queueName) {
@@ -375,11 +375,11 @@ class Queue {
   }
 
   // Process jobs from queue.
-  each(handler, workers) {
+  each(handler, width) {
     assert(typeof handler == 'function', "Called each without a valid handler");
     this._handlers.push(handler);
-    if (workers)
-      this._count = workers;
+    if (width)
+      this._width = width;
     if (this._processing)
       this.start();
   }
@@ -388,8 +388,7 @@ class Queue {
   // Start processing jobs.
   start() {
     this._processing = true;
-    this._count = this._count || this._server.config.workers || 1;
-    for (let i = 0; i < this._count; ++i) {
+    for (let i = 0; i < this.width; ++i) {
       let session = this._reserve(i);
       this._processContinously(session);
     }
@@ -398,6 +397,11 @@ class Queue {
   // Stop processing jobs.
   stop() {
     this._processing = false;
+  }
+
+  // Number of workers to run in parallel.
+  get width() {
+    return this._width || this._server.config.width || 1;
   }
 
 
@@ -409,9 +413,29 @@ class Queue {
       return Promise.resolve(false);
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    let promise = new Promise((resolve, reject)=> {
-
+    if (this.width == 1) {
+      // Common case, one worker for the queue.
       let session = this._reserve(0);
+      return this._processOnce(session);
+    } else {
+      // But you can also test with multiple concurrent workers.
+      let promises = []
+      for (let i = 0; i < this.width; ++i) {
+        let session = this._reserve(i);
+        promises.push(this._processOnce(session));
+      }
+
+      // The promise should resolve to true if any job (in any worker) get processed.
+      let anyProcessed = Promise.all(promises);
+      anyProcessed.then((processed)=> processed.indexOf(true) >= 0);
+      return anyProcessed;
+    }
+  }
+
+  // Called to process all jobs exactly once.
+  _processOnce(session) {
+    return new Promise((resolve, reject)=> {
+
       let timeout = 0;
       session.request('reserve_with_timeout', timeout)
         // If we reserved a job, this will run the job and delete it.
@@ -427,7 +451,6 @@ class Queue {
               });
 
     });
-    return promise;
   }
 
   // Called to process all jobs, until this._processing is set to false.
