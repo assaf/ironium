@@ -22,7 +22,7 @@ describe("processing", ()=> {
         setTimeout(()=> {
           chain.push('B');
           callback();
-        });
+        }, 10);
       });
     });
 
@@ -47,7 +47,7 @@ describe("processing", ()=> {
         setTimeout(()=> {
           chain.push('B');
           callback();
-        });
+        }, 10);
       }, 2);
     });
 

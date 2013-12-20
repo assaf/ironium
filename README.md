@@ -453,6 +453,5 @@ grunt clean   # Clean compiled files in lib/ directory
 grunt release # Publish new release (also grunt release:minor/major)
 ```
 
-The tests are non-existent at the moment, but if they were to exist, you would
-run them with `npm test` or `mocha`.
+To run the test suite, either `npm test` or individually with `mocha`.
 
