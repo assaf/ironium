@@ -75,7 +75,7 @@ module.exports = function({ id, notify, timeout, handlers }, ...args) {
   }, function(error) {
     clearTimeout(errorOnTimeout);
     notify.info("Error processing job %s: %s", id, error.stack);
-    notify.emit('error', error);
+    throw error;
   });
 
   return sequence;
