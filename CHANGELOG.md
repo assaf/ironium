@@ -1,3 +1,11 @@
+# 0.7.0
+
+Removed `workers.fulfill`, please use
+[thunks](https://github.com/visionmedia/co#thunks-vs-promises) instead.
+
+Minor performance improvement.
+
+
 # 0.6.0
 
 Removed `workers.push` and `workers.each`, referencing queues is better for

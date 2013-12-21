@@ -1,8 +1,8 @@
-const _                 = require('lodash');
-const assert            = require('assert');
-const fivebeans         = require('fivebeans');
-const ms                = require('ms');
-const { runJob }        = require('./runner');
+const _         = require('lodash');
+const assert    = require('assert');
+const fivebeans = require('fivebeans');
+const ms        = require('ms');
+const runJob    = require('./runner');
 
 
 // How long to wait when reserving a job.  Iron.io terminates connection after
@@ -127,7 +127,7 @@ module.exports = class Server {
     this.notify.debug("Clear all queues");
     var queues    = _.values(this._queues);
     var promises  = queues.map((queue)=> queue.reset());
-    return Promise.all(promises);
+    return Promise.all(promises).then(()=> null);
   }
 
   // Use when testing to wait for all jobs to be processed.  Returns a promise.
@@ -416,7 +416,7 @@ class Queue {
     if (this.width == 1) {
       // Common case, one worker for the queue.
       var session = this._reserve(0);
-      return this._processOnce(session);
+      return this._processOnce(session).then();
     } else {
       // But you can also test with multiple concurrent workers.
       var promises = []

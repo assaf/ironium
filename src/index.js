@@ -3,19 +3,6 @@ const { EventEmitter }  = require('events');
 const { format }        = require('util');
 const Queues            = require('./queues');
 const Scheduler         = require('./scheduler');
-const runner            = require('./runner');
-
-
-function returnPromiseOrCallback(promise, callback) {
-  if (callback)
-    promise.then(function() {
-      setImmediate(callback);
-    }, function(error) {
-      callback(error);
-    });
-  else
-    return promise;
-}
 
 
 class Workers extends EventEmitter {
@@ -60,12 +47,6 @@ class Workers extends EventEmitter {
     this._queues.stop();
   }
 
-  // Calls the function with a callback that fulfills a promise, returns that
-  // promise.
-  fulfill(...args) {
-    return runner.fulfill(...args);
-  }
-
   // Used in testing: run all scheduled jobs once (immediately), run all queued
   // jobs, finally call callback.  If called with no arguments, returns a promise.
   once(callback) {
@@ -73,16 +54,20 @@ class Workers extends EventEmitter {
     // queued jobs to completion.
     var promise = this._scheduler.once()
       .then(()=> this._queues.once())
-      .then(()=> {
-        this.debug("Completed all jobs");
-      });
-    return returnPromiseOrCallback(promise, callback);
+      .then(()=> this.debug("Completed all jobs") );
+    if (callback)
+      promise.then(callback, callback);
+    else
+      return promise;
   }
 
   // Used in testing: empties all queues.
   reset(callback) {
-    var promise = this._queues.reset(callback);
-    return returnPromiseOrCallback(promise, callback);
+    var promise = this._queues.reset();
+    if (callback)
+      promise.then(callback, callback);
+    else
+      return promise;
   }
 
   // Used for logging debug messages.

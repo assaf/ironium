@@ -1,9 +1,9 @@
 // Essentially cron for scheduling tasks in Node.
 
-const _           = require('lodash');
-const assert      = require('assert');
-const CronJob     = require('cron');
-const { runJob }  = require('./runner');
+const _       = require('lodash');
+const assert  = require('assert');
+const CronJob = require('cron');
+const runJob  = require('./runner');
 
 
 // In production we respect the cron schedule set by the application.

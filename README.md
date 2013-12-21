@@ -240,21 +240,6 @@ it("should have run the bar job", function() {
 });
 ```
 
-#### fulfill(fn)
-
-Calls the function with a callback that fulfills a promise, returns that
-promise.
-
-Use this with yield expressions to wrap a function that takes a callback, and
-yield its promise.  For example:
-
-```
-var contents = yield workers.fulfill(function(callback) {
-  File.readFile(filename, callback);
-});
-```
-
-
 #### reset(callback)
 
 Use this method when testing.  It will delete all queued jobs.
@@ -314,11 +299,13 @@ workers.queue('update-name').each(function(job) {
 });
 ```
 
-If you need to use callbacks, you can call `workers.fulfill()` to get a promise,
-and run code with a callback that fulfills that promise.
+If you need to use callbacks, you can return a
+[thunk](https://github.com/visionmedia/co#thunks-vs-promises).  A `thunk` is a
+function that receives a callback, but no other arguments.
 
 For example, Mongoose finders return promises, but the save method doesn't, so
 you'll need to write your code like this:
+
 
 ```
 workers.queue('update-name').each(function*(job) {
@@ -331,9 +318,9 @@ workers.queue('update-name').each(function*(job) {
   assert(customer.isModified());
 
   // customer.save needs a callback, yields needs a promise
-  yield workers.fulfill(function(callback) {
+  yield function(callback) {
     customer.save(callback);
-  });
+  };
   // Customer has been saved in the database
   assert(!customer.isModified());
 });
@@ -343,9 +330,9 @@ Another example:
 
 ```
 workers.queue('echo-file').each(function*(job) {
-  var contents = yield workers.fulfill(function(callback) {
+  var contents = yield function(callback) {
     File.readFile(job.filename, callback);
-  });
+  };
   console.log(contents);
 });
 ```
