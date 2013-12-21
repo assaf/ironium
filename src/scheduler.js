@@ -30,13 +30,13 @@ module.exports = class Scheduler {
     assert(job instanceof Function, "Third argument must be the job function");
     assert(!this._cronJobs[name],   "Attempt to schedule multiple jobs with same name (" + name + ")")
 
-    let cronTime = this._development ? DEVELOPMENT_CRON_TIME : time;
-    let jobSpec = {
+    var cronTime = this._development ? DEVELOPMENT_CRON_TIME : time;
+    var jobSpec = {
       id:       name,
       notify:   this.notify,
       handlers: [job]
     };
-    let cronJob  = CronJob.job(cronTime, ()=> runJob(jobSpec));
+    var cronJob  = CronJob.job(cronTime, ()=> runJob(jobSpec));
     cronJob.name = name;
     this._cronJobs[name] = cronJob;
 
@@ -66,15 +66,9 @@ module.exports = class Scheduler {
 
   // Run all schedules jobs in parallel.
   once() {
-    let cronJobs = _.values(this._cronJobs);
-    let promises = cronJobs.map((cronJob)=> cronJob._callbacks[0]() );
+    var cronJobs = _.values(this._cronJobs);
+    var promises = cronJobs.map((cronJob)=> cronJob._callbacks[0]() );
     return Promise.all(promises);
-  }
-
-  // Runs the named job.  This is used to wrap the actual job function with
-  // logging messages, error notification, and returns a promise that `once()`
-  // uses to wait for all scheduled jobs to complete.
-  _runJob(name, job) {
   }
 
 }

@@ -14,11 +14,8 @@ module.exports = function(grunt) {
       sourceMaps:   true
     },
     files: {
-      expand: true,
-      cwd:  'src',
-      src:  '**/*.js',
-      dest: 'lib/',
-      ext:  '.js'
+      src:  'src/**/*.js',
+      dest: 'index.js'
     }
   });
 
@@ -28,7 +25,7 @@ module.exports = function(grunt) {
     options:  { interrupt: true }
   });
 
-  grunt.config('clean', [ 'lib' ]);
+  grunt.config('clean', [ 'index.js' ]);
 
   grunt.config.set('notify.notify_hooks', {
     options: { enabled: true }
@@ -39,7 +36,7 @@ module.exports = function(grunt) {
   });
   
 
-  grunt.registerTask('build', "Compile source files from src/ into lib/ directory",
+  grunt.registerTask('build', "Compile source files from src/ into index.js",
                      [ 'clean', 'traceur', 'notify:build' ]);
   grunt.registerTask('default', "Continously compile source files (build and watch)",
                      [ 'build', 'watch' ]);

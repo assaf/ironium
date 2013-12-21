@@ -35,9 +35,9 @@ class Configuration {
   }
 
   get config() {
-    let config = this._config;
+    var config = this._config;
     if (!config) {
-      let source = this._workers._config && this._workers._config.queues;
+      var source = this._workers._config && this._workers._config.queues;
       if (!source)
         source = (process.env.NODE_ENV == 'test') ? { prefix: 'test-' } : {};
       this._config = config = {
@@ -98,7 +98,7 @@ module.exports = class Server {
   // Returns the named queue, queue created on demand.
   getQueue(name) {
     assert(name, "Missing queue name");
-    let queue = this._queues[name];
+    var queue = this._queues[name];
     if (!queue) {
       queue = new Queue(name, this);
       this._queues[name] = queue;
@@ -125,25 +125,25 @@ module.exports = class Server {
   // Use when testing to empty contents of all queues.  Returns a promise.
   reset() {
     this.notify.debug("Clear all queues");
-    let queues    = _.values(this._queues);
-    let promises  = queues.map((queue)=> queue.reset());
+    var queues    = _.values(this._queues);
+    var promises  = queues.map((queue)=> queue.reset());
     return Promise.all(promises);
   }
 
   // Use when testing to wait for all jobs to be processed.  Returns a promise.
   once() {
     this.notify.debug("Process all queued jobs");
-    let queues   = _.values(this._queues);
-    let promise  = new Promise(function(resolve, reject) {
+    var queues   = _.values(this._queues);
+    var promise  = new Promise(function(resolve, reject) {
 
       function runAllJobsOnce () {
         // Run one job from each queue, which resolves to an array collecting
         // which queues ran some job.
-        let all  = Promise.all( queues.map((queue)=> queue.once()) );
+        var all  = Promise.all( queues.map((queue)=> queue.once()) );
         all.then((processed)=> {
           // If any queue has processed a job, repeat, otherwise all queues are
           // empty.
-          let anyProcessed = processed.indexOf(true) >= 0;
+          var anyProcessed = processed.indexOf(true) >= 0;
           if (anyProcessed)
             setImmediate(runAllJobsOnce);
           else
@@ -199,7 +199,7 @@ class Session {
   // handling.  It returns a promise that resolves, depending on the arity of
   // the API response, to either single value or array.
   request(command, ...args) {
-    let promise = new Promise((resolve, reject)=> {
+    var promise = new Promise((resolve, reject)=> {
 
       function makeRequest(client) {
         try {
@@ -207,7 +207,7 @@ class Session {
           // Catch commands that don't complete in time.  If the connection
           // breaks for any reason, Fivebeans never calls the callback, the only
           // way we can handle this condition is with a timeout.
-          let requestTimeout = setTimeout(function() {
+          var requestTimeout = setTimeout(function() {
             reject('TIMED_OUT');
           }, TIMEOUT_REQUEST);
 
@@ -246,13 +246,13 @@ class Session {
       return this.promise;
 
     // This is the Fivebeans client is essentially a session.
-    let client  = new fivebeans.client(this.config.hostname, this.config.port);
-    let promise = new Promise((resolve, reject)=> {
+    var client  = new fivebeans.client(this.config.hostname, this.config.port);
+    var promise = new Promise((resolve, reject)=> {
 
       // When working with iron.io, need to authenticate each connection before
       // it can be used.  This is the first setup step, followed by the
       // session-specific setup.
-      let authenticateAndSetup = ()=> {
+      var authenticateAndSetup = ()=> {
         if (this.config.authenticate) {
           client.put(0, 0, 0, this.config.authenticate, function(error) {
             if (error) {
@@ -267,7 +267,7 @@ class Session {
 
       // Get/put clients have different setup requirements, this are handled by
       // an externally supplied method.  Once completed, the promise is resolved.
-      let setupAndResolve = ()=> {
+      var setupAndResolve = ()=> {
         this.setup(client, (error)=> {
           if (error) {
             reject(error);
@@ -327,7 +327,7 @@ class Queue {
 
   // Session for storing messages and other manipulations, created lazily
   get _put() {
-    let session = this._putSession;
+    var session = this._putSession;
     if (!session) {
       // Setup: tell Beanstalkd which tube to use (persistent to session).
       session = new Session(this.name, this._server, (client, callback)=> {
@@ -341,7 +341,7 @@ class Queue {
   // Session for processing messages, created lazily.  This sessions is
   // blocked, so all other operations should happen on the _put session.
   _reserve(index) {
-    let session = this._reserveSessions[index];
+    var session = this._reserveSessions[index];
     if (!session) {
       // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
       session = new Session(this.name, this._server, (client, callback)=> {
@@ -359,11 +359,11 @@ class Queue {
   push(job, callback) {
     assert(job, "Missing job to queue");
 
-    let priority  = 0;
-    let delay     = 0;
-    let timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000);
-    let payload   = JSON.stringify(job);
-    let promise   = this._put.request('put', priority, delay, timeToRun, payload);
+    var priority  = 0;
+    var delay     = 0;
+    var timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000);
+    var payload   = JSON.stringify(job);
+    var promise   = this._put.request('put', priority, delay, timeToRun, payload);
     if (callback) {
       // Don't pass jobID to callback, easy to use in test before hook, like
       // this:
@@ -388,8 +388,8 @@ class Queue {
   // Start processing jobs.
   start() {
     this._processing = true;
-    for (let i = 0; i < this.width; ++i) {
-      let session = this._reserve(i);
+    for (var i = 0; i < this.width; ++i) {
+      var session = this._reserve(i);
       this._processContinously(session);
     }
   }
@@ -415,18 +415,18 @@ class Queue {
     this.notify.debug("Waiting for jobs on queue %s", this.name);
     if (this.width == 1) {
       // Common case, one worker for the queue.
-      let session = this._reserve(0);
+      var session = this._reserve(0);
       return this._processOnce(session);
     } else {
       // But you can also test with multiple concurrent workers.
-      let promises = []
-      for (let i = 0; i < this.width; ++i) {
-        let session = this._reserve(i);
+      var promises = []
+      for (var i = 0; i < this.width; ++i) {
+        var session = this._reserve(i);
         promises.push(this._processOnce(session));
       }
 
       // The promise should resolve to true if any job (in any worker) get processed.
-      let anyProcessed = Promise.all(promises);
+      var anyProcessed = Promise.all(promises);
       anyProcessed.then((processed)=> processed.indexOf(true) >= 0);
       return anyProcessed;
     }
@@ -436,7 +436,7 @@ class Queue {
   _processOnce(session) {
     return new Promise((resolve, reject)=> {
 
-      let timeout = 0;
+      var timeout = 0;
       session.request('reserve_with_timeout', timeout)
         // If we reserved a job, this will run the job and delete it.
         .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
@@ -459,12 +459,12 @@ class Queue {
     if (!(this._processing && this._handlers.length))
       return;
 
-    let repeat = ()=> {
+    var repeat = ()=> {
       this._processContinously(session);
     }
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    let timeout = RESERVE_TIMEOUT / 1000;
+    var timeout = RESERVE_TIMEOUT / 1000;
     session.request('reserve_with_timeout', timeout)
       // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
@@ -486,7 +486,7 @@ class Queue {
   // to queue.  Returns a promise.
   _runAndDestroy(session, jobID, payload) {
     // Payload comes in the form of a buffer, need to conver to a string.
-    let promise = this._runJob(jobID, payload.toString());
+    var promise = this._runJob(jobID, payload.toString());
 
     promise.then(
       ()=> session.request('destroy', jobID),
@@ -495,8 +495,8 @@ class Queue {
         // queue.  Since this may be a transient error condition (e.g. server
         // down), we let it sit in the queue for a while before it becomes
         // available again.
-        let priority = 0;
-        let delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
+        var priority = 0;
+        var delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
         session.request('release', jobID, priority, delay)
           .catch((error)=> this.notify.error(error) );
       });
@@ -505,7 +505,7 @@ class Queue {
   }
 
   _runJob(jobID, payload) {
-    let jobSpec = {
+    var jobSpec = {
       id:       [this.name, jobID].join(':'),
       notify:   this.notify,
       handlers: this._handlers,
@@ -515,7 +515,7 @@ class Queue {
     // string, e.g. some services send URL encoded name/value pairs, or MIME
     // messages.
     try {
-      let job = JSON.parse(payload);
+      var job = JSON.parse(payload);
       this.notify.debug("Processing job %s", jobSpec.id, job);
       return runJob(jobSpec, job);
     } catch(ex) {
@@ -529,8 +529,8 @@ class Queue {
   reset() {
     // We're using the _put session (use), the _reserve session (watch) doesn't
     // return any jobs.
-    let session = this._put;
-    let promise = new Promise(function(resolve, reject) {
+    var session = this._put;
+    var promise = new Promise(function(resolve, reject) {
 
       // Delete all ready jobs, then call deleteDelayed.
       function deleteReady() {

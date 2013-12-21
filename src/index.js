@@ -71,7 +71,7 @@ class Workers extends EventEmitter {
   once(callback) {
     // Must run all scheduled jobs first, only then can be run any (resulting)
     // queued jobs to completion.
-    let promise = this._scheduler.once()
+    var promise = this._scheduler.once()
       .then(()=> this._queues.once())
       .then(()=> {
         this.debug("Completed all jobs");
@@ -81,7 +81,7 @@ class Workers extends EventEmitter {
 
   // Used in testing: empties all queues.
   reset(callback) {
-    let promise = this._queues.reset(callback);
+    var promise = this._queues.reset(callback);
     return returnPromiseOrCallback(promise, callback);
   }
 
@@ -101,7 +101,7 @@ class Workers extends EventEmitter {
     if (messageOrError instanceof Error)
       this.emit('error', messageOrError);
     else {
-      let message = format(messageOrError, ...args);
+      var message = format(messageOrError, ...args);
       this.emit('error', new Error(message));
     }
   }
