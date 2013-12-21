@@ -94,5 +94,6 @@ describe("processing", ()=> {
 
   });
 
+  after((done)=> workers.reset(done));
 });
 

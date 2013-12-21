@@ -111,4 +111,6 @@ describe("queue", ()=> {
     after(()=> processed.length = 0);
   });
 
+
+  after((done)=> workers.reset(done));
 });
