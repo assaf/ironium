@@ -8,7 +8,7 @@
   "engines": {
     "node": "0.10.x"
   },
-  "main": "index",
+  "main": "lib/index",
   "dependencies": {
     "cron": "1.0.1",
     "fivebeans": "1.1.0",

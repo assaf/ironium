@@ -10,12 +10,14 @@ module.exports = function(grunt) {
   grunt.config('traceur', {
     options: {
       blockBinding: true,
-      modules:      true,
+      modules:      false,
       sourceMaps:   true
     },
     files: {
-      src:  'src/**/*.js',
-      dest: 'index.js'
+      cwd:    'src',
+      src:    '**/*.js',
+      dest:   'lib/',
+      expand: true
     }
   });
 
@@ -25,7 +27,7 @@ module.exports = function(grunt) {
     options:  { interrupt: true }
   });
 
-  grunt.config('clean', [ 'index.js' ]);
+  grunt.config('clean', [ 'lib' ]);
 
   grunt.config.set('notify.notify_hooks', {
     options: { enabled: true }
