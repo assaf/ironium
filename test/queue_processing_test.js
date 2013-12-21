@@ -1,6 +1,7 @@
-const assert  = require('assert');
-const Helpers = require('./helpers');
-const workers = require('../src');
+const assert      = require('assert');
+const Helpers     = require('./helpers');
+const { Promise } = require('es6-promise');
+const workers     = require('../src');
 
 
 describe("processing", ()=> {

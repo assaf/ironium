@@ -1,3 +1,9 @@
+# 0.7.1
+
+Use [monolithed/ECMAScript-6](https://github.com/monolithed/ECMAScript-6) to
+implement promises.
+
+
 # 0.7.0
 
 Removed `workers.fulfill`, please use

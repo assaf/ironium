@@ -6,6 +6,9 @@ Traceur.require.makeDefault(function(filename) {
 });
 
 // Required to support let/const
-Traceur.options.blockBinding = true;
-Traceur.options.generators = true;
+Traceur.options.blockBinding  = true;
+Traceur.options.generators    = true;
 
+// Disable Traceur's global promise, available in test environment but not
+// necessarily in application.  This makes sure we always use the polyfill.
+global.Promise = null;
