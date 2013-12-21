@@ -16,18 +16,18 @@ describe("processing", ()=> {
   describe("with multiple handlers", ()=> {
 
     // Count how many steps run
-    let steps = 0;
+    let steps = [];
     before(()=> {
       processMultiple.each((job, callback)=> {
-        steps++;
+        steps.push('A');
         callback();
       });
       processMultiple.each((job, callback)=> {
-        steps++;
+        steps.push('B');
         callback();
       });
       processMultiple.each((job, callback)=> {
-        steps++;
+        steps.push('C');
         callback();
       });
     });
@@ -36,7 +36,7 @@ describe("processing", ()=> {
     before((done)=> workers.once(done));
 
     it("should run all steps", ()=> {
-      assert.equal(steps, 3);
+      assert.equal(steps.join(''), 'ABC');
     });
 
   });
@@ -45,16 +45,14 @@ describe("processing", ()=> {
   describe("with promises", ()=> {
 
     // Count how many steps run
-    let steps = 0;
+    let steps = [];
     before(()=> {
       processPromise.each((job)=> {
-        let promise = new Promise((resolve, reject)=> {
-          setTimeout(resolve, 10);
-        });
+        let promise = new Promise(setImmediate);
         promise
-          .then(()=> steps++)
-          .then(()=> steps++)
-          .then(()=> steps++);
+          .then(()=> steps.push('A'))
+          .then(()=> steps.push('B'))
+          .then(()=> steps.push('C'));
         return promise;
       });
     });
@@ -63,7 +61,7 @@ describe("processing", ()=> {
     before((done)=> workers.once(done));
 
     it("should run all steps", ()=> {
-      assert.equal(steps, 3);
+      assert.equal(steps.join(''), 'ABC');
     });
 
   });
@@ -72,14 +70,18 @@ describe("processing", ()=> {
   describe("with generator", ()=> {
 
     // Count how many steps run
-    let steps = 0;
+    let steps = [];
     before(()=> {
       processGenerator.each(function*(job) {
-        steps++;
-        yield Promise.resolve();
-        steps++;
-        yield (done)=> done();
-        steps++;
+        var one = yield Promise.resolve('A');
+        steps.push(one);
+        var two = yield (done)=> done(null, 'B');
+        steps.push(two);
+        var three = yield* function*() {
+          yield setImmediate;
+          return 'C';
+        }();
+        steps.push(three);
       });
     });
 
@@ -87,7 +89,7 @@ describe("processing", ()=> {
     before((done)=> workers.once(done));
 
     it("should run all steps", ()=> {
-      assert.equal(steps, 3);
+      assert.equal(steps.join(''), 'ABC');
     });
 
   });
