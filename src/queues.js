@@ -129,27 +129,26 @@ module.exports = class Server {
     var promises = Object.keys(this._queues)
       .map((name)=> this._queues[name])
       .map((queue)=> queue.reset());
+    // So you can do before((done)=> workers.reset(done))
+    // Otherwise, all resolves to an array, Mocha complains.
     return Promise.all(promises).then(()=> undefined);
   }
 
   // Use when testing to wait for all jobs to be processed.  Returns a promise.
   once() {
-    this.notify.debug("Process all queued jobs");
-    var queues = Object.keys(this._queues)
-      .map((name)=> this._queues[name]);
+    var promises = Object.keys(this._queues)
+      .map((name)=> this._queues[name])
+      .map((queue)=> queue.once());
 
-    function runAllJobsOnce() {
-      var promises = queues.map((queue)=> queue.once());
-      var runOnce = Promise.all(promises);
-      return runOnce.then((processed)=> {
+    var finalRun = Promise.all(promises)
+      .then((processed)=> {
         // If any queue has processed a job, repeat, otherwise all queues are
         // empty.
         var anyProcessed = processed.indexOf(true) >= 0;
         if (anyProcessed)
-          return runAllJobsOnce();
+          return this.once();
       });
-    }
-    return runAllJobsOnce();
+    return finalRun;
   }
 
 }
@@ -196,7 +195,7 @@ class Session {
   // the API response, to either single value or array.
   request(command, ...args) {
     var connection = this.connect();
-    var response = new Promise(function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
       // Wait for connection, need open client to send request.
       connection.then(function(client) {
 
@@ -219,7 +218,6 @@ class Session {
 
       }, reject);
     });
-    return response;
   }
 
   // Called to establish a new connection, returns a promise that would resolve
@@ -424,14 +422,15 @@ class Queue {
       // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
       // Reserved/ran/deleted job, so resolve to true.
-      .then(()=> true)
-      .catch((error)=> {
-        // No job, resolve to false; reject on any other error.
-        if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-          return false;
-        else
-          throw error;
-      });
+      .then(
+        ()=> true,
+        (error)=> {
+          // No job, resolve to false; reject on any other error.
+          if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+            return false;
+          else
+            throw error;
+        });
   }
 
   // Called to process all jobs, until this._processing is set to false.
@@ -470,7 +469,6 @@ class Queue {
     // Payload comes in the form of a buffer, need to conver to a string.
     var runningJob = this._runJob(jobID, payload.toString());
     return runningJob.then(
-
       ()=> session.request('destroy', jobID),
       (error)=> {
         // Promise rejected (error or timeout); we release the job back to the
@@ -480,6 +478,7 @@ class Queue {
         var priority = 0;
         var delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
         session.request('release', jobID, priority, delay);
+        throw error;
       });
   }
 
