@@ -1,8 +1,9 @@
 // Essentially cron for scheduling tasks in Node.
 
-const assert  = require('assert');
-const CronJob = require('cron');
-const runJob  = require('./runner');
+const assert      = require('assert');
+const CronJob     = require('cron');
+const { Promise } = require('es6-promise');
+const runJob      = require('./run_job');
 
 
 // In production we respect the cron schedule set by the application.

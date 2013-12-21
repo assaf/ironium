@@ -1,6 +1,7 @@
 const assert            = require('assert');
 const co                = require('co');
 const { createDomain }  = require('domain');
+const { Promise }       = require('es6-promise');
 
 
 // id       - Job identifier, used for logging and errors

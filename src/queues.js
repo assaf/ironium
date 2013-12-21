@@ -1,7 +1,8 @@
-const assert    = require('assert');
-const fivebeans = require('fivebeans');
-const ms        = require('ms');
-const runJob    = require('./runner');
+const assert      = require('assert');
+const fivebeans   = require('fivebeans');
+const ms          = require('ms');
+const { Promise } = require('es6-promise');
+const runJob      = require('./run_job');
 
 
 // How long to wait when reserving a job.  Iron.io terminates connection after
