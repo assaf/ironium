@@ -1,4 +1,3 @@
-const assert            = require('assert');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
 const Queues            = require('./queues');
@@ -71,24 +70,13 @@ class Workers extends EventEmitter {
   }
 
   // Used for logging debug messages.
-  debug(message, ...args) {
-    this.emit('debug', format(message, ...args));
+  debug(...args) {
+    this.emit('debug', format(...args));
   }
 
   // Used for logging info messages.
-  info(message, ...args) {
-    this.emit('info', format(message, ...args));
-  }
-
-  // Used for reporting errors.  First argument may be an error or formatting
-  // string.
-  error(messageOrError, ...args) {
-    if (messageOrError instanceof Error)
-      this.emit('error', messageOrError);
-    else {
-      var message = format(messageOrError, ...args);
-      this.emit('error', new Error(message));
-    }
+  info(...args) {
+    this.emit('info', format(...args));
   }
 }
 

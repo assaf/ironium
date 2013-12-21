@@ -47,10 +47,11 @@ module.exports = function({ id, notify, timeout, handlers }, ...args) {
         // Job may have returned a promise or a generator, var's see …
         if (result) {
           if (typeof(result.then) == 'function') {
-            // A thenable object == promise, var's use it to resolve/reject this
-            // job.
+            // A thenable object == promise.  Use it to resolve job instead of
+            // callback.
             result.then(resolve, reject);
-          } else {
+          } else if (typeof(result.next) == 'function') {
+            // A generator.  Use it to resolve job instead of callback.
             co(result)(function(error) {
               if (error)
                 reject(error);
@@ -72,7 +73,8 @@ module.exports = function({ id, notify, timeout, handlers }, ...args) {
     notify.info("Completed job %s", id);
   }, function(error) {
     clearTimeout(errorOnTimeout);
-    notify.error("Error processing job %s: %s", id, error.stack);
+    notify.info("Error processing job %s: %s", id, error.stack);
+    notify.emit('error', error);
   });
 
   return sequence;

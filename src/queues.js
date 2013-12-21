@@ -28,7 +28,6 @@ const PROCESSING_TIMEOUT  = ms('10m');
 const RELEASE_DELAY       = ms('1m');
 
 
-
 class Configuration {
   constructor(workers) {
     this._workers = workers;
@@ -109,51 +108,48 @@ module.exports = class Server {
   // Starts processing jobs from all queues.
   start() {
     this.notify.debug("Start all queues");
-    _.values(this._queues).forEach(function(queue) {
+    for (var name in this._queues) {
+      var queue = this._queues[name];
       queue.start();
-    });
+    }
   }
 
   // Stops processing jobs from all queues.
   stop(callback) {
     this.notify.debug("Stop all queues");
-    _.values(this._queues).forEach(function(queue) {
+    for (var name in this._queues) {
+      var queue = this._queues[name];
       queue.stop();
-    });
+    }
   }
 
   // Use when testing to empty contents of all queues.  Returns a promise.
   reset() {
     this.notify.debug("Clear all queues");
-    var queues    = _.values(this._queues);
-    var promises  = queues.map((queue)=> queue.reset());
-    return Promise.all(promises).then(()=> null);
+    var promises = Object.keys(this._queues)
+      .map((name)=> this._queues[name])
+      .map((queue)=> queue.reset());
+    return Promise.all(promises).then(()=> undefined);
   }
 
   // Use when testing to wait for all jobs to be processed.  Returns a promise.
   once() {
     this.notify.debug("Process all queued jobs");
-    var queues   = _.values(this._queues);
-    var promise  = new Promise(function(resolve, reject) {
+    var queues = Object.keys(this._queues)
+      .map((name)=> this._queues[name]);
 
-      function runAllJobsOnce () {
-        // Run one job from each queue, which resolves to an array collecting
-        // which queues ran some job.
-        var all  = Promise.all( queues.map((queue)=> queue.once()) );
-        all.then((processed)=> {
-          // If any queue has processed a job, repeat, otherwise all queues are
-          // empty.
-          var anyProcessed = processed.indexOf(true) >= 0;
-          if (anyProcessed)
-            setImmediate(runAllJobsOnce);
-          else
-            resolve();
-        }, reject);
-      }
-      runAllJobsOnce();
-
-    });
-    return promise;
+    function runAllJobsOnce() {
+      var promises = queues.map((queue)=> queue.once());
+      var runOnce = Promise.all(promises);
+      return runOnce.then((processed)=> {
+        // If any queue has processed a job, repeat, otherwise all queues are
+        // empty.
+        var anyProcessed = processed.indexOf(true) >= 0;
+        if (anyProcessed)
+          return runAllJobsOnce();
+      });
+    }
+    return runAllJobsOnce();
   }
 
 }
@@ -199,42 +195,31 @@ class Session {
   // handling.  It returns a promise that resolves, depending on the arity of
   // the API response, to either single value or array.
   request(command, ...args) {
-    var promise = new Promise((resolve, reject)=> {
+    var connection = this.connect();
+    var response = new Promise(function(resolve, reject) {
+      // Wait for connection, need open client to send request.
+      connection.then(function(client) {
 
-      function makeRequest(client) {
-        try {
+        // Catch commands that don't complete in time.  If the connection
+        // breaks for any reason, Fivebeans never calls the callback, the only
+        // way we can handle this condition is with a timeout.
+        var requestTimeout = setTimeout(function() {
+          reject('TIMED_OUT');
+        }, TIMEOUT_REQUEST);
 
-          // Catch commands that don't complete in time.  If the connection
-          // breaks for any reason, Fivebeans never calls the callback, the only
-          // way we can handle this condition is with a timeout.
-          var requestTimeout = setTimeout(function() {
-            reject('TIMED_OUT');
-          }, TIMEOUT_REQUEST);
+        client[command].call(client, ...args, function(error, ...results) {
+          clearTimeout(requestTimeout);
+          if (error)
+            reject(error);
+          else if (results.length > 1)
+            resolve(results);
+          else
+            resolve(results[0]);
+        });
 
-          client[command].call(client, ...args, function(error, ...results) {
-            clearTimeout(requestTimeout);
-            if (error)
-              reject(error);
-            else if (results.length > 1)
-              resolve(results);
-            else
-              resolve(results[0]);
-          });
-
-        } catch (error) {
-          // e.g. command doesn't exist so client[command] is undefined
-          reject(error);
-        }
-      }
-
-      // Wait for open connection, then execute the command.
-      this.connect().then(makeRequest, (error)=> {
-        this.promise = null; // will connect again next time
-        reject(error);
-      });
+      }, reject);
     });
-
-    return promise;
+    return response;
   }
 
   // Called to establish a new connection, returns a promise that would resolve
@@ -255,10 +240,9 @@ class Session {
       var authenticateAndSetup = ()=> {
         if (this.config.authenticate) {
           client.put(0, 0, 0, this.config.authenticate, function(error) {
-            if (error) {
-              reject(error);
-              client.destroy();
-            } else
+            if (error)
+              client.emit('error', error);
+            else
               setupAndResolve();
           });
         } else
@@ -269,10 +253,9 @@ class Session {
       // an externally supplied method.  Once completed, the promise is resolved.
       var setupAndResolve = ()=> {
         this.setup(client, (error)=> {
-          if (error) {
-            reject(error);
-            client.destroy();
-          } else
+          if (error)
+            client.emit('error', error);
+          else
             resolve(client);
         });
       }
@@ -291,6 +274,7 @@ class Session {
         .on('close', ()=> {
           // Discard this connection
           this.promise = null; // will connect again next time
+          reject(error);
           this.notify.info("Connection closed for %s", this.name);
           client.end();
         });
@@ -321,6 +305,7 @@ class Queue {
 
     this._processing      = false;
     this._handlers        = [];
+    this._putSession      = null;
     this._reserveSessions = [];
   }
 
@@ -368,8 +353,7 @@ class Queue {
       // Don't pass jobID to callback, easy to use in test before hook, like
       // this:
       //   before((done)=> queue.put(MESSAGE, done));
-      promise.then(()=> setImmediate(callback),
-                   (error)=> callback(error));
+      promise.then(()=> callback(), callback);
     } else
       return promise;
   }
@@ -416,7 +400,7 @@ class Queue {
     if (this.width == 1) {
       // Common case, one worker for the queue.
       var session = this._reserve(0);
-      return this._processOnce(session).then();
+      return this._processOnce(session);
     } else {
       // But you can also test with multiple concurrent workers.
       var promises = []
@@ -426,31 +410,28 @@ class Queue {
       }
 
       // The promise should resolve to true if any job (in any worker) get processed.
-      var anyProcessed = Promise.all(promises);
-      anyProcessed.then((processed)=> processed.indexOf(true) >= 0);
+      var anyProcessed = Promise.all(promises)
+        .then((processed)=> processed.indexOf(true) >= 0);
       return anyProcessed;
     }
   }
 
   // Called to process all jobs exactly once.
   _processOnce(session) {
-    return new Promise((resolve, reject)=> {
-
-      var timeout = 0;
-      session.request('reserve_with_timeout', timeout)
-        // If we reserved a job, this will run the job and delete it.
-        .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
-        // Reserved/ran/deleted job, so resolve to true.
-        .then(()=> resolve(true),
-              (error)=> {
-                // No job, resolve to false; reject on any other error.
-                if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-                  resolve(false);
-                else
-                  reject(error);
-              });
-
-    });
+    var timeout = 0;
+    var reserve = session.request('reserve_with_timeout', timeout);
+    return reserve
+      // If we reserved a job, this will run the job and delete it.
+      .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
+      // Reserved/ran/deleted job, so resolve to true.
+      .then(()=> true)
+      .catch((error)=> {
+        // No job, resolve to false; reject on any other error.
+        if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+          return false;
+        else
+          throw error;
+      });
   }
 
   // Called to process all jobs, until this._processing is set to false.
@@ -459,23 +440,24 @@ class Queue {
     if (!(this._processing && this._handlers.length))
       return;
 
-    var repeat = ()=> {
-      this._processContinously(session);
-    }
+    var repeat = this._processContinously.bind(this, session);
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
     var timeout = RESERVE_TIMEOUT / 1000;
-    session.request('reserve_with_timeout', timeout)
+    var reserve = session.request('reserve_with_timeout', timeout);
+
+    reserve 
       // If we reserved a job, this will run the job and delete it.
       .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
       // Reserved/ran/deleted job, repeat to next job.
-      .then(repeat, (error)=> {
+      .then(()=> setImmediate(repeat))
+      .catch((error)=> {
         // No job, go back to wait for next job.
-        if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+        if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT')) {
           setImmediate(repeat);
-        else {
+        } else {
           // Report on any other error, and back off for a few.
-          this.notify.error(error);
+          this.notify.emit('error', error);
           setTimeout(repeat, RESERVE_BACKOFF);
         }
       });
@@ -486,9 +468,9 @@ class Queue {
   // to queue.  Returns a promise.
   _runAndDestroy(session, jobID, payload) {
     // Payload comes in the form of a buffer, need to conver to a string.
-    var promise = this._runJob(jobID, payload.toString());
+    var runningJob = this._runJob(jobID, payload.toString());
+    return runningJob.then(
 
-    promise.then(
       ()=> session.request('destroy', jobID),
       (error)=> {
         // Promise rejected (error or timeout); we release the job back to the
@@ -497,11 +479,8 @@ class Queue {
         // available again.
         var priority = 0;
         var delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
-        session.request('release', jobID, priority, delay)
-          .catch((error)=> this.notify.error(error) );
+        session.request('release', jobID, priority, delay);
       });
-
-    return promise;
   }
 
   _runJob(jobID, payload) {
@@ -533,32 +512,30 @@ class Queue {
     var promise = new Promise(function(resolve, reject) {
 
       // Delete all ready jobs, then call deleteDelayed.
-      function deleteReady() {
+      function deleteReadyJob() {
         session.request('peek_ready')
           .then(([jobID, payload])=> session.request('destroy', jobID) )
-          .then(deleteReady)
-          .catch((error)=> {
+          .then(deleteReadyJob, (error)=> {
             if (error == 'NOT_FOUND')
-              deleteDelayed();
+              deleteDelayedJob();
             else
               reject(error);
           });
       }
 
       // Delete all delayed job, then resolve promise.
-      function deleteDelayed() {
+      function deleteDelayedJob() {
         session.request('peek_delayed')
           .then(([jobID, payload])=> session.request('destroy', jobID) )
-          .then(deleteDelayed)
-          .catch((error)=> {
+          .then(deleteDelayedJob, (error)=> {
             if (error == 'NOT_FOUND')
-              resolve();
+              resolve(); // And we're done
             else
               reject(error);
           });
       }
 
-      deleteReady();
+      deleteReadyJob();
 
     });
 
