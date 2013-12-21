@@ -1,4 +1,3 @@
-const _         = require('lodash');
 const assert    = require('assert');
 const fivebeans = require('fivebeans');
 const ms        = require('ms');

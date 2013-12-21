@@ -422,10 +422,6 @@ Ironium is written in ECMAScript 6, because future.  Specifically you'll notice
 that `let` and `const` replaced all usage of `var`, class definitions are
 easier to read in the new syntax, and fat arrows (`=>`) replace `that = this`.
 
-However, the code doesn't depend on any of the new ES6 libraries (`Map`, `find`,
-etc), since these can only be added to the global namespace, which would be bad,
-bad, bad.  We use [lodash](http://lodash.com/) instead.
-
 The ES6 source lives in `src` and gets compiled into ES5 legacy in `index.js`.
 And [Grunt](http://gruntjs.com/) because it has good support for watched
 compiling and OS X notifying.
