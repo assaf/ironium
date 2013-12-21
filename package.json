@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "scripts": {
     "test": "./node_modules/.bin/mocha",
     "prepublish": "npm test && grunt build"
