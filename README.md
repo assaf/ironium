@@ -17,8 +17,7 @@ run-time intricacies for you.
 
 [Beanstalkd](http://kr.github.io/beanstalkd/) is "a simple, fast work queue".
 It's easy to setup (`brew install beanstalkd` on the Mac), easy to tinker with
-(`telnet localhost 11300`), and persistenly reliable.  And it's available on
-[Codeship](http://codeship.io/), our preferred CI service.
+(`telnet localhost 11300`), and persistenly reliable.
 
 [Iron.io](http://www.iron.io/) is "the Message Queue for the Cloud".  It's a
 managed queue service with a nice UI, an excellent choice for production
@@ -434,6 +433,18 @@ set the hostname and port number.
 If you're running in production against an [Iron.io](https://hud.iron.io/)
 server, you will need to set the hostname to `"mq-aws-us-east-1.iron.io"`, and
 set the `token` and `projectID` based on the Iron.io project's credentials.
+
+
+## Test Environment
+
+The default test configuration (`NODE_ENV == 'test'`) connects to Beanstalkd on
+localhost, and prefixes all queue names with `test-`, so they don't conflict
+with any queues used during development.
+
+[Codeship](http://codeship.io/) has Beanstalkd installed on test servers, if
+using [Travis-CI](https://travis-ci.org), you will need to install if
+specifically, see out [`.travis.yml`]().
+
 
 
 ## Contributing
