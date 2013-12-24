@@ -5,8 +5,7 @@ node_js:
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq beanstalkd
-  - sudo echo "START=yes" >> /etc/default/beanstalkd
-  - sudo service beanstalkd restart
+  - sudo service beanstalkd start
 notifications:
   email:
     on_success: always
