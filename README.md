@@ -440,6 +440,7 @@ grunt clean   # Clean compiled files
 grunt release # Publish new release (also grunt release:minor/major)
 ```
 
-You can run the entire test suite with `npm test` (Travis does this), or
-specific files/tests with [Mocha](http://visionmedia.github.io/mocha/).
+You can run the entire test suite with `npm test`
+([Travis](https://travis-ci.org/assaf/ironium) runs this), or specific
+files/tests with [Mocha](http://visionmedia.github.io/mocha/).
 
