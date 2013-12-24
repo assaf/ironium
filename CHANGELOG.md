@@ -1,3 +1,8 @@
+# 0.7.2
+
+Fixed: need Error object when reporting connection closed
+
+
 # 0.7.1
 
 Use [monolithed/ECMAScript-6](https://github.com/monolithed/ECMAScript-6) to

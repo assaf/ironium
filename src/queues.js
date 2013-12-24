@@ -272,7 +272,7 @@ class Session {
         .on('close', ()=> {
           // Discard this connection
           this.promise = null; // will connect again next time
-          reject(error);
+          reject(new Error("Connection closed"));
           this.notify.info("Connection closed for %s", this.name);
           client.end();
         });
