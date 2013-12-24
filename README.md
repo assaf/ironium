@@ -8,9 +8,6 @@ Job queues and scheduled jobs for Node.js,
 status](https://travis-ci.org/assaf/ironium.png)](https://travis-ci.org/assaf/ironium)
 
 
-* [Contributing](#contributing)
-
-
 ## The Why
 
 You've got a workload that runs outside the Web app's request/response cycle.
@@ -37,8 +34,26 @@ Beanstalkd protocol.
 details, like connection management and restart, timing out failed jobs,
 retries, etc.
 
+* [API](#api)
+  * [queue(name)](#queuename)
+  * [queue.push(job, callback)](#queuepushjob-callback)
+  * [queue.each(handler)](#queueeachhandler)
+  * [queue.name](#queuename)
+  * [queue.webhookURL](#queuewebhookurl)
+  * [schedule(name, time, job)](#schedulename-time-job)
+  * [configure(object)](#configureobject)
+  * [start()](#start)
+  * [stop()](#stop)
+  * [once(callback)](#oncecallback)
+  * [reset(callback)](#resetcallback)
+* [Using Promises](#using-promises)
+* [Using Generators](#using-generators)
+* [Logging](#logging)
+* [Configuring](#configuring)
+* [Contributing](#contributing)
 
-## The How
+
+## API
 
 Ironium has a simple API with three primary methods:
 - `push` to push a job into a queue
@@ -84,7 +99,7 @@ As you can see from this example, each queue has two interesting methods, `push`
 and `each`.
 
 
-### queue.push(job, callback?)
+### queue.push(job, callback)
 
 Pushes a new job into the queue.  The job is serialized as JSON, so objects,
 arrays and strings all work as expected.
@@ -106,7 +121,7 @@ queues('echo').push(job, function(error) {
 ```
 
 
-### queue.each(handler, width?)
+### queue.each(handler)
 
 Processes jobs from the queue. In addition to calling this method, you need to
 either start the workers (see `start` method), or run all queued jobs (see
@@ -200,7 +215,7 @@ but only enable processing on select servers.  For testing, have a look at `once
 You can call this method to stop the workers.
 
 
-### once(callback?)
+### once(callback)
 
 Use this method when testing.  It will run all schedules jobs exactly once, and
 then process all queued jobs until the queues are empty.
@@ -371,7 +386,7 @@ workers.on('error', function(error) {
 ```
 
 
-## Configuration
+## Configuring
 
 For development and testing you can typically get by with the default
 configuration.  For production, you may want to set the server in use, as simple

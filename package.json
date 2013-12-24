@@ -3,7 +3,7 @@
   "version": "0.7.2",
   "scripts": {
     "test": "./node_modules/.bin/mocha",
-    "prepublish": "npm test && grunt build"
+    "prepublish": "grunt build"
   },
   "engines": {
     "node": "0.10.x"
