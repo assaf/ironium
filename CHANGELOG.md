@@ -1,3 +1,8 @@
+# 0.7.3
+
+Testing with [Travis-CI](https://travis-ci.org/assaf/ironium).
+
+
 # 0.7.2
 
 Fixed: need Error object when reporting connection closed
