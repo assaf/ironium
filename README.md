@@ -4,6 +4,12 @@ Job queues and scheduled jobs for Node.js,
 [Beanstalkd](http://kr.github.io/beanstalkd/) and/or
 [Iron.io](http://www.iron.io/).
 
+[![Build
+status](https://travis-ci.org/assaf/ironium.png)](https://travis-ci.org/assaf/ironium)
+
+
+* [Contributing](#contributing)
+
 
 ## The Why
 
@@ -43,7 +49,7 @@ There are a few more methods to help you with managing workers, running tests,
 and working with Webhooks.
 
 
-#### queue(name)
+### queue(name)
 
 Returns the named queue.  Calling this method with the same name will always
 return the same queue.  Queues are created on-the-fly, you don't need to setup
@@ -78,7 +84,7 @@ As you can see from this example, each queue has two interesting methods, `push`
 and `each`.
 
 
-#### queue.push(job, callback?)
+### queue.push(job, callback?)
 
 Pushes a new job into the queue.  The job is serialized as JSON, so objects,
 arrays and strings all work as expected.
@@ -100,7 +106,7 @@ queues('echo').push(job, function(error) {
 ```
 
 
-#### queue.each(handler, width?)
+### queue.each(handler, width?)
 
 Processes jobs from the queue. In addition to calling this method, you need to
 either start the workers (see `start` method), or run all queued jobs (see
@@ -157,30 +163,30 @@ workers.queue('webhook').each(function(job, callback) {
 });
 ```
 
-#### queue.name
+### queue.name
 
 This property returns the queue name.
 
 This name does not include the prefix.
 
-#### queue.webhookURL
+### queue.webhookURL
 
 This method / property returns the Webhook URL.  Only available when using
 Iron.io.  You can pass this URL to a service, and any messages it will post to
 this URL will be queued.
 
 
-#### schedule(name, time, job)
+### schedule(name, time, job)
 
 TBD Schedules the named job to run at the given schedule.
 
 
-#### configure(object)
+### configure(object)
 
 Configure the workers (see below).
 
 
-#### start()
+### start()
 
 You must call this method to start the workers.  Until you call this method, no
 scheduled or queued jobs are processed.
@@ -189,12 +195,12 @@ The `start` method allows you to run the same codebase in multiple environments,
 but only enable processing on select servers.  For testing, have a look at `once`.
 
 
-#### stop()
+### stop()
 
 You can call this method to stop the workers.
 
 
-#### once(callback?)
+### once(callback?)
 
 Use this method when testing.  It will run all schedules jobs exactly once, and
 then process all queued jobs until the queues are empty.
@@ -240,7 +246,7 @@ it("should have run the bar job", function() {
 });
 ```
 
-#### reset(callback)
+### reset(callback)
 
 Use this method when testing.  It will delete all queued jobs.
 
@@ -365,7 +371,7 @@ workers.on('error', function(error) {
 ```
 
 
-## Configurations
+## Configuration
 
 For development and testing you can typically get by with the default
 configuration.  For production, you may want to set the server in use, as simple
@@ -418,23 +424,22 @@ set the `token` and `projectID` based on the Iron.io project's credentials.
 
 ## Contributing
 
-Ironium is written in ECMAScript 6, because future.  Specifically you'll notice
-that `let` and `const` replaced all usage of `var`, class definitions are
-easier to read in the new syntax, and fat arrows (`=>`) replace `that = this`.
+Ironium is written in ECMAScript 6, because future.
 
-The ES6 source lives in `src` and gets compiled into ES5 legacy in `index.js`.
-And [Grunt](http://gruntjs.com/) because it has good support for watched
-compiling and OS X notifying.
+The ES6 source lives in the `src` directory, compiled into ES5 in the `lib`
+directory.  We use [Grunt](http://gruntjs.com/) for the convenience plugins of
+compiling, watching and notifying.
 
 Specifically:
 
 ```
 grunt         # Run this in development (same as grunt build watch)
-grunt build   # Compile source files from src/ into index.js
+grunt build   # Compile source files from src/ into lib/
 grunt watch   # Continously compile source files on every change
 grunt clean   # Clean compiled files
 grunt release # Publish new release (also grunt release:minor/major)
 ```
 
-To run the test suite, either `npm test` or individually with `mocha`.
+You can run the entire test suite with `npm test` (Travis does this), or
+specific files/tests with [Mocha](http://visionmedia.github.io/mocha/).
 
