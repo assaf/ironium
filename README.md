@@ -34,7 +34,7 @@ Beanstalkd protocol.
 details, like connection management and restart, timing out failed jobs,
 retries, etc.
 
-* [API](#api)
+* **[API](#api)**
   * [queue(name)](#queuename)
   * [queue.push(job, callback)](#queuepushjob-callback)
   * [queue.each(handler)](#queueeachhandler)
@@ -46,11 +46,11 @@ retries, etc.
   * [stop()](#stop)
   * [once(callback)](#oncecallback)
   * [reset(callback)](#resetcallback)
-* [Using Promises](#using-promises)
-* [Using Generators](#using-generators)
-* [Logging](#logging)
-* [Configuring](#configuring)
-* [Contributing](#contributing)
+* **[Using Promises](#using-promises)**
+* **[Using Generators](#using-generators)**
+* **[Logging](#logging)**
+* **[Configuring](#configuring)**
+* **[Contributing](#contributing)**
 
 
 ## API
@@ -272,8 +272,7 @@ For example:
 
 ```
 before(function(done) {
-  promise = workers.reset();
-  promise.then(done, done);
+  workers.reset(done);
 });
 ```
 
