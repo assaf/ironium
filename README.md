@@ -49,6 +49,7 @@ retries, etc.
 * **[Using Generators](#using-generators)**
 * **[Logging](#logging)**
 * **[Configuring](#configuring)**
+* **[Testing Your Code](#testing-your-code)**
 * **[Contributing](#contributing)**
 
 
@@ -435,7 +436,7 @@ server, you will need to set the hostname to `"mq-aws-us-east-1.iron.io"`, and
 set the `token` and `projectID` based on the Iron.io project's credentials.
 
 
-## Test Environment
+## Testing Your Code
 
 The default test configuration (`NODE_ENV == 'test'`) connects to Beanstalkd on
 localhost, and prefixes all queue names with `test-`, so they don't conflict
@@ -443,8 +444,7 @@ with any queues used during development.
 
 [Codeship](http://codeship.io/) has Beanstalkd installed on test servers, if
 using [Travis-CI](https://travis-ci.org), you will need to install if
-specifically, see out [`.travis.yml`](ironium/blob/master/.travis.yml).
-
+specifically, see out [`.travis.yml`](.travis.yml).
 
 
 ## Contributing
