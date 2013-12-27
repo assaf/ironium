@@ -1,3 +1,11 @@
+# 0.8.0
+
+Methods like `once`, `reset` and `push` now return thunks instead of promises.
+Disappointing for some, but easier for those of us using
+[Mocha](http://visionmedia.github.io/mocha/) and
+[co](https://github.com/visionmedia/co).
+
+
 # 0.7.3
 
 Testing with [Travis-CI](https://travis-ci.org/assaf/ironium).

@@ -104,8 +104,8 @@ and `each`.
 Pushes a new job into the queue.  The job is serialized as JSON, so objects,
 arrays and strings all work as expected.
 
-If the second argument is a callback, called after the job has been queued.
-Otherwise, returns a promise that resolves when the job has been queued. 
+If the second argument is a callback, it is called after the job has been queued.
+Otherwise, returns a thunk (function that accepts a callback).
 
 For example:
 
@@ -118,6 +118,18 @@ queues('echo').push(job, function(error) {
   if (error)
     console.error('No echo for you!');
 });
+```
+
+Because this function returns a thunk, you can also do this in your test suite:
+
+```
+before(queues('echo').push(job));
+```
+
+And this, if you're using ES6:
+
+```
+yield queues('echo').push(job);
 ```
 
 
@@ -221,7 +233,8 @@ Use this method when testing.  It will run all schedules jobs exactly once, and
 then process all queued jobs until the queues are empty.
 
 You can either call `once` with a callback, to be notified when all jobs have
-been processed, or with no arguments and wait on the promise it returns.
+been processed, or with no arguments, it will return a thunk (function that
+accepts a callback).
 
 This method exists since there's no reliable way to use `start` and `stop` for
 running automated tests.
@@ -237,20 +250,16 @@ workers.schedule('echo-foo', '* * * *', function(callback) {
   queue.push('foo', callback);
 });
 
-before(function(done) {
-  // Queue another job
-  queue.push('bar', done);
+queue.each(function(text, callback) {
+  echo.push(text);
+  callback();
 });
 
-before(function(done) {
-  queue.each(function(text, callback) {
-    echo.push(text);
-    callback();
-  });
+// Queue another job
+before(queue.push('bar'));
 
-  // Running the scheduled job, followed by the two queued jobs
-  workers.once(done);
-});
+// Running the scheduled job, followed by the two queued jobs
+before(workers.once());
 
 it("should have run the foo scheduled job", function() {
   assert(echo.indexOf('foo') >= 0);
@@ -266,9 +275,16 @@ it("should have run the bar job", function() {
 Use this method when testing.  It will delete all queued jobs.
 
 You can either call `reset` with a callback, to be notified when all jobs have
-been deleted, or with no arguments and wait on the promise it returns.
+been deleted, or with no arguments, returns a thunk (function that accepts a
+callback).
 
 For example:
+
+```
+before(workers.reset());
+```
+
+Is equivalent to:
 
 ```
 before(function(done) {
@@ -279,10 +295,11 @@ before(function(done) {
 
 ## Using Promises
 
-If you prefer, your jobs can return promises instead of using callbacks.  The
-job is considered complete when the promise resolves, and failed if the promise
-gets rejected.  In the case of queues, the failed job will return to the queue
-and processed again.
+If you prefer, your jobs can return
+[promises](http://www.html5rocks.com/en/tutorials/es6/promises/) instead of
+using callbacks.  The job is considered complete when the promise resolves, and
+failed if the promise gets rejected.  In the case of queues, the failed job will
+return to the queue and processed again.
 
 For example:
 
@@ -297,6 +314,7 @@ workers.queue('delayed-echo').each(function(job) {
   return promise;
 });
 ```
+
 
 ## Using Generators
 

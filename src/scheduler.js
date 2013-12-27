@@ -1,9 +1,9 @@
 // Essentially cron for scheduling tasks in Node.
 
-const assert      = require('assert');
-const CronJob     = require('cron');
-const { Promise } = require('es6-promise');
-const runJob      = require('./run_job');
+const assert  = require('assert');
+const co      = require('co');
+const CronJob = require('cron');
+const runJob  = require('./run_job');
 
 
 // In production we respect the cron schedule set by the application.
@@ -36,7 +36,7 @@ module.exports = class Scheduler {
       notify:   this.notify,
       handlers: [job]
     };
-    var cronJob  = CronJob.job(cronTime, ()=> runJob(jobSpec));
+    var cronJob  = CronJob.job(cronTime, (callback)=> runJob(jobSpec)(callback));
     this._cronJobs[name] = cronJob;
 
     if (this._startJobs) {
@@ -66,16 +66,17 @@ module.exports = class Scheduler {
   }
 
   // Run all schedules jobs in parallel.
-  once() {
-    var promises = [];
+  *once() {
+    var jobs = [];
     for (var name in this._cronJobs) {
       var cronJob = this._cronJobs[name];
-      // Remember, the first callback is a runJob() that returns a promise
-      var promise = cronJob._callbacks[0]();
-      promises.push(promise);
+      // Remember, the first callback is a runJob() that returns a thunk.
+      // Nothing happens if we don't call it.
+      jobs.push(cronJob._callbacks[0]);
     }
-    return Promise.all(promises).then(()=> undefined);
+    yield jobs;
   }
+
 
 }
 

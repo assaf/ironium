@@ -12,11 +12,12 @@
   "dependencies": {
     "co": "3.0.1",
     "cron": "1.0.1",
-    "es6-promise": "0.1.1",
     "fivebeans": "1.1.0",
-    "ms": "0.6.2"
+    "ms": "0.6.2",
+    "traceur": "0.0.9"
   },
   "devDependencies": {
+    "es6-promise": "0.1.1",
     "grunt": "0.4.2",
     "grunt-cli": "0.1.11",
     "grunt-contrib-clean": "0.5.0",
@@ -24,8 +25,7 @@
     "grunt-notify": "0.2.16",
     "grunt-release": "0.6.0",
     "grunt-traceur": "0.0.3",
-    "mocha": "1.16.2",
-    "traceur": "0.0.9"
+    "mocha": "1.16.2"
   },
   "repository": {
     "type": "git",

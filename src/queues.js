@@ -1,7 +1,10 @@
+// Need runtime to support generators.
+require(require.resolve('traceur') + '/../../runtime/runtime');
+
 const assert      = require('assert');
+const co          = require('co');
 const fivebeans   = require('fivebeans');
 const ms          = require('ms');
-const { Promise } = require('es6-promise');
 const runJob      = require('./run_job');
 
 
@@ -108,47 +111,35 @@ module.exports = class Server {
   // Starts processing jobs from all queues.
   start() {
     this.notify.debug("Start all queues");
-    for (var name in this._queues) {
-      var queue = this._queues[name];
-      queue.start();
-    }
+    for (var queue of this.queues)
+      queue.stop();
   }
 
   // Stops processing jobs from all queues.
   stop(callback) {
     this.notify.debug("Stop all queues");
-    for (var name in this._queues) {
-      var queue = this._queues[name];
+    for (var queue of this.queues)
       queue.stop();
-    }
   }
 
-  // Use when testing to empty contents of all queues.  Returns a promise.
-  reset() {
+  // Use when testing to empty contents of all queues.
+  *reset() {
     this.notify.debug("Clear all queues");
-    var promises = Object.keys(this._queues)
-      .map((name)=> this._queues[name])
-      .map((queue)=> queue.reset());
-    // So you can do before((done)=> workers.reset(done))
-    // Otherwise, all resolves to an array, Mocha complains.
-    return Promise.all(promises).then(()=> undefined);
+    for (var queue of this.queues)
+      yield queue.reset();
   }
 
-  // Use when testing to wait for all jobs to be processed.  Returns a promise.
-  once() {
-    var promises = Object.keys(this._queues)
-      .map((name)=> this._queues[name])
-      .map((queue)=> queue.once());
+  // Use when testing to wait for all jobs to be processed.
+  *once() {
+    do {
+      var processed = yield this.queues.map((queue)=> queue.once());
+      var anyProcessed = (processed.indexOf(true) >= 0);
+    } while (anyProcessed);
+  }
 
-    var finalRun = Promise.all(promises)
-      .then((processed)=> {
-        // If any queue has processed a job, repeat, otherwise all queues are
-        // empty.
-        var anyProcessed = processed.indexOf(true) >= 0;
-        if (anyProcessed)
-          return this.once();
-      });
-    return finalRun;
+  // Returns an array of all queues.
+  get queues() {
+    return Object.keys(this._queues).map((name)=> this._queues[name]);
   }
 
 }
@@ -185,106 +176,79 @@ class Session {
     this.setup  = setup;
   }
 
-  // Make a request to the server, returns a promise.
+  // Make a request to the server.
   //
   // command  - The command (e.g. put, get, destroy)
   // args     - Zero or more arguments, depends on command
   //
   // This is a simple wrapper around the Fivebeans client with additional error
-  // handling.  It returns a promise that resolves, depending on the arity of
-  // the API response, to either single value or array.
-  request(command, ...args) {
-    var connection = this.connect();
-    return new Promise(function(resolve, reject) {
-      // Wait for connection, need open client to send request.
-      connection.then(function(client) {
-
-        // Catch commands that don't complete in time.  If the connection
-        // breaks for any reason, Fivebeans never calls the callback, the only
-        // way we can handle this condition is with a timeout.
-        var requestTimeout = setTimeout(function() {
-          reject('TIMED_OUT');
-        }, TIMEOUT_REQUEST);
-
-        client[command].call(client, ...args, function(error, ...results) {
+  // handling.
+  *request(command, ...args) {
+    // Wait for connection, need open client to send request.
+    var client  = yield this.connect();
+    var results = yield function(resume) {
+      // Catch commands that don't complete in time.  If the connection
+      // breaks for any reason, Fivebeans never calls the callback, the only
+      // way we can handle this condition is with a timeout.
+      var completed = false;
+      var requestTimeout = setTimeout(function() {
+        if (!completed) {
+          completed = true;
+          resume('TIMED_OUT');
+        }
+      }, TIMEOUT_REQUEST);
+      client[command].call(client, ...args, function(error, ...results) {
+        if (!completed) {
+          completed = true;
           clearTimeout(requestTimeout);
-          if (error)
-            reject(error);
-          else if (results.length > 1)
-            resolve(results);
-          else
-            resolve(results[0]);
-        });
-
-      }, reject);
-    });
+          resume(error, results);
+        }
+      });
+    }
+    return results && (results.length > 1 ? results : results[0]);
   }
 
-  // Called to establish a new connection, returns a promise that would resolve
-  // to Fivebeans client.
-  connect() {
-    // this.promise is set after first call to `connect`, and until we detect a
+  // Called to establish a new connection, or use existing connections.
+  // Returns a FiveBeans client.
+  *connect(callback) {
+    // this._client is set after first call to `connect`, and until we detect a
     // connection failure and terminate it.
-    if (this.promise)
-      return this.promise;
+    if (this._client)
+      return this._client;
 
     // This is the Fivebeans client is essentially a session.
     var client  = new fivebeans.client(this.config.hostname, this.config.port);
-    var promise = new Promise((resolve, reject)=> {
 
-      // When working with iron.io, need to authenticate each connection before
-      // it can be used.  This is the first setup step, followed by the
-      // session-specific setup.
-      var authenticateAndSetup = ()=> {
-        if (this.config.authenticate) {
-          client.put(0, 0, 0, this.config.authenticate, function(error) {
-            if (error)
-              client.emit('error', error);
-            else
-              setupAndResolve();
-          });
-        } else
-          setupAndResolve();
-      }
-
-      // Get/put clients have different setup requirements, this are handled by
-      // an externally supplied method.  Once completed, the promise is resolved.
-      var setupAndResolve = ()=> {
-        this.setup(client, (error)=> {
-          if (error)
-            client.emit('error', error);
-          else
-            resolve(client);
-        });
-      }
-
-      // First listen to the connection events, then attempt to connect.  This
-      // will take us through the authenticate, setup and resolve path.
-      client
-        .on('connect', authenticateAndSetup)
-        .on('error', (error)=> {
-          // Discard this connection
-          this.promise = null; // will connect again next time
-          reject(error);
-          this.notify.info("Client error in queue %s: %s", this.name, error.toString());
-          client.end();
-        })
-        .on('close', ()=> {
-          // Discard this connection
-          this.promise = null; // will connect again next time
-          reject(new Error("Connection closed"));
-          this.notify.info("Connection closed for %s", this.name);
-          client.end();
-        });
-
-      // Nothing happens until we start the connection.
-      client.connect();
-
+    client.on('error', (error)=> {
+      // Discard this connection
+      this._client = null; // will connect again next time
+      this.notify.info("Client error in queue %s: %s", this.name, error.toString());
+      client.end();
+    });
+    client.on('close', ()=> {
+      // Discard this connection
+      this._client = null; // will connect again next time
+      this.notify.info("Connection closed for %s", this.name);
+      client.end();
     });
 
-    // Every call to `connect` should be able to access this promise.
-    this.promise = promise;
-    return promise;
+    // Nothing happens until we start the connection and wait for the connect event.
+    client.connect();
+    yield (resume)=> client.on('connect', resume);
+
+    // When working with iron.io, need to authenticate each connection before
+    // it can be used.  This is the first setup step, followed by the
+    // session-specific setup.
+    if (this.config.authenticate)
+      yield (resume)=> client.put(0, 0, 0, this.config.authenticate, resume);
+    
+    // Get/put clients have different setup requirements, this are handled by
+    // an externally supplied method.
+    yield (resume)=> this.setup(client, resume);
+
+    // Every call to `connect` should be able to access this client.
+    this._client = client;
+    return client;
   }
 
 }
@@ -338,22 +302,27 @@ class Queue {
   }
 
 
-  // Push job to queue.
+  // Push job to queue.  If called with one argument, returns a thunk.
+  // is not queued until thunk is called.
   push(job, callback) {
     assert(job, "Missing job to queue");
+    var thunk = co(function*() {
 
-    var priority  = 0;
-    var delay     = 0;
-    var timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000);
-    var payload   = JSON.stringify(job);
-    var promise   = this._put.request('put', priority, delay, timeToRun, payload);
-    if (callback) {
+      var priority  = 0;
+      var delay     = 0;
+      var timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000);
+      var payload   = JSON.stringify(job);
       // Don't pass jobID to callback, easy to use in test before hook, like
       // this:
-      //   before((done)=> queue.put(MESSAGE, done));
-      promise.then(()=> callback(), callback);
-    } else
-      return promise;
+      //   before(queue.put(MESSAGE));
+      var jobID = yield this._put.request('put', priority, delay, timeToRun, payload);
+      this.notify.debug("Queued job %s on queue %s", jobID, this.name, payload);
+
+    }.call(this));
+    if (callback)
+      thunk(callback);
+    else
+      return thunk;
   }
 
   // Process jobs from queue.
@@ -387,158 +356,128 @@ class Queue {
   }
 
 
-  // Called to process a single job.  Returns a promise which resolves to true
-  // if any job was processed.
-  once() {
+  // Called to process all jobs in this queue, and return when empty.
+  *once() {
     assert(!this._processing, "Cannot call once while continuously processing jobs");
     if (!this._handlers.length)
-      return Promise.resolve(false);
+      return false;
 
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    if (this.width == 1) {
-      // Common case, one worker for the queue.
-      var session = this._reserve(0);
-      return this._processOnce(session);
-    } else {
-      // But you can also test with multiple concurrent workers.
-      var promises = []
-      for (var i = 0; i < this.width; ++i) {
-        var session = this._reserve(i);
-        promises.push(this._processOnce(session));
+    var session = this._reserve(0);
+    var anyProcessed = false;
+    try {
+      while (true) {
+        var timeout = 0;
+        var [jobID, payload] = yield session.request('reserve_with_timeout', timeout);
+        yield this._runAndDestroy(session, jobID, payload);
+        anyProcessed = true;
       }
-
-      // The promise should resolve to true if any job (in any worker) get processed.
-      var anyProcessed = Promise.all(promises)
-        .then((processed)=> processed.indexOf(true) >= 0);
-      return anyProcessed;
+    } catch (error) {
+      if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+        return anyProcessed;
+      else
+        throw error;
     }
-  }
-
-  // Called to process all jobs exactly once.
-  _processOnce(session) {
-    var timeout = 0;
-    var reserve = session.request('reserve_with_timeout', timeout);
-    return reserve
-      // If we reserved a job, this will run the job and delete it.
-      .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
-      // Reserved/ran/deleted job, so resolve to true.
-      .then(
-        ()=> true,
-        (error)=> {
-          // No job, resolve to false; reject on any other error.
-          if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-            return false;
-          else
-            throw error;
-        });
   }
 
   // Called to process all jobs, until this._processing is set to false.
   _processContinously(session) {
     // Don't do anything without a handler, stop when processing is false.
-    if (!(this._processing && this._handlers.length))
-      return;
-
-    var repeat = this._processContinously.bind(this, session);
-
     this.notify.debug("Waiting for jobs on queue %s", this.name);
-    var timeout = RESERVE_TIMEOUT / 1000;
-    var reserve = session.request('reserve_with_timeout', timeout);
+    co(function*() {
+      while (this._processing && this._handlers.length) {
 
-    reserve 
-      // If we reserved a job, this will run the job and delete it.
-      .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
-      // Reserved/ran/deleted job, repeat to next job.
-      .then(()=> setImmediate(repeat))
-      .catch((error)=> {
-        // No job, go back to wait for next job.
-        if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT')) {
-          setImmediate(repeat);
-        } else {
-          // Report on any other error, and back off for a few.
-          this.notify.emit('error', error);
-          setTimeout(repeat, RESERVE_BACKOFF);
+        try {
+
+          var timeout = RESERVE_TIMEOUT / 1000;
+          var [jobID, payload] = yield session.request('reserve_with_timeout', timeout);
+          yield this._runAndDestroy(session, jobID, payload);
+
+        } catch (error) {
+
+          // No job, go back to wait for next job.
+          if (error != 'TIMED_OUT' && (error.message != 'TIMED_OUT')) {
+            // Report on any other error, and back off for a few.
+            this.notify.emit('error', error);
+            yield (resume)=> setTimeout(resume, RESERVE_BACKOFF);
+          }
+
         }
-      });
+
+      }
+    }.call(this))();
   }
 
 
   // Called to process a job.  If successful, deletes job, otherwise returns job
-  // to queue.  Returns a promise.
-  _runAndDestroy(session, jobID, payload) {
-    // Payload comes in the form of a buffer, need to conver to a string.
-    var runningJob = this._runJob(jobID, payload.toString());
-    return runningJob.then(
-      ()=> session.request('destroy', jobID),
-      (error)=> {
-        // Promise rejected (error or timeout); we release the job back to the
-        // queue.  Since this may be a transient error condition (e.g. server
-        // down), we let it sit in the queue for a while before it becomes
-        // available again.
-        var priority = 0;
-        var delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
-        session.request('release', jobID, priority, delay);
-        throw error;
-      });
-  }
-
-  _runJob(jobID, payload) {
-    var jobSpec = {
-      id:       [this.name, jobID].join(':'),
-      notify:   this.notify,
-      handlers: this._handlers,
-      timeout:  PROCESSING_TIMEOUT - ms('1s')
-    };
-    // Typically we queue JSON objects, but the payload may be just a
-    // string, e.g. some services send URL encoded name/value pairs, or MIME
-    // messages.
+  // to queue.
+  *_runAndDestroy(session, jobID, payload) {
     try {
-      var job = JSON.parse(payload);
-      this.notify.debug("Processing job %s", jobSpec.id, job);
-      return runJob(jobSpec, job);
-    } catch(ex) {
-      this.notify.debug("Processing job %s", jobSpec.id, payload);
-      return runJob(jobSpec, payload);
+
+      // Payload comes in the form of a buffer, need to conver to a string.
+      payload = payload.toString();
+      // Typically we queue JSON objects, but the payload may be just a
+      // string, e.g. some services send URL encoded name/value pairs, or MIME
+      // messages.
+      try {
+        payload = JSON.parse(payload);
+      } catch(ex) {
+      }
+
+      this.notify.debug("Processing job %s", jobID, payload);
+      var jobSpec = {
+        id:       [this.name, jobID].join(':'),
+        notify:   this.notify,
+        handlers: this._handlers,
+        timeout:  PROCESSING_TIMEOUT - ms('1s')
+      };
+      yield runJob(jobSpec, payload);
+      try {
+        yield session.request('destroy', jobID);
+      } catch (error) {
+        this.notify.info("Could not delete job %s", jobID);
+      }
+
+    } catch (error) {
+
+      // Error or timeout: we release the job back to the queue.  Since this
+      // may be a transient error condition (e.g. server down), we let it sit
+      // in the queue for a while before it becomes available again.
+      var priority = 0;
+      var delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
+      yield session.request('release', jobID, priority, delay);
+      throw error;
+
     }
   }
 
-
-  // Delete all messages from the queue.  Returns a promise.
-  reset() {
+  // Delete all messages from the queue.
+  *reset() {
     // We're using the _put session (use), the _reserve session (watch) doesn't
     // return any jobs.
     var session = this._put;
-    var promise = new Promise(function(resolve, reject) {
 
-      // Delete all ready jobs, then call deleteDelayed.
-      function deleteReadyJob() {
-        session.request('peek_ready')
-          .then(([jobID, payload])=> session.request('destroy', jobID) )
-          .then(deleteReadyJob, (error)=> {
-            if (error == 'NOT_FOUND')
-              deleteDelayedJob();
-            else
-              reject(error);
-          });
+    // Delete all ready jobs.
+    try {
+      while (true) {
+        var jobID = yield session.request('peek_ready');
+        yield session.request('destroy', jobID);
       }
+    } catch (error) {
+      if (error != 'NOT_FOUND')
+        throw error;
+    }
 
-      // Delete all delayed job, then resolve promise.
-      function deleteDelayedJob() {
-        session.request('peek_delayed')
-          .then(([jobID, payload])=> session.request('destroy', jobID) )
-          .then(deleteDelayedJob, (error)=> {
-            if (error == 'NOT_FOUND')
-              resolve(); // And we're done
-            else
-              reject(error);
-          });
+    // Delete all delayed jobs.
+    try {
+      while (true) {
+        var jobID = yield session.request('peek_delayed');
+        yield session.request('destroy', jobID);
       }
-
-      deleteReadyJob();
-
-    });
-
-    return promise;
+    } catch (error) {
+      if (error != 'NOT_FOUND')
+        throw error;
+    }
   }
 
 }

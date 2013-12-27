@@ -1,7 +1,9 @@
+const co                = require('co');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
 const Queues            = require('./queues');
 const Scheduler         = require('./scheduler');
+require('./')
 
 
 class Workers extends EventEmitter {
@@ -47,26 +49,31 @@ class Workers extends EventEmitter {
   }
 
   // Used in testing: run all scheduled jobs once (immediately), run all queued
-  // jobs, finally call callback.  If called with no arguments, returns a promise.
+  // jobs, finally call callback.  If called with no arguments, returns a thunk.
   once(callback) {
-    // Must run all scheduled jobs first, only then can be run any (resulting)
-    // queued jobs to completion.
-    var promise = this._scheduler.once()
-      .then(()=> this._queues.once())
-      .then(()=> this.debug("Completed all jobs") );
+    var thunk = co(function*() {
+
+      // Must run all scheduled jobs first, only then can be run any (resulting)
+      // queued jobs to completion.
+      yield this._scheduler.once();
+      yield this._queues.once();
+      this.debug("Completed all jobs");
+
+    }.call(this));
     if (callback)
-      promise.then(callback, callback);
+      thunk(callback);
     else
-      return promise;
+      return thunk;
   }
 
-  // Used in testing: empties all queues.
+  // Used in testing: empties all queues.  If called with no arguments, returns
+  // a thunk.
   reset(callback) {
-    var promise = this._queues.reset();
+    var thunk = co(this._queues.reset());
     if (callback)
-      promise.then(callback, callback);
+      thunk(callback);
     else
-      return promise;
+      return thunk;
   }
 
   // Used for logging debug messages.

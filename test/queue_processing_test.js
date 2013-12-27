@@ -9,9 +9,8 @@ describe("processing", ()=> {
   const processMultiple   = workers.queue('process-multiple');
   const processPromise    = workers.queue('process-promise');
   const processGenerator  = workers.queue('process-generator');
-
-  // Empty all queues.
-  before((done)=> workers.reset(done));
+  const processOnceA      = workers.queue('process-once-a');
+  const processOnceB      = workers.queue('process-once-b');
 
 
   describe("with multiple handlers", ()=> {
@@ -33,8 +32,8 @@ describe("processing", ()=> {
       });
     });
 
-    before((done)=> processMultiple.push('bandito', done));
-    before((done)=> workers.once(done));
+    before(processMultiple.push('job'));
+    before(workers.once());
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -58,8 +57,8 @@ describe("processing", ()=> {
       });
     });
 
-    before((done)=> processPromise.push('bandito', done));
-    before((done)=> workers.once(done));
+    before(processPromise.push('job'));
+    before(workers.once());
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -86,8 +85,8 @@ describe("processing", ()=> {
       });
     });
 
-    before((done)=> processGenerator.push('bandito', done));
-    before((done)=> workers.once(done));
+    before(processGenerator.push('job'));
+    before(workers.once());
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -95,6 +94,34 @@ describe("processing", ()=> {
 
   });
 
-  after((done)=> workers.reset(done));
+
+  describe("once", ()=> {
+    // Count how many steps run
+    let steps = [];
+    before(()=> {
+      // Process A, queue job for B
+      // Process B, queue job for A
+      // Process A, nothing more
+      processOnceA.each(function(job, callback) {
+        steps.push('A');
+        if (steps.length == 1)
+          processOnceB.push('job', callback);
+        else
+          callback();
+      });
+      processOnceB.each(function(job, callback) {
+        steps.push('B');
+        processOnceA.push('job', callback);
+      });
+    });
+
+    before(processOnceA.push('job'));
+    before(workers.once());
+
+    it("should run all jobs to completion", ()=> {
+      assert.equal(steps.join(''), 'ABA');
+    });
+  });
+
 });
 

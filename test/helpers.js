@@ -11,3 +11,5 @@ if (process.env.DEBUG) {
   workers.on('error', (error)=> console.error(error.stack))
 }
 
+before(workers.reset());
+after(workers.reset());

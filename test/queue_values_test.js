@@ -7,9 +7,6 @@ describe("queue", ()=> {
 
   const capture = workers.queue('capture');
 
-  // Empty all queues.
-  before((done)=> workers.reset(done));
-
   // Capture processed jobs here.
   let processed = [];
 
@@ -22,13 +19,13 @@ describe("queue", ()=> {
 
 
   describe("an object", ()=> {
-    before((done)=> capture.push({ id: 5, name: 'bandito' }, done));
-    before((done)=> workers.once(done));
+    before(capture.push({ id: 5, name: 'job' }));
+    before(workers.once());
 
     it("should process that object", ()=>{
       let job = processed[0];
       assert.equal(job.id, 5);
-      assert.equal(job.name, 'bandito');
+      assert.equal(job.name, 'job');
     });
 
     after(()=> processed.length = 0);
@@ -36,12 +33,12 @@ describe("queue", ()=> {
 
 
   describe("a string", ()=> {
-    before((done)=> capture.push('bandito', done));
-    before((done)=> workers.once(done));
+    before(capture.push('job'));
+    before(workers.once());
 
     it("should process that string", ()=>{
       let job = processed[0];
-      assert.equal(job, 'bandito');
+      assert.equal(job, 'job');
     });
 
     after(()=> processed.length = 0);
@@ -49,8 +46,8 @@ describe("queue", ()=> {
 
 
   describe("a number", ()=> {
-    before((done)=> capture.push(3.1, done));
-    before((done)=> workers.once(done));
+    before(capture.push(3.1));
+    before(workers.once());
 
     it("should process that number", ()=>{
       let job = processed[0];
@@ -62,8 +59,8 @@ describe("queue", ()=> {
 
 
   describe("an array", ()=> {
-    before((done)=> capture.push([true, '+'], done));
-    before((done)=> workers.once(done));
+    before(capture.push([true, '+']));
+    before(workers.once());
 
     it("should process that array", ()=>{
       let job = processed[0];
@@ -87,30 +84,39 @@ describe("queue", ()=> {
   });
 
 
-  describe("as promise", ()=> {
-    let promise;
+  describe("as thunk", ()=> {
+    let thunk;
 
     before(()=> {
-      promise = capture.push('promise');
+      thunk = capture.push('thunk');
     });
-    before((done)=> workers.once(done));
+    before(workers.once());
 
-    it("should return a promise", ()=> {
-      assert(promise);
-      assert(typeof(promise.then) == 'function');
-      assert(typeof(promise.catch) == 'function');
+    it("should return a thunk", ()=> {
+      assert(thunk);
+      assert(typeof(thunk) == 'function');
     });
 
-    it("should resolve promise with job ID", (done)=> {
-      promise.then((id)=> {
-        assert(/\d+/.test(id));
+    it("should not queue until thunk called", (done)=>{
+      process.nextTick(()=> {
+        workers.once(()=>{
+          assert(processed.length == 0);
+          done();
+        });
+      });
+    });
+
+    describe("thunk called", ()=> {
+      before((done)=> thunk(done));
+      before(workers.once());
+
+      it("should queue job", (done)=>{
+        assert(processed.length == 1);
         done();
-      }, done);
+      });
     });
 
     after(()=> processed.length = 0);
   });
 
-
-  after((done)=> workers.reset(done));
 });

@@ -10,9 +10,6 @@ describe("processing", ()=> {
   const errorPromise    = workers.queue('error-promise');
   const errorGenerator  = workers.queue('error-generator');
 
-  // Empty all queues.
-  before((done)=> workers.reset(done));
-
   function untilSuccessful(done) {
     workers.once((error)=> {
       if (error)
@@ -36,7 +33,7 @@ describe("processing", ()=> {
       });
     });
 
-    before((done)=> errorCallback.push('bandito', done));
+    before(errorCallback.push('job'));
     before(untilSuccessful);
 
     it("should repeat until processed", ()=> {
@@ -60,7 +57,7 @@ describe("processing", ()=> {
       });
     });
 
-    before((done)=> errorPromise.push('bandito', done));
+    before(errorPromise.push('job'));
     before(untilSuccessful);
 
     it("should repeat until processed", ()=> {
@@ -89,7 +86,7 @@ describe("processing", ()=> {
       });
     });
 
-    before((done)=> errorGenerator.push('bandito', done));
+    before(errorGenerator.push('job'));
     before(untilSuccessful);
 
     it("should repeat until processed", ()=> {
@@ -98,6 +95,5 @@ describe("processing", ()=> {
 
   });
 
-  after((done)=> workers.reset(done));
 });
 

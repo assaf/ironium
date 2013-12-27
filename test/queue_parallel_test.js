@@ -3,13 +3,10 @@ const Helpers = require('./helpers');
 const workers = require('../src');
 
 
-describe("processing", ()=> {
+describe.skip("processing", ()=> {
 
   const processSerial     = workers.queue('process-serial');
   const processParallel   = workers.queue('process-parallel');
-
-  // Empty all queues.
-  before((done)=> workers.reset(done));
 
 
   describe("with one worker", ()=> {
@@ -26,9 +23,9 @@ describe("processing", ()=> {
       });
     });
 
-    before((done)=> processSerial.push(1, done));
-    before((done)=> processSerial.push(2, done));
-    before((done)=> workers.once(done));
+    before(processSerial.push(1));
+    before(processSerial.push(2));
+    before(workers.once());
 
     it("should run jobs in sequence", ()=> {
       assert.equal(chain.join(''), 'ABAB');
@@ -51,16 +48,15 @@ describe("processing", ()=> {
       }, 2);
     });
 
-    before((done)=> processParallel.push(3, done));
-    before((done)=> processParallel.push(4, done));
-    before((done)=> workers.once(done));
+    before(processParallel.push(3));
+    before(processParallel.push(4));
+    before(workers.once());
 
-    it("should run jobs in parallel", ()=> {
+    it("should run jobs in sequence", ()=> {
       assert.equal(chain.join(''), 'AABB');
     });
 
   });
 
-  after((done)=> workers.reset(done));
 });
 
