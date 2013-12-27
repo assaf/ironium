@@ -220,16 +220,14 @@ class Session {
     var client  = new fivebeans.client(this.config.hostname, this.config.port);
 
     client.on('error', (error)=> {
-      // Discard this connection
-      this._client = null; // will connect again next time
+      // On error we automatically discard the connection.
       this.notify.info("Client error in queue %s: %s", this.name, error.toString());
       client.end();
     });
-    client.on('close', ()=> {
-      // Discard this connection
+    client.on('end', ()=> {
+      // Client disconnected
       this._client = null; // will connect again next time
       this.notify.info("Connection closed for %s", this.name);
-      client.end();
     });
 
     // Nothing happens until we start the connection and wait for the connect event.
@@ -244,7 +242,7 @@ class Session {
     
     // Get/put clients have different setup requirements, this are handled by
     // an externally supplied method.
-    yield (resume)=> this.setup(client, resume);
+    yield this.setup(client);
 
     // Every call to `connect` should be able to access this client.
     this._client = client;
@@ -277,8 +275,9 @@ class Queue {
     var session = this._putSession;
     if (!session) {
       // Setup: tell Beanstalkd which tube to use (persistent to session).
-      session = new Session(this.name, this._server, (client, callback)=> {
-        client.use(this._prefixedName, callback);
+      var tubeName = this._prefixedName;
+      session = new Session(this.name, this._server, function*(client) {
+        yield (resume)=> client.use(tubeName, resume);
       });
       this._putSession = session;
     }
@@ -291,10 +290,11 @@ class Queue {
     var session = this._reserveSessions[index];
     if (!session) {
       // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
-      session = new Session(this.name, this._server, (client, callback)=> {
-        client.ignore('default', ()=> {
-          client.watch(this._prefixedName, callback);
-        });
+      var tubeName = this._prefixedName;
+      session = new Session(this.name, this._server, function*(client) {
+        // Must watch a new tube before we can ignore default tube
+        yield (resume)=> client.watch(tubeName, resume);
+        yield (resume)=> client.ignore('default', resume);
       });
       this._reserveSessions[index] = session;
     }
