@@ -95,6 +95,8 @@ module.exports = class Server {
     this.notify   = workers;
     this.config   = new Configuration(workers);
     this._queues  = Object.create({});
+    // We need this to automatically start any queue added after workers.start().
+    this.started  = false;
   }
 
   // Returns the named queue, queue created on demand.
@@ -104,6 +106,8 @@ module.exports = class Server {
     if (!queue) {
       queue = new Queue(name, this);
       this._queues[name] = queue;
+      if (this.started)
+        queue.start();
     }
     return queue;
   }
@@ -111,13 +115,15 @@ module.exports = class Server {
   // Starts processing jobs from all queues.
   start() {
     this.notify.debug("Start all queues");
+    this.started = true;
     for (var queue of this.queues)
-      queue.stop();
+      queue.start();
   }
 
   // Stops processing jobs from all queues.
   stop(callback) {
     this.notify.debug("Stop all queues");
+    this.started = false;
     for (var queue of this.queues)
       queue.stop();
   }
@@ -219,30 +225,42 @@ class Session {
     // This is the Fivebeans client is essentially a session.
     var client  = new fivebeans.client(this.config.hostname, this.config.port);
 
-    client.on('error', (error)=> {
-      // On error we automatically discard the connection.
-      this.notify.info("Client error in queue %s: %s", this.name, error.toString());
+    try {
+
+      client.on('error', (error)=> {
+        // On connection error, we automatically discard the connection.
+        if (this._client == client)
+          this._client = null;
+        this.notify.info("Client error in queue %s: %s", this.name, error.toString());
+        client.end();
+      });
+      client.on('close', ()=> {
+        // Client disconnected
+        if (this._client == client)
+          this._client = null;
+        this.notify.info("Connection closed for %s", this.name);
+      });
+
+      // Nothing happens until we start the connection.  Must wait for
+      // connection event before we can send anything down the stream.
+      client.connect();
+      yield (resume)=> client.on('connect', resume);
+
+      // When working with Iron.io, need to authenticate each connection before
+      // it can be used.  This is the first setup step, followed by the
+      // session-specific setup.
+      if (this.config.authenticate)
+        yield (resume)=> client.put(0, 0, 0, this.config.authenticate, resume);
+      
+      // Put/reserve clients have different setup requirements, this are handled by
+      // an externally supplied method.
+      yield this.setup(client);
+
+    } catch (error) {
+      // Gracefully terminate connection.
       client.end();
-    });
-    client.on('end', ()=> {
-      // Client disconnected
-      this._client = null; // will connect again next time
-      this.notify.info("Connection closed for %s", this.name);
-    });
-
-    // Nothing happens until we start the connection and wait for the connect event.
-    client.connect();
-    yield (resume)=> client.on('connect', resume);
-
-    // When working with iron.io, need to authenticate each connection before
-    // it can be used.  This is the first setup step, followed by the
-    // session-specific setup.
-    if (this.config.authenticate)
-      yield (resume)=> client.put(0, 0, 0, this.config.authenticate, resume);
-    
-    // Get/put clients have different setup requirements, this are handled by
-    // an externally supplied method.
-    yield this.setup(client);
+      throw error;
+    }
 
     // Every call to `connect` should be able to access this client.
     this._client = client;
@@ -278,6 +296,9 @@ class Queue {
       var tubeName = this._prefixedName;
       session = new Session(this.name, this._server, function*(client) {
         yield (resume)=> client.use(tubeName, resume);
+        // Allow the program to exit if the only active connections are for
+        // queuing jobs (no listeners).
+        client.stream.unref();
       });
       this._putSession = session;
     }
@@ -328,20 +349,35 @@ class Queue {
   // Process jobs from queue.
   each(handler, width) {
     assert(typeof handler == 'function', "Called each without a valid handler");
-    this._handlers.push(handler);
     if (width)
       this._width = width;
-    if (this._processing)
-      this.start();
+    this._handlers.push(handler);
+
+    // It is possible start() was already called, but there was no handler, so
+    // this is where we start listening.
+    if (this._processing && this._handlers.length == 1)
+      for (var i = 0; i < this.width; ++i) {
+        var session = this._reserve(i);
+        this._processContinously(session);
+      }
   }
 
 
   // Start processing jobs.
   start() {
+    // Don't act stupid if called multiple times.
+    if (this._processing)
+      return;
     this._processing = true;
-    for (var i = 0; i < this.width; ++i) {
-      var session = this._reserve(i);
-      this._processContinously(session);
+
+    // Only call _processContinously if there are any handlers associated with
+    // this queue.  A queue may have no handle (e.g. one process queues,
+    // another processes), in which case we don't want to listen on it.
+    if (this._handlers.length) {
+      for (var i = 0; i < this.width; ++i) {
+        var session = this._reserve(i);
+        this._processContinously(session);
+      }
     }
   }
 
@@ -395,11 +431,13 @@ class Queue {
 
         } catch (error) {
 
+
           // No job, go back to wait for next job.
-          if (error != 'TIMED_OUT' && (error.message != 'TIMED_OUT')) {
+          if (error != 'TIMED_OUT' && error.message != 'TIMED_OUT') {
             // Report on any other error, and back off for a few.
             this.notify.emit('error', error);
-            yield (resume)=> setTimeout(resume, RESERVE_BACKOFF);
+            var backoff = (process.env.NODE_ENV == 'test' ? 0 : RESERVE_BACKOFF);
+            yield (resume)=> setTimeout(resume, backoff);
           }
 
         }
