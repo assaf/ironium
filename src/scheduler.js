@@ -31,12 +31,17 @@ module.exports = class Scheduler {
     assert(!this._cronJobs[name],   "Attempt to schedule multiple jobs with same name (" + name + ")")
 
     var cronTime = this._development ? DEVELOPMENT_CRON_TIME : time;
-    var jobSpec = {
-      id:       name,
-      notify:   this.notify,
-      handlers: [job]
-    };
-    var cronJob  = CronJob.job(cronTime, (callback)=> runJob(jobSpec)(callback));
+    var cronJob  = CronJob.job(cronTime, (callback)=> {
+      this.notify.info("Processing scheduled job %s", name);
+      runJob(job, [], undefined, (error)=> {
+        if (error)
+          this.notify.info("Error processing scheduled job %s: %s", name, error.stack);
+        else
+          this.notify.info("Completed scheduled job %s", name);
+        if (callback)
+          callback(error);
+      });
+    });
     this._cronJobs[name] = cronJob;
 
     if (this._startJobs) {

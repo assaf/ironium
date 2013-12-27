@@ -310,7 +310,7 @@ class Queue {
 
       var priority  = 0;
       var delay     = 0;
-      var timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000);
+      var timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000) + 1;
       var payload   = JSON.stringify(job);
       // Don't pass jobID to callback, easy to use in test before hook, like
       // this:
@@ -424,22 +424,21 @@ class Queue {
       } catch(ex) {
       }
 
-      this.notify.debug("Processing job %s", jobID, payload);
-      var jobSpec = {
-        id:       [this.name, jobID].join(':'),
-        notify:   this.notify,
-        handlers: this._handlers,
-        timeout:  PROCESSING_TIMEOUT - ms('1s')
-      };
-      yield runJob(jobSpec, payload);
+      this.notify.info("Processing queued job %s:%s", this.name, jobID);
+      this.notify.debug("Payload for job %s:%s:", this.name, jobID, payload);
+      for (var handler of this._handlers)
+        yield (resume)=> runJob(handler, [payload], PROCESSING_TIMEOUT, resume);
+      this.notify.info("Completed queued job %s:%s", this.name, jobID);
+
       try {
         yield session.request('destroy', jobID);
       } catch (error) {
-        this.notify.info("Could not delete job %s", jobID);
+        this.notify.info("Could not delete job %s:%s", this.name, jobID);
       }
 
     } catch (error) {
 
+      this.notify.info("Error processing queued job %s:%ss", this.name, jobID, error.stack);
       // Error or timeout: we release the job back to the queue.  Since this
       // may be a transient error condition (e.g. server down), we let it sit
       // in the queue for a while before it becomes available again.

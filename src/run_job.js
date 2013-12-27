@@ -3,30 +3,16 @@ const co                = require('co');
 const { createDomain }  = require('domain');
 
 
-// Runs the job, return a thunk.
+// Returns the job.
 //
-// id       - Job identifier, used for logging and errors
-// notify   - Notify when job starts and completes, and of any error
-// timeout  - Force job to fail if past timeout (optional)
-// handlers - The functions to execute
-// args     - Arguments to pass to each handler
-module.exports = function({ id, notify, timeout, handlers }, ...args) {
-  notify.info("Processing job %s", id);
-  return co(function*() {
-    try {
-      for (var handler of handlers)
-        yield (resume)=> runJob(handler, args, timeout, resume);
-      notify.info("Completed job %s", id);
-    } catch (error) {
-      notify.info("Error processing job %s: %s", id, error.stack);
-      throw error;
-    }
-  }());
-}
+// handler  - Called to process the job
+// args     - With the given arguments
+// timeout  - If set, times out job after that many ms
+// callback - Called on completion
+module.exports = function runJob(handler, args, timeout, callback) {
+  assert(handler, "Handler is missing");
+  assert(callback, "Callback is missing");
 
-
-// Returns a promise for running this job.
-function runJob(handler, args, timeout, callback) {
   var completed = false;
   // Ideally we call the function, function calls the callback, all is well.
   // But the handler may throw an exception, or suffer some other
