@@ -1,9 +1,11 @@
+// Need runtime to support generators.
+require(require.resolve('traceur') + '/../../runtime/runtime');
+
 const co                = require('co');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
 const Queues            = require('./queues');
 const Scheduler         = require('./scheduler');
-require('./')
 
 
 class Workers extends EventEmitter {

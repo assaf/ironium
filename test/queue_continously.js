@@ -1,5 +1,5 @@
 var assert = require('assert');
-var fork = require('child_process').fork;
+var fork   = require('child_process').fork;
 
 
 if (typeof(describe) != 'undefined') {

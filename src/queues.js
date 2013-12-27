@@ -1,6 +1,3 @@
-// Need runtime to support generators.
-require(require.resolve('traceur') + '/../../runtime/runtime');
-
 const assert      = require('assert');
 const co          = require('co');
 const fivebeans   = require('fivebeans');
