@@ -460,7 +460,8 @@ var workers = require('ironium');
 if (process.env.NODE_ENV == 'production')
   workers.configure({
     queues: {
-      hostname: 'my.beanstalkd.server'
+      hostname: 'my.beanstalkd.server',
+      width:    4
     }
   });
 ```
@@ -477,26 +478,39 @@ if (process.env.NODE_ENV == 'production')
 
 The configuration options are:
 
-* `queues.hostname`   - Hostname of the queue server (defaults to `localhost`)
-* `queues.port`       - Port number for the queue server (defaults to 11300)
-* `queues.prefix`     - Prefix all queue names (when `NODE_ENV == test`,
-  defaults to `test-`)
-* `queues.token`      - When using Iron.io, the API token (get it from the
-  project's credentials page)
-* `queues.projectID`  - When using Iron.io, the API project ID (get it from the
-  project's credentials page)
-* `queues.width`      - Number of workers processing each queue (default to 1)
+```
+{
+  "queues": {
+    "prefix":      <Prefix all queue names>,
+    "width":       <Number of workers processing each queue, default to 1>,
+    "hostname":    <Beanstalkd server hostname, default to localhost>,
+    "port":        <Beanstalkd port number, default to 11300>
+  },
+  "scheduler": {
+  },
+  "ironio": {
+    "hostname":    <Iron.io hostname, optional>,
+    "projectID":   <project ID from credentials settings>,
+    "token":       <access token for this project>
+  }
+}
+```
 
 If you're running in development or test environment with a local Beanstalkd
-server, you can use the default configuration, which points to `localhost` port
-`11300` and uses the prefix `test-` in test envrionment.
+server, you can just use the default configuration, which points to `localhost`,
+port 11300.
+
+The default configuration when running in test environment (`NODE_ENV ==
+'test'`) uses the prefix `test-` for all queues.
 
 If you're running in production against a Beanstalkd, you will likely need to
-set the hostname and port number.
+set `queues.hostname` and `queues.port`.
 
-If you're running in production against an [Iron.io](https://hud.iron.io/)
-server, you will need to set the hostname to `"mq-aws-us-east-1.iron.io"`, and
-set the `token` and `projectID` based on the Iron.io project's credentials.
+If you're running in production against an [Iron.io](https://hud.iron.io/), you
+need to set `ironio.projectID` and `ironio.token` based on your project
+credentials.  You may set `ironio.hostname`, or just rely on the default.
+
+When using Iron.io, the `queues.hostname` and `queues.port` are ignored.
 
 
 ## Testing Your Code

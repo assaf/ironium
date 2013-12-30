@@ -6,25 +6,14 @@ const ms      = require('ms');
 const runJob  = require('./run_job');
 
 
-// In production we respect the cron schedule set by the application.
-//
-// In development, all jobs run continusously every 5 seconds.
-//
-// In test, you can run all jobs by calling once().
-const DEVELOPMENT_CRON_TIME = '*/5 * * * * *';
-
-
 module.exports = class Scheduler {
 
   constructor(workers) {
-    this.notify       = workers;
-    this._development = process.env.NODE_ENV == 'development';
+    this._workers     = workers;
     this._schedules   = Object.create({});
     // If true, every new job is started automatically.  Necessary in case you
     // call schedule() after calling start().
     this.started      = false;
-    this._queue       = workers.queue('$schedule');
-    this._queue.each(this._runQueuedJob.bind(this));
   }
 
   // Schedules a new job.
@@ -70,7 +59,7 @@ module.exports = class Scheduler {
 
   // Schedule calls this to queue the job.
   queueJob(name, callback) {
-    var thunk = this._queue.push({ name, time: Date.now()});
+    var thunk = this.queue.push({ name, time: Date.now()});
     if (callback)
       thunk(callback);
     else
@@ -84,6 +73,23 @@ module.exports = class Scheduler {
       yield schedule.runJob(time);
     else
       this.notify.info("No schedule %s, ignoring", name);
+  }
+
+  get queue() {
+    // Lazily, only if/when schedule added.
+    if (!this._queue) {
+      this._queue = this._workers.queue('$schedule');
+      this._queue.each(this._runQueuedJob.bind(this));
+    }
+    return this._queue;
+  }
+
+  get config() {
+    return this._workers.config;
+  }
+
+  get notify() {
+    return this._workers;
   }
 }
 
@@ -180,19 +186,24 @@ class Schedule {
       clearInterval(this._interval);
     this._scheduler.queueJob(this.name, (error)=> {
       if (error)
-        this._scheduler.notify.error(error);
+        this.notify.error(error);
     });
   }
 
   // Scheduler calls this to actually run the job when picked up from queue.
   *runJob(time) {
     try {
-      this._scheduler.notify.info("Processing %s, scheduled for %s", this.name, time);
+      this.notify.info("Processing %s, scheduled for %s", this.name, time);
       yield (resume)=> runJob(this.job, [], undefined, resume);
     } catch (error) {
       // Notify error, but does not return job to queue.
-      this._scheduler.notify.error(error);
+      this.notify.error(error);
     }
   }
+
+  get notify() {
+    return this._scheduler.notify;
+  }
+
 }
 

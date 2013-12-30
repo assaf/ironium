@@ -1,3 +1,8 @@
+# 0.9.1
+
+Configuration gets separate section for setting up Iron.io server.
+
+
 # 0.9.0
 
 Scheduler now queues job for execution, this will allow using a scheduler

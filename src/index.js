@@ -4,6 +4,7 @@ require(require.resolve('traceur') + '/../../runtime/runtime');
 const co                = require('co');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
+const Configuration     = require('./configuration');
 const Queues            = require('./queues');
 const Scheduler         = require('./scheduler');
 
@@ -46,7 +47,14 @@ class Workers extends EventEmitter {
 
   // Update configuration.
   configure(config) {
-    this._config = config;
+    this._config = new Configuration(config);
+  }
+
+  // Get the current/default configuration.
+  get config() {
+    if (!this._config)
+      this._config = new Configuration();
+    return this._config;
   }
 
   // Start running scheduled and queued jobs.
