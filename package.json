@@ -11,7 +11,6 @@
   "main": "lib/index",
   "dependencies": {
     "co": "3.0.1",
-    "cron": "1.0.1",
     "fivebeans": "1.1.0",
     "ms": "0.6.2",
     "traceur": "0.0.9"

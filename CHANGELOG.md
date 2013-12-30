@@ -1,3 +1,12 @@
+# 0.9.0
+
+Scheduler now queues job for execution, this will allow using a scheduler
+service.
+
+Scheduler now accepts scheduled time as either Date, interval (number or
+string), or an object with start time, end time and interval.
+
+
 # 0.8.0
 
 Methods like `once`, `reset` and `push` now return thunks instead of promises.

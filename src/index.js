@@ -25,10 +25,21 @@ class Workers extends EventEmitter {
   // Schedules a new job to run periodically/once.
   //
   // name - Job name, used for reporting / monitoring
-  // time - Cron time pattern
+  // time - Run time, see below
   // job  - The job to run
   //
-  // Job is called with a callback, may also return a promise.
+  // Job is called with a callback, may also return a promise, or generator.
+  //
+  // The scheduled time can be one of:
+  // - Integer interval
+  // - String interval takes the form of "1s", "5m", "6h", etc
+  // - Date, run the job once at the specified time
+  // - An object with the properties start, end and every
+  //
+  // If the start property is set, the schedule runs first on that time, and
+  // repeatedly if the property every specifies an interval.  If the end
+  // property is set, the schedule stops at that set time.  If only the every
+  // property is set, the schedule runs on that specified interval.
   schedule(name, time, job) {
     this._scheduler.schedule(name, time, job);
   }

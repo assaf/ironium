@@ -54,8 +54,9 @@ module.exports = function runJob(handler, args, timeout, callback) {
           function(error) {
             domain.emit('error', error);
           });
-      } else if (typeof(result.next) == 'function') {
-        // A generator.  Use it to resolve job instead of callback.
+      } else if (typeof(result.next) == 'function' &&
+                 typeof(result.throw) == 'function') {
+        // A generator object.  Use it to resolve job instead of callback.
         co(result)(function(error) {
           if (error)
              domain.emit('error', error);

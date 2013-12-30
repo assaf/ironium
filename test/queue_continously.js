@@ -108,7 +108,10 @@ if (typeof(describe) != 'undefined') {
   // Last job, exit this process successfully.
   workers.queue('done').each(function(job, callback) {
     process.send('done');
-    process.exit(0);
+    workers.stop();
+    process.nextTick(function() {
+      process.exit(0);
+    });
   });
 
 

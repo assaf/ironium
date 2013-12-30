@@ -205,7 +205,52 @@ this URL will be queued.
 
 ### schedule(name, time, job)
 
-TBD Schedules the named job to run at the given schedule.
+Schedules the named job to run at the specified time.
+
+Each schedule has a unique name, this is used for reporting, and to prevent
+accidental duplicate schedules.  However, you can create two schedules using the
+same job.
+
+The scheduled time can be a `Date`, in which case the job will run once at the
+given time.  It can be an interval, in which case the job will run repeatedly at
+the given interval.  The interval can be number (in ms), or a string that can
+takes the form of "30s", "5m", "4h", etc.
+
+The scheduled time can also be an object with the properties `start`, `end` and
+`every`.  If the property `every` is specified, the job will run every so many
+milliseconds.
+
+If the property `start` is specified, the job will run once at the specified
+time, and if `every` is also specified, repeatedly afterwards.  If the property
+`end` is specified, the job will stop running after that time.
+
+Just like a queued job, the scheduled job is called with a callback and must use
+it to report completion.  However, it may also return a promise, or be a
+generator function.
+
+For example:
+
+```
+workers.schedule('everyHour', '1h', function(callback) {
+  console.log("I run every hour");
+});
+
+workers.schedule('inAnHour', new Date() + ms('1h'), function() {
+  console.log("I run once, after an hour");
+  return Promise.resolve();
+});
+
+var schedule = {
+  every: ms('2h'),               // Every two hours
+  end:   new Date() + ms('24h'), // End in 24 hours
+};
+workers.schedule('everyTwoForADay', schedule, function*() {
+  console.log("I run every 2 hours for 24 hours");
+  var customers = yield Customer.findAll();
+  for (var customer of customers)
+    yield customer.increase('awesome');
+});
+```
 
 
 ### configure(object)

@@ -264,6 +264,12 @@ class Session {
     return client;
   }
 
+  end() {
+    if (this._client)
+      this._client.end();
+    this._client = null;
+  }
+
 }
 
 
@@ -381,6 +387,9 @@ class Queue {
   // Stop processing jobs.
   stop() {
     this._processing = false;
+    for (var session of this._reserveSessions)
+      session.end();
+    this._reserveSessions.length = 0;
   }
 
   // Number of workers to run in parallel.
