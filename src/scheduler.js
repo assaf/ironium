@@ -149,14 +149,14 @@ class Schedule {
         // Set interval first, _queueNext will clear it, if we're already past
         // the end time.
         if (this.every)
-          this._interval = setInterval(()=> this._queueNext, this.every);
+          this._interval = setInterval(()=> this._queueNext(), this.every);
         this._queueNext();
       }, now - this.startTime);
       return;
     }
 
     if (this.every)
-      this._interval = setInterval(()=> this._queueNext, this.every);
+      this._interval = setInterval(()=> this._queueNext(), this.every);
   }
 
   // Stops the scheduler for this job.  Resets timer/interval.
@@ -186,7 +186,7 @@ class Schedule {
       clearInterval(this._interval);
     this._scheduler.queueJob(this.name, (error)=> {
       if (error)
-        this.notify.error(error);
+        this.notify.emit('error', error);
     });
   }
 
@@ -197,7 +197,7 @@ class Schedule {
       yield (resume)=> runJob(this.job, [], undefined, resume);
     } catch (error) {
       // Notify error, but does not return job to queue.
-      this.notify.error(error);
+      this.notify.emit('error', error);
     }
   }
 

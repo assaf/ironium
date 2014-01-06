@@ -1,3 +1,8 @@
+# 0.9.3
+
+FIXED: scheduled jobs not running in production.
+
+
 # 0.9.2
 
 FIXED: hostname/port not picked up from configuration.
