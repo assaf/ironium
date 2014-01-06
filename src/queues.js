@@ -411,7 +411,6 @@ class Session {
         }
       }, TIMEOUT_REQUEST);
       client[command].call(client, ...args, function(error, ...results) {
-        console.log(command, results)
         if (!completed) {
           completed = true;
           clearTimeout(requestTimeout);
