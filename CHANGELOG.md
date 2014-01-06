@@ -1,3 +1,8 @@
+# 0.9.2
+
+FIXED: hostname/port not picked up from configuration.
+
+
 # 0.9.1
 
 Configuration gets separate section for setting up Iron.io server.

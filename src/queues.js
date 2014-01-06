@@ -213,7 +213,8 @@ class Queue {
   // Called to process all jobs, until this._processing is set to false.
   _processContinously(session) {
     // Don't do anything without a handler, stop when processing is false.
-    this.notify.debug("Waiting for jobs on queue %s", this.name);
+    if (this._processing && this._handlers.length)
+      this.notify.debug("Waiting for jobs on queue %s", this.name);
     co(function*() {
       while (this._processing && this._handlers.length) {
 
@@ -410,6 +411,7 @@ class Session {
         }
       }, TIMEOUT_REQUEST);
       client[command].call(client, ...args, function(error, ...results) {
+        console.log(command, results)
         if (!completed) {
           completed = true;
           clearTimeout(requestTimeout);
@@ -429,7 +431,7 @@ class Session {
       return this._client;
 
     // This is the Fivebeans client is essentially a session.
-    var client  = new fivebeans.client(this.config.hostname, this.config.port);
+    var client  = new fivebeans.client(this.config.queues.hostname, this.config.queues.port);
 
     try {
 
