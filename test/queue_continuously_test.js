@@ -118,9 +118,12 @@ if (typeof(describe) != 'undefined') {
   // Delete all jobs from previous run before starting this one.
   // We need to have all the queues before we can call this.
   workers.reset(function() {
-    workers.start();
     workers.queue('regular').push('job', function() {});
+    workers.start();
   });
+
+  // Wait, otherwise process exits without processing any jobs.
+  setTimeout(function() {}, 10000);
 
 }
 

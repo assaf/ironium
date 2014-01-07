@@ -1,3 +1,8 @@
+# 0.9.4
+
+CHANGED: use of queues on their own will not prevent process from completing.
+
+
 # 0.9.3
 
 FIXED: scheduled jobs not running in production.

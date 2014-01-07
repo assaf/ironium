@@ -321,9 +321,6 @@ class Queue {
       var tubeName = this.prefixedName;
       session = new Session(this._server, this.name, function*(client) {
         yield (resume)=> client.use(tubeName, resume);
-        // Allow the program to exit if the only active connections are for
-        // queuing jobs (no listeners).
-        client.stream.unref();
       });
       this._putSession = session;
     }
@@ -438,19 +435,22 @@ class Session {
         // On connection error, we automatically discard the connection.
         if (this._client == client)
           this._client = null;
-        this.notify.info("Client error in queue %s: %s", this.name, error.toString());
+        this.notify.error("Client error in queue %s: %s", this.name, error.toString());
         client.end();
       });
       client.on('close', ()=> {
         // Client disconnected
         if (this._client == client)
           this._client = null;
-        this.notify.info("Connection closed for %s", this.name);
+        this.notify.error("Connection closed for %s", this.name);
       });
 
       // Nothing happens until we start the connection.  Must wait for
       // connection event before we can send anything down the stream.
       client.connect();
+      // Allows the process to exit when done processing, otherwise, it will
+      // stay running while it's waiting to reserve the next job.
+      client.stream.unref();
       yield (resume)=> client.on('connect', resume);
 
       // When working with Iron.io, need to authenticate each connection before
