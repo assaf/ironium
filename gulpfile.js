@@ -8,8 +8,8 @@ const spawn   = require('child_process').spawn;
 const traceur = require('gulp-traceur');
 
 
+// Compile then watch -> compile
 gulp.task('default', function() {
-  // Compile then watch -> compile
   gulp.run('clean', 'build');
   gulp.watch('src/**/*.js', function() {
     gulp.run('build');
@@ -17,6 +17,7 @@ gulp.task('default', function() {
 });
 
 
+// Compile ES6 in src to ES5 in lib
 gulp.task('build', function() {
   const options = {
     blockBinding: true,
@@ -27,14 +28,17 @@ gulp.task('build', function() {
     .pipe(traceur(options))
     .pipe(replace("module.exports = {};", ""))
     .pipe(gulp.dest('lib'));
+  // Notifications only available on Mac
   if (OS.type() == 'Darwin')
     compile.pipe(notify({ message: "Ironium: built!" }));
 });
 
+// Delete anything compiled into lib directory
 gulp.task('clean', function() {
   gulp.src('lib/**', {read: false }).pipe(clean());
 });
 
+// Run mocha, used by release task
 gulp.task('test', function(callback) {
   const mocha = spawn('mocha', [], { stdio: 'inherit' });
   mocha.on('close', function(code) {
@@ -46,6 +50,7 @@ gulp.task('test', function(callback) {
 });
 
 
+// Tag the release and npm publish
 gulp.task('release', ['clean', 'build', 'test'], function() {
   return gulp.src('package.json')
     .pipe(release({

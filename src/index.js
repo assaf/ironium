@@ -106,6 +106,15 @@ class Workers extends EventEmitter {
   info(...args) {
     this.emit('info', format(...args));
   }
+
+  // Used for logging error messages.
+  info(...args) {
+    let error = (args.length == 1 && args[0] instanceof Error) ?
+      args[0] :
+      new Error(format(...args));
+    this.emit('error', error);
+  }
+
 }
 
 

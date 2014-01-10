@@ -1,3 +1,8 @@
+# 0.9.6
+
+FIXED: connection errors not reported correctly.
+
+
 # 0.9.5
 
 FIXED: bug when cleaning out Beanstalkd queue.

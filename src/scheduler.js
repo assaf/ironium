@@ -186,7 +186,7 @@ class Schedule {
       clearInterval(this._interval);
     this._scheduler.queueJob(this.name, (error)=> {
       if (error)
-        this.notify.emit('error', error);
+        this.notify.error(error);
     });
   }
 
@@ -197,7 +197,7 @@ class Schedule {
       yield (resume)=> runJob(this.job, [], undefined, resume);
     } catch (error) {
       // Notify error, but does not return job to queue.
-      this.notify.emit('error', error);
+      this.notify.error(error);
     }
   }
 

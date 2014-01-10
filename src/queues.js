@@ -230,7 +230,7 @@ class Queue {
           // No job, go back to wait for next job.
           if (error != 'TIMED_OUT' && error.message != 'TIMED_OUT') {
             // Report on any other error, and back off for a few.
-            this.notify.emit('error', error);
+            this.notify.error(error);
             var backoff = (process.env.NODE_ENV == 'test' ? 0 : RESERVE_BACKOFF);
             yield (resume)=> setTimeout(resume, backoff);
           }
@@ -435,14 +435,14 @@ class Session {
         // On connection error, we automatically discard the connection.
         if (this._client == client)
           this._client = null;
-        this.notify.error("Client error in queue %s: %s", this.name, error.toString());
+        this._server.notify.error("Client error in queue %s: %s", this.name, error.toString());
         client.end();
       });
       client.on('close', ()=> {
         // Client disconnected
         if (this._client == client)
           this._client = null;
-        this.notify.error("Connection closed for %s", this.name);
+        this._server.notify.error("Connection closed for %s", this.name);
       });
 
       // Nothing happens until we start the connection.  Must wait for
