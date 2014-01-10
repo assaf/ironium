@@ -9,7 +9,7 @@ const Queues            = require('./queues');
 const Scheduler         = require('./scheduler');
 
 
-class Workers extends EventEmitter {
+class Ironium extends EventEmitter {
 
   constructor() {
     EventEmitter.call(this);
@@ -108,7 +108,7 @@ class Workers extends EventEmitter {
   }
 
   // Used for logging error messages.
-  info(...args) {
+  error(...args) {
     let error = (args.length == 1 && args[0] instanceof Error) ?
       args[0] :
       new Error(format(...args));
@@ -118,5 +118,5 @@ class Workers extends EventEmitter {
 }
 
 
-module.exports = new Workers();
+module.exports = new Ironium();
 

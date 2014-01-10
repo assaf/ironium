@@ -1,16 +1,16 @@
 const assert      = require('assert');
-const Helpers     = require('./helpers');
+const Helpers     = require('../helpers');
 const { Promise } = require('es6-promise');
-const workers     = require('../src');
+const ironium     = require('../../src');
 
 
 describe("processing", ()=> {
 
-  const processMultiple   = workers.queue('process-multiple');
-  const processPromise    = workers.queue('process-promise');
-  const processGenerator  = workers.queue('process-generator');
-  const processOnceA      = workers.queue('process-once-a');
-  const processOnceB      = workers.queue('process-once-b');
+  const processMultiple   = ironium.queue('process-multiple');
+  const processPromise    = ironium.queue('process-promise');
+  const processGenerator  = ironium.queue('process-generator');
+  const processOnceA      = ironium.queue('process-once-a');
+  const processOnceB      = ironium.queue('process-once-b');
 
 
   describe("with multiple handlers", ()=> {
@@ -33,7 +33,7 @@ describe("processing", ()=> {
     });
 
     before(processMultiple.push('job'));
-    before(workers.once());
+    before(ironium.once());
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -58,7 +58,7 @@ describe("processing", ()=> {
     });
 
     before(processPromise.push('job'));
-    before(workers.once());
+    before(ironium.once());
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -86,7 +86,7 @@ describe("processing", ()=> {
     });
 
     before(processGenerator.push('job'));
-    before(workers.once());
+    before(ironium.once());
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -116,7 +116,7 @@ describe("processing", ()=> {
     });
 
     before(processOnceA.push('job'));
-    before(workers.once());
+    before(ironium.once());
 
     it("should run all jobs to completion", ()=> {
       assert.equal(steps.join(''), 'ABA');

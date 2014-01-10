@@ -1,17 +1,17 @@
 var assert      = require('assert');
-var Helpers     = require('./helpers');
+var Helpers     = require('../helpers');
 var { Promise } = require('es6-promise');
-var workers     = require('../src');
+var ironium     = require('../../src');
 
 
 describe("processing", ()=> {
 
-  var errorCallback   = workers.queue('error-callback');
-  var errorPromise    = workers.queue('error-promise');
-  var errorGenerator  = workers.queue('error-generator');
+  var errorCallback   = ironium.queue('error-callback');
+  var errorPromise    = ironium.queue('error-promise');
+  var errorGenerator  = ironium.queue('error-generator');
 
   function untilSuccessful(done) {
-    workers.once((error)=> {
+    ironium.once((error)=> {
       if (error)
         setTimeout(()=> untilSuccessful(done));
       else

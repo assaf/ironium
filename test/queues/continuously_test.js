@@ -49,51 +49,51 @@ if (typeof(describe) != 'undefined') {
 
 } else {
 
-  var workers = require('../lib');
+  var ironium = require('../../lib');
 
   if (process.env.DEBUG) {
-    workers.on('debug', console.log);
-    workers.on('info',  console.info);
-    workers.on('error', console.error);
+    ironium.on('debug', console.log);
+    ironium.on('info',  console.info);
+    ironium.on('error', console.error);
   }
-  // Catch workers.emit('error'), otherwise process fails on failed job
-  workers.on('error', function() { });
+  // Catch ironium.emit('error'), otherwise process fails on failed job
+  ironium.on('error', function() { });
 
 
   // Regular job: queued once, execute once
-  workers.queue('regular').each(function(job, callback) {
+  ironium.queue('regular').each(function(job, callback) {
     process.send('regular');
 
-    workers.queue('duplicate').push('job', function() {
-      workers.queue('duplicate').push('job', function() {
-        workers.queue('duplicate').push('job', function() {
-          workers.queue('delayed').push('job', callback);
+    ironium.queue('duplicate').push('job', function() {
+      ironium.queue('duplicate').push('job', function() {
+        ironium.queue('duplicate').push('job', function() {
+          ironium.queue('delayed').push('job', callback);
         });
       });
     });
   });
 
   // Duplicate job: queued and executed three times.
-  workers.queue('duplicate').each(function(job, callback) {
+  ironium.queue('duplicate').each(function(job, callback) {
     process.send('duplicate');
     callback();
   });
 
   // Delayed job: this job takes 500ms to complete.
-  workers.queue('delayed').each(function(job, callback) {
+  ironium.queue('delayed').each(function(job, callback) {
     setTimeout(function() {
       process.send('delayed');
 
-      workers.queue('failed').push('job', callback);
+      ironium.queue('failed').push('job', callback);
     }, 500);
   });
 
   var failed = 0;
 
   // Failed job: fails three times, then succeeds.
-  workers.queue('failed').each(function(job, callback) {
+  ironium.queue('failed').each(function(job, callback) {
     if (failed == 3) {
-      workers.queue('done').push('job', callback);
+      ironium.queue('done').push('job', callback);
     } else {
       process.send('failed');
       failed++;
@@ -106,9 +106,9 @@ if (typeof(describe) != 'undefined') {
   });
 
   // Last job, exit this process successfully.
-  workers.queue('done').each(function(job, callback) {
+  ironium.queue('done').each(function(job, callback) {
     process.send('done');
-    workers.stop();
+    ironium.stop();
     process.nextTick(function() {
       process.exit(0);
     });
@@ -117,9 +117,9 @@ if (typeof(describe) != 'undefined') {
 
   // Delete all jobs from previous run before starting this one.
   // We need to have all the queues before we can call this.
-  workers.reset(function() {
-    workers.queue('regular').push('job', function() {});
-    workers.start();
+  ironium.reset(function() {
+    ironium.queue('regular').push('job', function() {});
+    ironium.start();
   });
 
   // Wait, otherwise process exits without processing any jobs.

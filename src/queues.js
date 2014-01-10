@@ -31,11 +31,12 @@ const RELEASE_DELAY       = ms('1m');
 // Abstracts the queue server.
 module.exports = class Server {
 
-  constructor(workers) {
-    this._workers = workers;
-    this._queues  = Object.create({});
-    // We need this to automatically start any queue added after workers.start().
+  constructor(ironium) {
+    // We need this to automatically start any queue added after ironium.start().
     this.started  = false;
+
+    this._ironium = ironium;
+    this._queues  = Object.create({});
   }
 
   // Returns the named queue, queue created on demand.
@@ -88,13 +89,13 @@ module.exports = class Server {
   }
 
   get config() {
-    return this._workers.config;
+    // Lazy load configuration.
+    return this._ironium.config;
   }
 
   get notify() {
-    return this._workers;
+    return this._ironium;
   }
-
 }
 
 
@@ -103,10 +104,13 @@ module.exports = class Server {
 class Queue {
 
   constructor(server, name) {
-    this.name           = name;
-    this.webhookURL     = server.config.webhookURL(name);
+    this.name             = name;
+    this.webhookURL       = server.config.webhookURL(name);
 
     this._server          = server;
+    this._notify          = server.notify;
+    this._prefixedName    = server.config.prefixedName(name);
+
     this._processing      = false;
     this._handlers        = [];
     this._putSession      = null;
@@ -128,7 +132,7 @@ class Queue {
       // this:
       //   before(queue.put(MESSAGE));
       var jobID = yield this._put.request('put', priority, delay, timeToRun, payload);
-      this.notify.debug("Queued job %s on queue %s", jobID, this.name, payload);
+      this._notify.debug("Queued job %s on queue %s", jobID, this.name, payload);
 
     }.call(this));
     if (callback)
@@ -192,7 +196,7 @@ class Queue {
     if (!this._handlers.length)
       return false;
 
-    this.notify.debug("Waiting for jobs on queue %s", this.name);
+    this._notify.debug("Waiting for jobs on queue %s", this.name);
     var session = this._reserve(0);
     var anyProcessed = false;
     try {
@@ -214,7 +218,7 @@ class Queue {
   _processContinously(session) {
     // Don't do anything without a handler, stop when processing is false.
     if (this._processing && this._handlers.length)
-      this.notify.debug("Waiting for jobs on queue %s", this.name);
+      this._notify.debug("Waiting for jobs on queue %s", this.name);
     co(function*() {
       while (this._processing && this._handlers.length) {
 
@@ -230,7 +234,7 @@ class Queue {
           // No job, go back to wait for next job.
           if (error != 'TIMED_OUT' && error.message != 'TIMED_OUT') {
             // Report on any other error, and back off for a few.
-            this.notify.error(error);
+            this._notify.error(error);
             var backoff = (process.env.NODE_ENV == 'test' ? 0 : RESERVE_BACKOFF);
             yield (resume)=> setTimeout(resume, backoff);
           }
@@ -257,21 +261,21 @@ class Queue {
       } catch(ex) {
       }
 
-      this.notify.info("Processing queued job %s:%s", this.name, jobID);
-      this.notify.debug("Payload for job %s:%s:", this.name, jobID, payload);
+      this._notify.info("Processing queued job %s:%s", this.name, jobID);
+      this._notify.debug("Payload for job %s:%s:", this.name, jobID, payload);
       for (var handler of this._handlers)
         yield (resume)=> runJob(handler, [payload], PROCESSING_TIMEOUT, resume);
-      this.notify.info("Completed queued job %s:%s", this.name, jobID);
+      this._notify.info("Completed queued job %s:%s", this.name, jobID);
 
       try {
         yield session.request('destroy', jobID);
       } catch (error) {
-        this.notify.info("Could not delete job %s:%s", this.name, jobID);
+        this._notify.info("Could not delete job %s:%s", this.name, jobID);
       }
 
     } catch (error) {
 
-      this.notify.info("Error processing queued job %s:%ss", this.name, jobID, error.stack);
+      this._notify.info("Error processing queued job %s:%ss", this.name, jobID, error.stack);
       // Error or timeout: we release the job back to the queue.  Since this
       // may be a transient error condition (e.g. server down), we let it sit
       // in the queue for a while before it becomes available again.
@@ -318,7 +322,7 @@ class Queue {
     var session = this._putSession;
     if (!session) {
       // Setup: tell Beanstalkd which tube to use (persistent to session).
-      var tubeName = this.prefixedName;
+      var tubeName = this._prefixedName;
       session = new Session(this._server, this.name, function*(client) {
         yield (resume)=> client.use(tubeName, resume);
       });
@@ -333,7 +337,7 @@ class Queue {
     var session = this._reserveSessions[index];
     if (!session) {
       // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
-      var tubeName = this.prefixedName;
+      var tubeName = this._prefixedName;
       session = new Session(this._server, this.name, function*(client) {
         // Must watch a new tube before we can ignore default tube
         yield (resume)=> client.watch(tubeName, resume);
@@ -342,15 +346,6 @@ class Queue {
       this._reserveSessions[index] = session;
     }
     return session;
-  }
-
-
-  get notify() {
-    return this._server.notify;
-  }
-
-  get prefixedName() {
-    return this._server.config.prefixedName(this.name);
   }
 
 }
@@ -382,8 +377,9 @@ class Session {
   // callback - Call with error or nothing
   constructor(server, name, setup) {
     this.name     = name;
-    this._server  = server;
-    this._setup   = setup;
+    this.setup    = setup;
+    this._config  = server.config;
+    this._notify  = server.notify;
   }
 
   // Make a request to the server.
@@ -427,7 +423,8 @@ class Session {
       return this._client;
 
     // This is the Fivebeans client is essentially a session.
-    var client  = new fivebeans.client(this.config.queues.hostname, this.config.queues.port);
+    var config = this._config;
+    var client  = new fivebeans.client(config.queues.hostname, config.queues.port);
 
     try {
 
@@ -435,14 +432,14 @@ class Session {
         // On connection error, we automatically discard the connection.
         if (this._client == client)
           this._client = null;
-        this._server.notify.error("Client error in queue %s: %s", this.name, error.toString());
+        this._notify.error("Client error in queue %s: %s", this.name, error.toString());
         client.end();
       });
       client.on('close', ()=> {
         // Client disconnected
         if (this._client == client)
           this._client = null;
-        this._server.notify.error("Connection closed for %s", this.name);
+        this._notify.error("Connection closed for %s", this.name);
       });
 
       // Nothing happens until we start the connection.  Must wait for
@@ -456,12 +453,12 @@ class Session {
       // When working with Iron.io, need to authenticate each connection before
       // it can be used.  This is the first setup step, followed by the
       // session-specific setup.
-      if (this.config.authenticate)
-        yield (resume)=> client.put(0, 0, 0, this.config.authenticate, resume);
+      if (config.authenticate)
+        yield (resume)=> client.put(0, 0, 0, config.authenticate, resume);
       
       // Put/reserve clients have different setup requirements, this are handled by
       // an externally supplied method.
-      yield this._setup(client);
+      yield this.setup(client);
 
     } catch (error) {
       // Gracefully terminate connection.
@@ -478,14 +475,6 @@ class Session {
     if (this._client)
       this._client.end();
     this._client = null;
-  }
-
-  get config() {
-    return this._server.config;
-  }
-
-  get notify() {
-    return this._server.notify;
   }
 
 }

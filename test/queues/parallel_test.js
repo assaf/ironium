@@ -1,12 +1,12 @@
 const assert  = require('assert');
-const Helpers = require('./helpers');
-const workers = require('../src');
+const Helpers = require('../helpers');
+const ironium = require('../../src');
 
 
 describe.skip("processing", ()=> {
 
-  const processSerial     = workers.queue('process-serial');
-  const processParallel   = workers.queue('process-parallel');
+  const processSerial     = ironium.queue('process-serial');
+  const processParallel   = ironium.queue('process-parallel');
 
 
   describe("with one worker", ()=> {
@@ -25,7 +25,7 @@ describe.skip("processing", ()=> {
 
     before(processSerial.push(1));
     before(processSerial.push(2));
-    before(workers.once());
+    before(ironium.once());
 
     it("should run jobs in sequence", ()=> {
       assert.equal(chain.join(''), 'ABAB');
@@ -50,7 +50,7 @@ describe.skip("processing", ()=> {
 
     before(processParallel.push(3));
     before(processParallel.push(4));
-    before(workers.once());
+    before(ironium.once());
 
     it("should run jobs in sequence", ()=> {
       assert.equal(chain.join(''), 'AABB');

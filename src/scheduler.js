@@ -8,12 +8,13 @@ const runJob  = require('./run_job');
 
 module.exports = class Scheduler {
 
-  constructor(workers) {
-    this._workers     = workers;
-    this._schedules   = Object.create({});
+  constructor(ironium) {
     // If true, every new job is started automatically.  Necessary in case you
     // call schedule() after calling start().
     this.started      = false;
+
+    this._ironium     = ironium;
+    this._schedules   = Object.create({});
   }
 
   // Schedules a new job.
@@ -76,20 +77,25 @@ module.exports = class Scheduler {
   }
 
   get queue() {
-    // Lazily, only if/when schedule added.
+    // Lazy access to queue -> lazy load configuration.
+    //
+    // If we attempt to access the queue when new Scheduler created, we will
+    // immediately connect to some server, before the application gets a chance
+    // to call ironium.configure().
     if (!this._queue) {
-      this._queue = this._workers.queue('$schedule');
+      this._queue = this._ironium.queue('$schedule');
       this._queue.each(this._runQueuedJob.bind(this));
     }
     return this._queue;
   }
 
   get config() {
-    return this._workers.config;
+    // Lazy load configuration.
+    return this._ironium.config;
   }
 
   get notify() {
-    return this._workers;
+    return this._ironium;
   }
 }
 

@@ -1,5 +1,7 @@
 # 0.9.6
 
+CHANGED: documentation uses `ironium` instead of `workers`.
+
 FIXED: connection errors not reported correctly.
 
 

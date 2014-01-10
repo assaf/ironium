@@ -1,4 +1,4 @@
-const workers = require('../src');
+const ironium = require('../src');
 
 
 // Test mode: no delay when failed jobs returned to queue.
@@ -6,10 +6,10 @@ process.env.NODE_ENV = 'test';
 
 // Run with env DEBUG=true to see what's happening
 if (process.env.DEBUG) {
-  workers.on('debug', (message)=> console.log(message))
-  workers.on('info',  (message)=> console.info(message))
-  workers.on('error', (error)=> console.error(error.stack))
+  ironium.on('debug', (message)=> console.log(message))
+  ironium.on('info',  (message)=> console.info(message))
+  ironium.on('error', (error)=> console.error(error.stack))
 }
 
-before(workers.reset());
-after(workers.reset());
+before(ironium.reset());
+after(ironium.reset());

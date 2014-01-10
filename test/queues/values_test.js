@@ -1,11 +1,11 @@
 const assert  = require('assert');
-const Helpers = require('./helpers');
-const workers = require('../src');
+const Helpers = require('../helpers');
+const ironium = require('../../src');
 
 
 describe("queue", ()=> {
 
-  const capture = workers.queue('capture');
+  const capture = ironium.queue('capture');
 
   // Capture processed jobs here.
   let processed = [];
@@ -20,7 +20,7 @@ describe("queue", ()=> {
 
   describe("an object", ()=> {
     before(capture.push({ id: 5, name: 'job' }));
-    before(workers.once());
+    before(ironium.once());
 
     it("should process that object", ()=>{
       let job = processed[0];
@@ -34,7 +34,7 @@ describe("queue", ()=> {
 
   describe("a string", ()=> {
     before(capture.push('job'));
-    before(workers.once());
+    before(ironium.once());
 
     it("should process that string", ()=>{
       let job = processed[0];
@@ -47,7 +47,7 @@ describe("queue", ()=> {
 
   describe("a number", ()=> {
     before(capture.push(3.1));
-    before(workers.once());
+    before(ironium.once());
 
     it("should process that number", ()=>{
       let job = processed[0];
@@ -60,7 +60,7 @@ describe("queue", ()=> {
 
   describe("an array", ()=> {
     before(capture.push([true, '+']));
-    before(workers.once());
+    before(ironium.once());
 
     it("should process that array", ()=>{
       let job = processed[0];
@@ -90,7 +90,7 @@ describe("queue", ()=> {
     before(()=> {
       thunk = capture.push('thunk');
     });
-    before(workers.once());
+    before(ironium.once());
 
     it("should return a thunk", ()=> {
       assert(thunk);
@@ -99,7 +99,7 @@ describe("queue", ()=> {
 
     it("should not queue until thunk called", (done)=>{
       process.nextTick(()=> {
-        workers.once(()=>{
+        ironium.once(()=>{
           assert(processed.length == 0);
           done();
         });
@@ -108,7 +108,7 @@ describe("queue", ()=> {
 
     describe("thunk called", ()=> {
       before((done)=> thunk(done));
-      before(workers.once());
+      before(ironium.once());
 
       it("should queue job", (done)=>{
         assert(processed.length == 1);

@@ -77,8 +77,8 @@ Node.js servers, but only process jobs from specific nodes.
 For example, your code may have:
 
 ```
-var workers          = require('ironium');
-var sendWelcomeEmail = workers.queue('send-welcome-email');
+var ironium          = require('ironium');
+var sendWelcomeEmail = ironium.queue('send-welcome-email');
 
 // If this is a new customer, queue sending welcome email.
 customer.on('save', function(next) {
@@ -136,8 +136,8 @@ yield queues('echo').push(job);
 ### queue.each(handler)
 
 Processes jobs from the queue. In addition to calling this method, you need to
-either start the workers (see `start` method), or run all queued jobs (see
-`once` method).
+either start the workers (see `start` method), or run all queued jobs once (see
+[`once`](#oncecallback)).
 
 The first argument is the job handler, a function that takes either one or two
 arguments.  The second argument is the number of workers you want processing the
@@ -152,7 +152,7 @@ queue, from where it will be picked up after a short delay.
 For example:
 
 ```
-workers.queue('echo').each(job, callback) {
+ironium.queue('echo').each(job, callback) {
   console.log('Echo', job.message);
   callback();
 });
@@ -183,7 +183,7 @@ services send form encoded pairs, so you may need to handle them like this:
 ```
 var QS = require('querystring');
 
-workers.queue('webhook').each(function(job, callback) {
+ironium.queue('webhook').each(function(job, callback) {
   var params = QS.parse(job);
   console.log(params.message);
   callback();
@@ -231,11 +231,11 @@ generator function.
 For example:
 
 ```
-workers.schedule('everyHour', '1h', function(callback) {
+ironium.schedule('everyHour', '1h', function(callback) {
   console.log("I run every hour");
 });
 
-workers.schedule('inAnHour', new Date() + ms('1h'), function() {
+ironium.schedule('inAnHour', new Date() + ms('1h'), function() {
   console.log("I run once, after an hour");
   return Promise.resolve();
 });
@@ -244,7 +244,7 @@ var schedule = {
   every: ms('2h'),               // Every two hours
   end:   new Date() + ms('24h'), // End in 24 hours
 };
-workers.schedule('everyTwoForADay', schedule, function*() {
+ironium.schedule('everyTwoForADay', schedule, function*() {
   console.log("I run every 2 hours for 24 hours");
   var customers = yield Customer.findAll();
   for (var customer of customers)
@@ -255,7 +255,7 @@ workers.schedule('everyTwoForADay', schedule, function*() {
 
 ### configure(object)
 
-Configure the workers (see below).
+Configure the workers, see [Configuring](#configuring).
 
 
 ### start()
@@ -287,11 +287,11 @@ running automated tests.
 For example:
 
 ```
-var queue = workers.queue('echo');
+var queue = ironium.queue('echo');
 var echo  = [];
 
 // Scheduled worker will queue a job
-workers.schedule('echo-foo', '* * * *', function(callback) {
+ironium.schedule('echo-foo', '* * * *', function(callback) {
   queue.push('foo', callback);
 });
 
@@ -304,7 +304,7 @@ queue.each(function(text, callback) {
 before(queue.push('bar'));
 
 // Running the scheduled job, followed by the two queued jobs
-before(workers.once());
+before(ironium.once());
 
 it("should have run the foo scheduled job", function() {
   assert(echo.indexOf('foo') >= 0);
@@ -326,14 +326,14 @@ callback).
 For example:
 
 ```
-before(workers.reset());
+before(ironium.reset());
 ```
 
 Is equivalent to:
 
 ```
 before(function(done) {
-  workers.reset(done);
+  ironium.reset(done);
 });
 ```
 
@@ -349,7 +349,7 @@ return to the queue and processed again.
 For example:
 
 ```
-workers.queue('delayed-echo').each(function(job) {
+ironium.queue('delayed-echo').each(function(job) {
   var promise = new Promise(function(resolve, reject) {
 
     console.log('Echo', job.message);
@@ -368,7 +368,7 @@ promises and callback.  At each step the job can yield with a promise, and act
 on the value of that promise.  For example:
 
 ```
-workers.queue('update-name').each(function(job) {
+ironium.queue('update-name').each(function(job) {
   var customer = yield Customer.findById(job.customerID);
 
   // At this point customer is set
@@ -391,7 +391,7 @@ you'll need to write your code like this:
 
 
 ```
-workers.queue('update-name').each(function*(job) {
+ironium.queue('update-name').each(function*(job) {
   // You must call exec() to turn query into a promise
   var customer = yield Customer.findById(job.customerID).exec();
 
@@ -412,7 +412,7 @@ workers.queue('update-name').each(function*(job) {
 Another example:
 
 ```
-workers.queue('echo-file').each(function*(job) {
+ironium.queue('echo-file').each(function*(job) {
   var contents = yield function(callback) {
     File.readFile(job.filename, callback);
   };
@@ -433,15 +433,15 @@ For example:
 
 ```
 if (process.env.DEBUG)
-  workers.on('debug', function(message) {
+  ironium.on('debug', function(message) {
     console.log(message);
   });
 
-workers.on('info', function(message) {
+ironium.on('info', function(message) {
   console.log(message);
 });
 
-workers.on('error', function(error) {
+ironium.on('error', function(error) {
   console.error(error.stack);
   errorService.notify(error);
 });
@@ -452,13 +452,13 @@ workers.on('error', function(error) {
 
 For development and testing you can typically get by with the default
 configuration.  For production, you may want to set the server in use, as simple
-as passing a configuration object to `workers.configure`:
+as passing a configuration object to `ironium.configure`:
 
 ```
-var workers = require('ironium');
+var ironium = require('ironium');
 
 if (process.env.NODE_ENV == 'production')
-  workers.configure({
+  ironium.configure({
     queues: {
       hostname: 'my.beanstalkd.server',
       width:    4
@@ -469,11 +469,11 @@ if (process.env.NODE_ENV == 'production')
 Or load it form a JSON configuration file:
 
 ```
-var workers = require('ironium');
-var config  = require('./workers.json');
+var ironium = require('ironium');
+var config  = require('./ironium.json');
 
 if (process.env.NODE_ENV == 'production')
-  workers.configure(config);
+  ironium.configure(config);
 ```
 
 The configuration options are:
