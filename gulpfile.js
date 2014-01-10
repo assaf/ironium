@@ -1,6 +1,7 @@
 const clean   = require('gulp-clean');
 const gulp    = require('gulp');
 const notify  = require('gulp-notify');
+const OS      = require('os');
 const release = require('gulp-release');
 const replace = require('gulp-replace');
 const spawn   = require('child_process').spawn;
@@ -22,11 +23,12 @@ gulp.task('build', function() {
     sourceMaps:   true,
     modules:      'commonjs'
   };
-  gulp.src('src/**/*.js')
+  const compile = gulp.src('src/**/*.js')
     .pipe(traceur(options))
     .pipe(replace("module.exports = {};", ""))
-    .pipe(gulp.dest('lib'))
-    .pipe(notify({ message: "Ironium: built!" }));
+    .pipe(gulp.dest('lib'));
+  if (OS.type() == 'Darwin')
+    compile.pipe(notify({ message: "Ironium: built!" }));
 });
 
 gulp.task('clean', function() {
