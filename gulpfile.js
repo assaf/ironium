@@ -33,18 +33,24 @@ gulp.task('clean', function() {
   gulp.src('lib/**', {read: false }).pipe(clean());
 });
 
-gulp.task('test', ['clean', 'build'], function(callback) {
-  spawn('mocha', [], { stdio: 'inherit' }, callback);
+gulp.task('test', function(callback) {
+  const mocha = spawn('mocha', [], { stdio: 'inherit' });
+  mocha.on('close', function(code) {
+    if (code)
+      callback(new Error('Mocha exited with code ' + code));
+    else
+      callback();
+  });
 });
 
 
-gulp.task('release', ['clean', 'test'], function() {
-  return gulp.src('package.json')
+gulp.task('release', ['clean', 'build', 'test'], function() {
+  gulp.src('package.json')
     .pipe(release({
       commit: {
         files: [ '-a' ],
         message: 'Release <%= package.version %>'
       },
-      publish: false // explicitly pass false will skip this step
+      publish: true
     }));
 });
