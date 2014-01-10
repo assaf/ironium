@@ -529,17 +529,16 @@ specifically, see out [`.travis.yml`](.travis.yml).
 Ironium is written in ECMAScript 6, because future.
 
 The ES6 source lives in the `src` directory, compiled into ES5 in the `lib`
-directory.  We use [Grunt](http://gruntjs.com/) for the convenience plugins of
+directory.  We use [Gulp.js](http://gulpjs.com/) for the convenience plugins of
 compiling, watching and notifying.
 
 Specifically:
 
 ```
-grunt         # Run this in development (same as grunt build watch)
-grunt build   # Compile source files from src/ into lib/
-grunt watch   # Continously compile source files on every change
-grunt clean   # Clean compiled files
-grunt release # Publish new release (also grunt release:minor/major)
+gulp          # Run this in development, continously compiles on every change
+gulp build    # Compile source files from src/ into lib/
+gulp clean    # Clean compiled files
+gulp release  # Publish new release
 ```
 
 You can run the entire test suite with `npm test`

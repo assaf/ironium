@@ -1,14 +1,14 @@
-const assert      = require('assert');
-const Helpers     = require('./helpers');
-const { Promise } = require('es6-promise');
-const workers     = require('../src');
+var assert      = require('assert');
+var Helpers     = require('./helpers');
+var { Promise } = require('es6-promise');
+var workers     = require('../src');
 
 
 describe("processing", ()=> {
 
-  const errorCallback   = workers.queue('error-callback');
-  const errorPromise    = workers.queue('error-promise');
-  const errorGenerator  = workers.queue('error-generator');
+  var errorCallback   = workers.queue('error-callback');
+  var errorPromise    = workers.queue('error-promise');
+  var errorGenerator  = workers.queue('error-generator');
 
   function untilSuccessful(done) {
     workers.once((error)=> {
