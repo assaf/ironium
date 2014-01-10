@@ -292,7 +292,7 @@ class Queue {
     // Delete all ready jobs.
     try {
       while (true) {
-        var jobID = yield session.request('peek_ready');
+        var [jobID, payload] = yield session.request('peek_ready');
         yield session.request('destroy', jobID);
       }
     } catch (error) {
@@ -303,7 +303,7 @@ class Queue {
     // Delete all delayed jobs.
     try {
       while (true) {
-        var jobID = yield session.request('peek_delayed');
+        var [jobID, payload] = yield session.request('peek_delayed');
         yield session.request('destroy', jobID);
       }
     } catch (error) {

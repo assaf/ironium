@@ -1,3 +1,8 @@
+# 0.9.5
+
+FIXED: bug when cleaning out Beanstalkd queue.
+
+
 # 0.9.4
 
 CHANGED: use of queues on their own will not prevent process from completing.
