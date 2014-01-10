@@ -45,7 +45,7 @@ gulp.task('test', function(callback) {
 
 
 gulp.task('release', ['clean', 'build', 'test'], function() {
-  gulp.src('package.json')
+  return gulp.src('package.json')
     .pipe(release({
       commit: {
         files: [ '-a' ],
