@@ -5,18 +5,13 @@ const ms          = require('ms');
 const runJob      = require('./run_job');
 
 
-// How long to wait when reserving a job.  Iron.io terminates connection after
-// 1 minute, so that's the longest we can wait without having to continously
-// reopen connctions.
-const RESERVE_TIMEOUT     = ms('30s');
-
 // Back-off in case of connection error, prevents continously failing to
 // reserve a job.
 const RESERVE_BACKOFF     = ms('30s');
 
 // How long before we consider a request failed due to timeout.
 // Should be longer than RESERVE_TIMEOUT.
-const TIMEOUT_REQUEST     = RESERVE_TIMEOUT + ms('10s');
+const TIMEOUT_REQUEST     = ms('5m');
 
 // Timeout for processing job before we consider it failed and release it back
 // to the queue.
@@ -224,12 +219,10 @@ class Queue {
 
         try {
 
-          var timeout = RESERVE_TIMEOUT / 1000;
-          var [jobID, payload] = yield session.request('reserve_with_timeout', timeout);
+          var [jobID, payload] = yield session.request('reserve');
           yield this._runAndDestroy(session, jobID, payload);
 
         } catch (error) {
-
 
           // No job, go back to wait for next job.
           if (error != 'TIMED_OUT' && error.message != 'TIMED_OUT') {
@@ -393,20 +386,23 @@ class Session {
     // Wait for connection, need open client to send request.
     var client  = yield this.connect();
     var results = yield function(resume) {
-      // Catch commands that don't complete in time.  If the connection
-      // breaks for any reason, Fivebeans never calls the callback, the only
-      // way we can handle this condition is with a timeout.
+      // Catch commands that will never complete because the connection has been
+      // closed/errored.
       var completed = false;
-      var requestTimeout = setTimeout(function() {
+      function failed() {
         if (!completed) {
           completed = true;
           resume('TIMED_OUT');
         }
-      }, TIMEOUT_REQUEST);
+      }
+      client.once('error', failed);
+      client.once('close', failed);
+
       client[command].call(client, ...args, function(error, ...results) {
         if (!completed) {
           completed = true;
-          clearTimeout(requestTimeout);
+          client.removeListener('error', failed);
+          client.removeListener('close', failed);
           resume(error, results);
         }
       });

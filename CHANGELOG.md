@@ -2,6 +2,8 @@
 
 CHANGED: session ID now indicates if it's put session or worker number.
 
+FIXED: error handling for connection close/error without using timeout.
+
 
 # 0.9.6
 
