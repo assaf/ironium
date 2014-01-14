@@ -5,13 +5,13 @@ const ms          = require('ms');
 const runJob      = require('./run_job');
 
 
+// How long to wait when reserving a job.  Iron.io closes connection if we wait
+// too long.
+const RESERVE_TIMEOUT     = ms('30s');
+
 // Back-off in case of connection error, prevents continously failing to
 // reserve a job.
 const RESERVE_BACKOFF     = ms('30s');
-
-// How long before we consider a request failed due to timeout.
-// Should be longer than RESERVE_TIMEOUT.
-const TIMEOUT_REQUEST     = ms('5m');
 
 // Timeout for processing job before we consider it failed and release it back
 // to the queue.
@@ -219,13 +219,15 @@ class Queue {
 
         try {
 
-          var [jobID, payload] = yield session.request('reserve');
+          var timeout = RESERVE_TIMEOUT / 1000;
+          var [jobID, payload] = yield session.request('reserve_with_timeout', timeout);
           yield this._runAndDestroy(session, jobID, payload);
 
         } catch (error) {
 
-          // No job, go back to wait for next job.
-          if (error != 'TIMED_OUT' && error.message != 'TIMED_OUT') {
+          if (error == 'TIMED_OUT' || error.message == 'TIMED_OUT') {
+            // No job, go back to wait for next job.
+          } else {
             // Report on any other error, and back off for a few.
             this._notify.error(error);
             var backoff = (process.env.NODE_ENV == 'test' ? 0 : RESERVE_BACKOFF);

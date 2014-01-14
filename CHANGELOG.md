@@ -4,6 +4,8 @@ CHANGED: session ID now indicates if it's put session or worker number.
 
 FIXED: error handling for connection close/error without using timeout.
 
+FIXED: trying to work around Iron.io disconnect issue.
+
 
 # 0.9.6
 
