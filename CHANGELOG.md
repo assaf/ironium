@@ -1,3 +1,8 @@
+# 0.9.7
+
+CHANGED: session ID now indicates if it's put session or worker number.
+
+
 # 0.9.6
 
 CHANGED: documentation uses `ironium` instead of `workers`.

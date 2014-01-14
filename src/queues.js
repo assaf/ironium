@@ -323,7 +323,7 @@ class Queue {
     if (!session) {
       // Setup: tell Beanstalkd which tube to use (persistent to session).
       var tubeName = this._prefixedName;
-      session = new Session(this._server, this.name, function*(client) {
+      session = new Session(this._server, this.name + '/put', function*(client) {
         yield (resume)=> client.use(tubeName, resume);
       });
       this._putSession = session;
@@ -338,7 +338,7 @@ class Queue {
     if (!session) {
       // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
       var tubeName = this._prefixedName;
-      session = new Session(this._server, this.name, function*(client) {
+      session = new Session(this._server, this.name + '/' + index, function*(client) {
         // Must watch a new tube before we can ignore default tube
         yield (resume)=> client.watch(tubeName, resume);
         yield (resume)=> client.ignore('default', resume);
@@ -362,7 +362,7 @@ class Session {
 
   // Construct a new session.
   //
-  // name    - Queue name, used for error reporting
+  // id      - Session id, used for error reporting
   // config  - Queue server configuration, used to establish connection
   // notify  - Logging and errors
   // setup   - The setup function, see below
@@ -375,8 +375,8 @@ class Session {
   // The setup function is called with two arguments:
   // client   - Fivebeans client being setup
   // callback - Call with error or nothing
-  constructor(server, name, setup) {
-    this.name     = name;
+  constructor(server, id, setup) {
+    this.id       = id;
     this.setup    = setup;
     this._config  = server.config;
     this._notify  = server.notify;
@@ -432,14 +432,14 @@ class Session {
         // On connection error, we automatically discard the connection.
         if (this._client == client)
           this._client = null;
-        this._notify.error("Client error in queue %s: %s", this.name, error.toString());
+        this._notify.error("Client error in queue %s: %s", this.id, error.toString());
         client.end();
       });
       client.on('close', ()=> {
         // Client disconnected
         if (this._client == client)
           this._client = null;
-        this._notify.error("Connection closed for %s", this.name);
+        this._notify.error("Connection closed for %s", this.id);
       });
 
       // Nothing happens until we start the connection.  Must wait for
