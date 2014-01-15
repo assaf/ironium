@@ -388,25 +388,21 @@ class Session {
     // Wait for connection, need open client to send request.
     var client  = yield this.connect();
     var results = yield function(resume) {
-      // Catch commands that will never complete because the connection has been
-      // closed/errored.
-      var completed = false;
-      function failed() {
-        if (!completed) {
-          completed = true;
-          resume('TIMED_OUT');
-        }
+      // If connection ends close/error, Fivebeans never terminates the request,
+      // we need to respond to connection error directly.
+      function onError(error) {
+        resume(error);
       }
-      client.once('error', failed);
-      client.once('close', failed);
+      function onClose() {
+        resume(new Error("Connection closed"));
+      }
+      client.once('close', onClose);
+      client.once('error', onError);
 
       client[command].call(client, ...args, function(error, ...results) {
-        if (!completed) {
-          completed = true;
-          client.removeListener('error', failed);
-          client.removeListener('close', failed);
-          resume(error, results);
-        }
+        client.removeListener('close', onClose);
+        client.removeListener('error', onError);
+        resume(error, results);
       });
     }
     return results && (results.length > 1 ? results : results[0]);
@@ -430,14 +426,14 @@ class Session {
         // On connection error, we automatically discard the connection.
         if (this._client == client)
           this._client = null;
-        this._notify.error("Client error in queue %s: %s", this.id, error.toString());
+        this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
         client.end();
       });
       client.on('close', ()=> {
         // Client disconnected
         if (this._client == client)
           this._client = null;
-        this._notify.error("Connection closed for %s", this.id);
+        this._notify.debug("Connection closed for %s", this.id);
       });
 
       // Nothing happens until we start the connection.  Must wait for

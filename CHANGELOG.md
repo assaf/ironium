@@ -1,3 +1,8 @@
+# 0.9.8
+
+FIXED: should not warn about closed connection, unless it interrupts request.
+
+
 # 0.9.7
 
 CHANGED: session ID now indicates if it's put session or worker number.
