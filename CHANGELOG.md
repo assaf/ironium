@@ -2,6 +2,8 @@
 
 FIXED: should not warn about closed connection, unless it interrupts request.
 
+CHANGED: schedule time should be ISO string.
+
 
 # 0.9.7
 

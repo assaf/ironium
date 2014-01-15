@@ -60,7 +60,7 @@ module.exports = class Scheduler {
 
   // Schedule calls this to queue the job.
   queueJob(name, callback) {
-    var thunk = this.queue.push({ name, time: Date.now()});
+    var thunk = this.queue.push({ name, time: new Date().toISOString()});
     if (callback)
       thunk(callback);
     else
