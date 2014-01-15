@@ -30,7 +30,7 @@ gulp.task('build', function() {
     .pipe(gulp.dest('lib'));
   // Notifications only available on Mac
   if (OS.type() == 'Darwin')
-    compile.pipe(notify({ message: "Ironium: built!" }));
+    compile.pipe(notify({ message: "Ironium: built!", onLast: true }));
 });
 
 // Delete anything compiled into lib directory
