@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "scripts": {
     "test": "./node_modules/.bin/mocha",
     "prepublish": "gulp build"
@@ -13,12 +13,12 @@
     "co": "3.0.2",
     "fivebeans": "1.1.0",
     "ms": "0.6.2",
-    "traceur": "0.0.9"
+    "traceur": "0.0.10"
   },
   "devDependencies": {
     "es6-promise": "0.1.1",
     "gulp": "3.3.4",
-    "gulp-notify": "0.2.0",
+    "gulp-notify": "0.3.0",
     "gulp-traceur": "0.1.1",
     "gulp-release": "0.0.5",
     "gulp-replace": "0.2.0",

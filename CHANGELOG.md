@@ -1,3 +1,8 @@
+# 0.9.9
+
+Upgraded to Traceur 0.0.10.
+
+
 # 0.9.8
 
 FIXED: should not warn about closed connection, unless it interrupts request.

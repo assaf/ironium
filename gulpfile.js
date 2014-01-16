@@ -26,7 +26,6 @@ gulp.task('build', function() {
   };
   const compile = gulp.src('src/**/*.js')
     .pipe(traceur(options))
-    .pipe(replace("module.exports = {};", ""))
     .pipe(gulp.dest('lib'));
   // Notifications only available on Mac
   if (OS.type() == 'Darwin')

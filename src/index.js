@@ -1,5 +1,5 @@
 // Need runtime to support generators.
-require(require.resolve('traceur') + '/../../runtime/runtime');
+require('traceur');
 
 const co                = require('co');
 const { EventEmitter }  = require('events');
