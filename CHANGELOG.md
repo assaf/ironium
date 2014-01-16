@@ -1,6 +1,6 @@
 # 0.9.9
 
-Upgraded to Traceur 0.0.10.
+Upgraded to Traceur 0.0.10. 
 
 
 # 0.9.8
