@@ -46,10 +46,17 @@ gulp.task('test', function(callback) {
 
 
 // Tag the release and npm publish
-gulp.task('release', ['clean', 'build', 'test'], function() {
+gulp.task('element', function() {
+  const version = require('./package.json').version;
+  gulp.src('element.svg')
+    .pipe(replace(/<tspan id="version">.+<\/tspan>/, '<tspan id="version">' + version + '</tspan>'))
+    .pipe(gulp.dest('.'));
+          
+});
+gulp.task('release', ['clean', 'build', 'test', 'element'], function() {
   const version = require('./package.json').version;
   return gulp.src('package.json')
-    .pipe(git.add('package.json CHANGELOG.md'))
+    .pipe(git.add('package.json CHANGELOG.md element.svg'))
     .pipe(git.commit("Release " + version, '--allow-empty'))
     .pipe(git.tag(version, "Release " + version, true))
     .pipe(git.push())
