@@ -1,13 +1,12 @@
 # [Ironium](https://github.com/assaf/ironium)
 
-<img src='https://raw.github.com/assaf/ironium/master/element.svg' type='image/svg+xml'>
+![](https://rawgithub.com/assaf/ironium/master/element.svg)
 
 Job queues and scheduled jobs for Node.js,
 [Beanstalkd](http://kr.github.io/beanstalkd/) and/or
 [Iron.io](http://www.iron.io/).
 
-[![Build
-status](https://travis-ci.org/assaf/ironium.png)](https://travis-ci.org/assaf/ironium)
+![](http://b.adge.me/npm/v/ironium.svg) ![](b.adge.me/npm/v/ironium.svg) ![](http://b.adge.me/:license-MIT-green.svg)
 
 
 ## The Why
