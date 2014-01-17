@@ -17,12 +17,12 @@
   },
   "devDependencies": {
     "es6-promise": "0.1.1",
-    "gulp": "3.3.4",
+    "gulp": "3.4.0",
+    "gulp-clean": "0.2.3",
     "gulp-notify": "0.3.0",
-    "gulp-traceur": "0.1.1",
     "gulp-release": "0.0.5",
     "gulp-replace": "0.2.0",
-    "gulp-clean": "0.2.2",
+    "gulp-traceur": "0.1.1",
     "mocha": "1.17.0"
   },
   "repository": {
