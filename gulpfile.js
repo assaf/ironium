@@ -4,7 +4,6 @@ const gulp    = require('gulp');
 const notify  = require('gulp-notify');
 const OS      = require('os');
 const replace = require('gulp-replace');
-const spawn   = require('child_process').spawn;
 const traceur = require('gulp-traceur');
 
 
@@ -38,24 +37,21 @@ gulp.task('clean', function() {
   gulp.src('lib/**', {read: false }).pipe(clean());
 });
 
+const exec = require('gulp-exec');
+
 // Run mocha, used by release task
 gulp.task('test', function(callback) {
-  const mocha = spawn('mocha', [], { stdio: 'inherit' });
-  mocha.on('close', function(code) {
-    if (code)
-      callback(new Error('Mocha exited with code ' + code));
-    else
-      callback();
-  });
+  gulp.src('test').pipe(exec('mocha'));
 });
 
 
 // Tag the release and npm publish
 gulp.task('release', ['clean', 'build', 'test'], function() {
-  gulp.src('./package.json')
+  const version = require('./package.json').version;
+  gulp.src('package.json')
     .pipe(git.add('package.json CHANGELOG.md'))
-    .pipe(git.commit("Release <%= jsonFile.version %>", "--allow-empty"))
-    .pipe(git.tag("<%= jsonFile.version %>", "Release <%= jsonFile.version %>", true))
-    .pipe(git.push());
-    //.pipe(exec('npm publish'))
+    .pipe(git.commit("Release " + version, '--allow-empty'))
+    .pipe(git.tag(version, "Release " + version, true))
+    .pipe(git.push())
+    .pipe(exec('npm publish'))
 });
