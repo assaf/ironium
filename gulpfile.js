@@ -49,7 +49,7 @@ gulp.task('test', function(callback) {
 gulp.task('element', function() {
   const version = require('./package.json').version;
   gulp.src('element.svg')
-    .pipe(replace(/<tspan id="version">.+<\/tspan>/, '<tspan id="version">' + version + '</tspan>'))
+    .pipe(replace(/<tspan id="version">[\d\.]+<\/tspan>/, '<tspan id="version">' + version + '</tspan>'))
     .pipe(gulp.dest('.'));
           
 });
