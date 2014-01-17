@@ -1,6 +1,6 @@
 # [Ironium](https://github.com/assaf/ironium)
 
-![Ironium](element.svg)
+<img src='element.svg' type='image/svg+xml'>
 
 Job queues and scheduled jobs for Node.js,
 [Beanstalkd](http://kr.github.io/beanstalkd/) and/or
