@@ -13,7 +13,7 @@
     "co": "3.0.2",
     "fivebeans": "1.1.0",
     "ms": "0.6.2",
-    "traceur": "0.0.10"
+    "traceur": "0.0.11"
   },
   "devDependencies": {
     "es6-promise": "0.1.1",
