@@ -1,3 +1,8 @@
+# 0.9.10
+
+FIXED: more informative close/error messages.
+
+
 # 0.9.9
 
 Upgraded to Traceur 0.0.10. 

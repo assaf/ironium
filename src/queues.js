@@ -391,10 +391,10 @@ class Session {
       // If connection ends close/error, Fivebeans never terminates the request,
       // we need to respond to connection error directly.
       function onError(error) {
-        resume(error);
+        resume(new Error("Connection error: session=" + this.id + " command=" + command + " error=" + error.toString()));
       }
       function onClose() {
-        resume(new Error("Connection closed"));
+        resume(new Error("Connection closed: session=" + this.id + " command=" + command));
       }
       client.once('close', onClose);
       client.once('error', onError);
