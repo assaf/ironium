@@ -41,14 +41,14 @@ const exec = require('gulp-exec');
 
 // Run mocha, used by release task
 gulp.task('test', function(callback) {
-  gulp.src('test').pipe(exec('mocha'));
+  return gulp.src('test').pipe(exec('mocha'));
 });
 
 
 // Tag the release and npm publish
 gulp.task('release', ['clean', 'build', 'test'], function() {
   const version = require('./package.json').version;
-  gulp.src('package.json')
+  return gulp.src('package.json')
     .pipe(git.add('package.json CHANGELOG.md'))
     .pipe(git.commit("Release " + version, '--allow-empty'))
     .pipe(git.tag(version, "Release " + version, true))
