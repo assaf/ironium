@@ -1,8 +1,8 @@
 const clean   = require('gulp-clean');
+const git     = require('gulp-git');
 const gulp    = require('gulp');
 const notify  = require('gulp-notify');
 const OS      = require('os');
-const release = require('gulp-release');
 const replace = require('gulp-replace');
 const spawn   = require('child_process').spawn;
 const traceur = require('gulp-traceur');
@@ -52,12 +52,10 @@ gulp.task('test', function(callback) {
 
 // Tag the release and npm publish
 gulp.task('release', ['clean', 'build', 'test'], function() {
-  return gulp.src('package.json')
-    .pipe(release({
-      commit: {
-        files: [ '-a' ],
-        message: 'Release <%= package.version %>'
-      },
-      publish: true
-    }));
+  gulp.src('./package.json')
+    .pipe(git.add('package.json CHANGELOG.md'))
+    .pipe(git.commit("Release <%= jsonFile.version %>", "--allow-empty"))
+    .pipe(git.tag("<%= jsonFile.version %>", "Release <%= jsonFile.version %>", true))
+    .pipe(git.push());
+    //.pipe(exec('npm publish'))
 });
