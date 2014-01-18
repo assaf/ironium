@@ -385,17 +385,18 @@ class Session {
   // This is a simple wrapper around the Fivebeans client with additional error
   // handling.
   *request(command, ...args) {
-    var id = this.id;
     // Wait for connection, need open client to send request.
     var client  = yield this.connect();
     var results = yield function(resume) {
       // If connection ends close/error, Fivebeans never terminates the request,
       // we need to respond to connection error directly.
       function onError(error) {
-        resume(new Error("Connection error: session=" + id + " command=" + command + " error=" + error.toString()));
+        resume(error);
       }
       function onClose() {
-        resume(new Error("Connection closed: session=" + id + " command=" + command));
+        // The TIMED_OUT error is appropriate because the request failed to
+        // complete in time, and gets silently ignored when reserving jobs.
+        resume(new Error('TIMED_OUT'));
       }
       client.once('close', onClose);
       client.once('error', onError);

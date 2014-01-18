@@ -1,3 +1,8 @@
+# 0.9.11
+
+FIXED: don't care for close errors while reserving jobs.
+
+
 # 0.9.10
 
 FIXED: more informative close/error messages.
