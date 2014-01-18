@@ -385,16 +385,17 @@ class Session {
   // This is a simple wrapper around the Fivebeans client with additional error
   // handling.
   *request(command, ...args) {
+    var id = this.id;
     // Wait for connection, need open client to send request.
     var client  = yield this.connect();
     var results = yield function(resume) {
       // If connection ends close/error, Fivebeans never terminates the request,
       // we need to respond to connection error directly.
       function onError(error) {
-        resume(new Error("Connection error: session=" + this.id + " command=" + command + " error=" + error.toString()));
+        resume(new Error("Connection error: session=" + id + " command=" + command + " error=" + error.toString()));
       }
       function onClose() {
-        resume(new Error("Connection closed: session=" + this.id + " command=" + command));
+        resume(new Error("Connection closed: session=" + id + " command=" + command));
       }
       client.once('close', onClose);
       client.once('error', onError);
