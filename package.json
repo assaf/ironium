@@ -17,10 +17,9 @@
   },
   "devDependencies": {
     "es6-promise": "0.1.1",
-    "gulp": "3.4.0",
+    "gulp": "3.4.1",
     "gulp-clean": "0.2.3",
-    "gulp-exec": "1.0.3",
-    "gulp-git": "0.2.1",
+    "gulp-exec": "1.0.4",
     "gulp-notify": "0.3.0",
     "gulp-replace": "0.2.0",
     "gulp-traceur": "0.1.1",
