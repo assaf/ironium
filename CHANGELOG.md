@@ -1,3 +1,8 @@
+# 0.9.13
+
+CHANGED: workers.once() fails if any scheduled job fails.
+
+
 # 0.9.12
 
 FIXED: scheduled jobs not processed until next schedule.

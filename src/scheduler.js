@@ -179,12 +179,13 @@ class Schedule {
     }
   }
 
-  // Queue this job to run once.
+  // Run job once.
   *once() {
     var now = Date.now();
     if ((!this.startTime || now >= this.startTime) &&
         (!this.endTime || now < this.endTime)) {
-      yield this._scheduler.queueJob(this.name);
+      this.notify.debug("Processing %s", this.name);
+      yield (resume)=> runJob(this.job, [], undefined, resume);
     }
   }
 
