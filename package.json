@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "0.9.12",
+  "version": "0.9.13",
   "scripts": {
     "test": "./node_modules/.bin/mocha",
     "prepublish": "gulp build"
