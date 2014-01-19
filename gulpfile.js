@@ -57,7 +57,7 @@ gulp.task('release', ['clean', 'build', 'test', 'element'], function() {
   return gulp.src('package.json')
     .pipe(exec('git add package.json CHANGELOG.md element.svg'))
     .pipe(exec('git commit --allow-empty -m "' + message + '"'))
-    .pipe(exec('git tag version -m "' + message + '"'))
+    .pipe(exec('git tag ' + version + ' -m "' + message + '"'))
     .pipe(exec('git push origin master'))
     .pipe(exec('npm publish'))
 });
