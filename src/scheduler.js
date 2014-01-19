@@ -76,7 +76,7 @@ module.exports = class Scheduler {
       if (schedule)
         yield schedule.runJob(time);
       else
-        this.notify.info("No schedule %s, ignoring", name);
+        this.notify.error("No schedule %s, ignoring", name);
     } catch (error) {
       // Notify, but does not return job to queue.
       this.notify.error(error);
