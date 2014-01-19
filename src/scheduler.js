@@ -72,10 +72,15 @@ module.exports = class Scheduler {
   // This is used to pick up job from the queue and run it.
   *_runQueuedJob({ name, time }) {
     var schedule = this._schedules[name];
-    if (schedule)
-      yield schedule.runJob(time);
-    else
-      this.notify.info("No schedule %s, ignoring", name);
+    try {
+      if (schedule)
+        yield schedule.runJob(time);
+      else
+        this.notify.info("No schedule %s, ignoring", name);
+    } catch (error) {
+      // Notify, but does not return job to queue.
+      this.notify.error(error);
+    }
   }
 
   get queue() {
@@ -184,8 +189,7 @@ class Schedule {
     var now = Date.now();
     if ((!this.startTime || now >= this.startTime) &&
         (!this.endTime || now < this.endTime)) {
-      this.notify.debug("Processing %s", this.name);
-      yield (resume)=> runJob(this.job, [], undefined, resume);
+      yield this.runJob(this);
     }
   }
 
@@ -201,13 +205,8 @@ class Schedule {
 
   // Scheduler calls this to actually run the job when picked up from queue.
   *runJob(time) {
-    try {
-      this.notify.info("Processing %s, scheduled for %s", this.name, time);
-      yield (resume)=> runJob(this.job, [], undefined, resume);
-    } catch (error) {
-      // Notify error, but does not return job to queue.
-      this.notify.error(error);
-    }
+    this.notify.info("Processing %s, scheduled for %s", this.name, time);
+    yield (resume)=> runJob(this.job, [], undefined, resume);
   }
 
   get notify() {
