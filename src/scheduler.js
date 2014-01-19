@@ -35,6 +35,8 @@ module.exports = class Scheduler {
   start() {
     this.notify.debug("Starting all schedules");
     this.started = true;
+    // Not listening until we start up the queue.
+    this.queue;
     for (var schedule of this.schedules)
       schedule.start();
   }

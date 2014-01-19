@@ -1,3 +1,8 @@
+# 0.9.12
+
+FIXED: scheduled jobs not processed until next schedule.
+
+
 # 0.9.11
 
 FIXED: don't care for close errors while reserving jobs.
