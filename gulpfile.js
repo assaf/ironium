@@ -1,5 +1,5 @@
 const clean   = require('gulp-clean');
-const git     = require('gulp-git');
+const exec    = require('gulp-exec');
 const gulp    = require('gulp');
 const notify  = require('gulp-notify');
 const OS      = require('os');
@@ -37,8 +37,6 @@ gulp.task('clean', function() {
   gulp.src('lib/**', {read: false }).pipe(clean());
 });
 
-const exec = require('gulp-exec');
-
 // Run mocha, used by release task
 gulp.task('test', function(callback) {
   return gulp.src('test').pipe(exec('mocha'));
@@ -55,12 +53,11 @@ gulp.task('element', function() {
 });
 gulp.task('release', ['clean', 'build', 'test', 'element'], function() {
   const version = require('./package.json').version;
+  const message = "Release " + version;
   return gulp.src('package.json')
-    .pipe(git.add('package.json'))
-    .pipe(git.add('CHANGELOG.md'))
-    .pipe(git.add('element.svg'))
-    .pipe(git.commit("Release " + version, '--allow-empty'))
-    .pipe(git.tag(version, "Release " + version, true))
-    .pipe(git.push())
+    .pipe(exec('git add package.json CHANGELOG.md element.svg'))
+    .pipe(exec('git commit --allow-empty -m "' + message + '"'))
+    .pipe(exec('git tag version -m "' + message + '"'))
+    .pipe(exec('git push origin master'))
     .pipe(exec('npm publish'))
 });
