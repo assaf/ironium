@@ -156,20 +156,18 @@ class Schedule {
       return;
 
     if (this.startTime && now < this.startTime) {
-      // This job is scheduled to run in the future, set a timeout to start it.
       this._timeout = setTimeout(()=> {
         this._timeout = null;
         // Set interval first, _queueNext will clear it, if we're already past
         // the end time.
         if (this.every)
-          this._interval = setInterval(()=> this._queueNext(), this.every);
+          this._interval = setInterval(this._queueNext.bind(this), this.every);
         this._queueNext();
       }, now - this.startTime);
-      return;
+    } else if (this.every) {
+      // Interval works the same way, except queueNext will call start again.
+      this._interval = setInterval(this._queueNext.bind(this), this.every);
     }
-
-    if (this.every)
-      this._interval = setInterval(()=> this._queueNext(), this.every);
   }
 
   // Stops the scheduler for this job.  Resets timer/interval.
@@ -198,8 +196,12 @@ class Schedule {
     if (this._interval && this.endTime && Date.now() >= this.endTime)
       clearInterval(this._interval);
     this._scheduler.queueJob(this.name, (error)=> {
-      if (error)
-        this.notify.error(error);
+      if (error) {
+        // Error queuing job. For a one time job, try to queue again. For
+        // period job, only queue again if not scheduled to run soon.
+        if (!this.every || this.every > ms('1m'))
+          setTimeout(this._queueNext.bind(this), ms('5s'));
+      }
     });
   }
 

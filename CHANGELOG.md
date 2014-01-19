@@ -2,6 +2,8 @@
 
 CHANGED: workers.once() fails if any scheduled job fails.
 
+FIXED: if request to queue scheduled job fails, try again.
+
 
 # 0.9.12
 
