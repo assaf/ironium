@@ -51,13 +51,33 @@ gulp.task('element', function() {
     .pipe(gulp.dest('.'));
           
 });
-gulp.task('release', ['clean', 'build', 'test', 'element'], function() {
+gulp.task('changelog', function(callback) {
+  const Child = require('child_process');
+  const File  = require('fs');
+
+    
+  // Get the most recent tag
+  Child.exec('git describe --abbrev=0 --tags', function(error, stdout, stderr) {
+    const tag = stdout.trim();
+    // Get summary of all commits since that tag
+    Child.exec('git log ' + tag + '..HEAD --pretty=format:%s%n%b', function(error, stdout, stderr) {
+      const log = stdout;
+      File.writeFile('change.log', log, 'utf-8', callback);
+    });
+  });
+});
+
+gulp.task('release', ['clean', 'build', 'test', 'element', 'changelog'], function(callback) {
   const version = require('./package.json').version;
   const message = "Release " + version;
-  return gulp.src('package.json')
+
+  return gulp.src('change.log')
     .pipe(exec('git add package.json CHANGELOG.md element.svg'))
     .pipe(exec('git commit --allow-empty -m "' + message + '"'))
-    .pipe(exec('git tag ' + version + ' -m "' + message + '"'))
     .pipe(exec('git push origin master'))
-    .pipe(exec('npm publish'))
+    .pipe(exec('git tag -a ' + version + ' --file change.log'))
+    .pipe(exec('git push origin ' + version))
+    .pipe(clean())
+    .pipe(exec('npm publish'));
 });
+
