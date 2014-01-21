@@ -1,3 +1,8 @@
+# 0.9.14
+
+FIXED: don't block $schedule queue waiting for jobs to run.
+
+
 # 0.9.13
 
 CHANGED: workers.once() fails if any scheduled job fails.
