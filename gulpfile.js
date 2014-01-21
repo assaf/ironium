@@ -60,7 +60,7 @@ gulp.task('changelog', function(callback) {
   Child.exec('git describe --abbrev=0 --tags', function(error, stdout, stderr) {
     const tag = stdout.trim();
     // Get summary of all commits since that tag
-    Child.exec('git log ' + tag + '..HEAD --pretty=format:%s%n%b', function(error, stdout, stderr) {
+    Child.exec('git log ' + tag + '..HEAD --pretty=format:%s%n', function(error, stdout, stderr) {
       const log = stdout;
       File.writeFile('change.log', log, 'utf-8', callback);
     });
