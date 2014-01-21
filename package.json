@@ -13,14 +13,14 @@
     "co": "3.0.2",
     "fivebeans": "1.1.0",
     "ms": "0.6.2",
-    "traceur": "0.0.12"
+    "traceur": "0.0.13"
   },
   "devDependencies": {
     "es6-promise": "0.1.1",
-    "gulp": "3.4.1",
-    "gulp-clean": "0.2.3",
+    "gulp": "3.4.0",
+    "gulp-clean": "0.2.4",
     "gulp-exec": "1.0.4",
-    "gulp-notify": "0.3.0",
+    "gulp-notify": "0.3.2",
     "gulp-replace": "0.2.0",
     "gulp-traceur": "0.1.2",
     "mocha": "1.17.0"
