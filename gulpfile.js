@@ -38,7 +38,7 @@ gulp.task('clean', function() {
 });
 
 // Run mocha, used by release task
-gulp.task('test', function(callback) {
+gulp.task('test', ['build'], function(callback) {
   return gulp.src('test').pipe(exec('mocha'));
 });
 
