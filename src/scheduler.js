@@ -182,7 +182,7 @@ class Schedule {
     var now = Date.now();
     if ((!this.startTime || now >= this.startTime) &&
         (!this.endTime || now < this.endTime)) {
-      yield this.runJob(this);
+      yield this._scheduler.queueJob(this.name);
     }
   }
 
@@ -203,11 +203,11 @@ class Schedule {
   // Scheduler calls this to actually run the job when picked up from queue.
   *runJob(time) {
     try {
-      this.notify.info("Processing %s, scheduled for %s", this.name, time);
+      this.notify.info("Processing %s, scheduled for %s", this.name, time.toString());
       yield (resume)=> runJob(this.job, [], undefined, resume);
-      this.notify.info("Completed %s, scheduled for %s", this.name, time);
+      this.notify.info("Completed %s, scheduled for %s", this.name, time.toString());
     } catch (error) {
-      this.notify.error("Error %s, scheduled for %s", this.name, time, error.stack);
+      this.notify.error("Error %s, scheduled for %s", this.name, time.toString(), error.stack);
       throw error;
     }
   }
