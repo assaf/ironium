@@ -11,12 +11,14 @@ Module._extensions['.js'] = function(module, filename) {
   } else {
     const source = File.readFileSync(filename, 'utf8');
     const compiled = traceur.compile(source, {
-      blockBinding: true,
-      generators:   true,
-      validate:     true,
-      debug:        true,
-      filename:     filename,
-      sourceMap:    true
+      blockBinding:           true,
+      generators:             true,
+      generatorComprehension: true,
+      deferredFunctions:      true,
+      validate:               true,
+      debug:                  true,
+      filename:               filename,
+      sourceMap:              true
     });
     if (compiled.errors.length)
       throw new Error(compiled.errors.join('\n'));

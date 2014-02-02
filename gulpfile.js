@@ -3,8 +3,10 @@ const exec    = require('gulp-exec');
 const gulp    = require('gulp');
 const notify  = require('gulp-notify');
 const OS      = require('os');
+const Path    = require('path');
 const replace = require('gulp-replace');
-const traceur = require('gulp-traceur');
+const traceur = require('traceur');
+const through = require('through2');
 
 
 // Compile then watch -> compile
@@ -24,8 +26,7 @@ gulp.task('build', function() {
     modules:      'commonjs'
   };
   const compile = gulp.src('src/**/*.js')
-    .pipe(traceur(options))
-    .pipe(replace("module.exports = {};", ""))
+    .pipe(es6(options))
     .pipe(gulp.dest('lib'));
   // Notifications only available on Mac
   if (OS.type() == 'Darwin')
@@ -80,4 +81,22 @@ gulp.task('release', ['clean', 'build', 'test', 'element', 'changelog'], functio
     .pipe(clean())
     .pipe(exec('npm publish'));
 });
+
+
+function es6(options) {
+	return through.obj(function(file, encoding, callback) {
+		options.filename = Path.basename(file.path);
+		try {
+			var output = traceur.compile(file.contents.toString(), options);
+      if (output.errors.length > 0)
+        this.emit('error', new Error(output.errors.join('\n')));
+			if (output.js)
+				file.contents = new Buffer(output.js);
+		} catch (error) {
+			this.emit('error', error);
+		}
+		this.push(file);
+		callback();
+	});
+}
 
