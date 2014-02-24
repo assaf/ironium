@@ -16,7 +16,6 @@ Module._extensions['.js'] = function(module, filename) {
       generatorComprehension: true,
       deferredFunctions:      true,
       validate:               true,
-      debug:                  true,
       filename:               filename,
       sourceMap:              true
     });

@@ -10,14 +10,14 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "co": "3.0.2",
-    "fivebeans": "1.1.0",
+    "co": "3.0.4",
+    "fivebeans": "1.1.1",
     "ms": "0.6.2",
-    "traceur": "0.0.18"
+    "traceur": "0.0.24"
   },
   "devDependencies": {
     "es6-promise": "0.1.1",
-    "gulp": "3.5.0",
+    "gulp": "3.5.2",
     "gulp-clean": "0.2.4",
     "gulp-exec": "1.0.4",
     "gulp-notify": "0.4.0",
