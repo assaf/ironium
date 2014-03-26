@@ -23,74 +23,133 @@ const PROCESSING_TIMEOUT  = ms('10m');
 const RELEASE_DELAY       = ms('1m');
 
 
-// Abstracts the queue server.
-module.exports = class Server {
+// Represents a Beanstalkd session.  Since GET requests block, need separate
+// sessions for pushing and processing, and each is also setup differently.
+//
+// Underneath there is a Fivebeans client that gets connected and automatically
+// reconnected after failure (plus some error handling missing from Fivebeans).
+//
+// To use the underlying client, call the method `request`.
+class Session {
 
-  constructor(ironium) {
-    // We need this to automatically start any queue added after ironium.start().
-    this.started  = false;
-
-    this._ironium = ironium;
-    this._queues  = Object.create({});
+  // Construct a new session.
+  //
+  // id      - Session id, used for error reporting
+  // config  - Queue server configuration, used to establish connection
+  // notify  - Logging and errors
+  // setup   - The setup function, see below
+  //
+  // Beanstalkd requires setup to either use or watch a tube, depending on the
+  // session.  The setup function is provided when creating the session, and is
+  // called after the connection has been established (and for Iron.io,
+  // authenticated).
+  //
+  // The setup function is called with two arguments:
+  // client   - Fivebeans client being setup
+  // callback - Call with error or nothing
+  constructor(server, id, setup) {
+    this.id       = id;
+    this.setup    = setup;
+    this._config  = server.config;
+    this._notify  = server.notify;
   }
 
-  // Returns the named queue, queue created on demand.
-  getQueue(name) {
-    assert(name, "Missing queue name");
-    var queue = this._queues[name];
-    if (!queue) {
-      queue = new Queue(this, name);
-      this._queues[name] = queue;
-      if (this.started)
-        queue.start();
+  // Make a request to the server.
+  //
+  // command  - The command (e.g. put, get, destroy)
+  // args     - Zero or more arguments, depends on command
+  //
+  // This is a simple wrapper around the Fivebeans client with additional error
+  // handling.
+  *request(command, ...args) {
+    // Wait for connection, need open client to send request.
+    var client  = yield this.connect();
+    var results = yield function(resume) {
+      // If connection ends close/error, Fivebeans never terminates the request,
+      // we need to respond to connection error directly.
+      function onError(error) {
+        resume(error);
+      }
+      function onClose() {
+        // The TIMED_OUT error is appropriate because the request failed to
+        // complete in time, and gets silently ignored when reserving jobs.
+        resume(new Error('TIMED_OUT'));
+      }
+      client.once('close', onClose);
+      client.once('error', onError);
+
+      client[command].call(client, ...args, function(error, ...results) {
+        client.removeListener('close', onClose);
+        client.removeListener('error', onError);
+        resume(error, results);
+      });
+    };
+    return results && (results.length > 1 ? results : results[0]);
+  }
+
+  // Called to establish a new connection, or use existing connections.
+  // Returns a FiveBeans client.
+  *connect() {
+    // this._client is set after first call to `connect`, and until we detect a
+    // connection failure and terminate it.
+    if (this._client)
+      return this._client;
+
+    // This is the Fivebeans client is essentially a session.
+    var config = this._config;
+    var client  = new fivebeans.client(config.queues.hostname, config.queues.port);
+
+    try {
+
+      client.on('error', (error)=> {
+        // On connection error, we automatically discard the connection.
+        if (this._client == client)
+          this._client = null;
+        this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
+        client.end();
+      });
+      client.on('close', ()=> {
+        // Client disconnected
+        if (this._client == client)
+          this._client = null;
+        this._notify.debug("Connection closed for %s", this.id);
+      });
+
+      // Nothing happens until we start the connection.  Must wait for
+      // connection event before we can send anything down the stream.
+      client.connect();
+      // Allows the process to exit when done processing, otherwise, it will
+      // stay running while it's waiting to reserve the next job.
+      client.stream.unref();
+      yield (resume)=> client.on('connect', resume);
+
+      // When working with Iron.io, need to authenticate each connection before
+      // it can be used.  This is the first setup step, followed by the
+      // session-specific setup.
+      if (config.authenticate)
+        yield (resume)=> client.put(0, 0, 0, config.authenticate, resume);
+      
+      // Put/reserve clients have different setup requirements, this are handled by
+      // an externally supplied method.
+      yield this.setup(client);
+
+    } catch (error) {
+      // Gracefully terminate connection.
+      client.end();
+      throw error;
     }
-    return queue;
+
+    // Every call to `connect` should be able to access this client.
+    this._client = client;
+    return client;
   }
 
-  // Starts processing jobs from all queues.
-  start() {
-    this.notify.debug("Start all queues");
-    this.started = true;
-    for (var queue of this.queues)
-      queue.start();
+  end() {
+    if (this._client)
+      this._client.end();
+    this._client = null;
   }
 
-  // Stops processing jobs from all queues.
-  stop(callback) {
-    this.notify.debug("Stop all queues");
-    this.started = false;
-    for (var queue of this.queues)
-      queue.stop();
-  }
-
-  // Use when testing to empty contents of all queues.
-  *reset() {
-    this.notify.debug("Clear all queues");
-    for (var queue of this.queues)
-      yield queue.reset();
-  }
-
-  // Use when testing to wait for all jobs to be processed.
-  *once() {
-    do {
-      var processed = yield this.queues.map((queue)=> queue.once());
-      var anyProcessed = (processed.indexOf(true) >= 0);
-    } while (anyProcessed);
-  }
-
-  // Returns an array of all queues.
-  get queues() {
-    return Object.keys(this._queues).map((name)=> this._queues[name]);
-  }
-
-  get config() {
-    // Lazy load configuration.
-    return this._ironium.config;
-  }
-
-  get notify() {
-    return this._ironium;
-  }
 }
 
 
@@ -288,10 +347,12 @@ class Queue {
     // return any jobs.
     var session = this._put;
 
+    var jobID, payload;
+
     // Delete all ready jobs.
     try {
       while (true) {
-        var [jobID, payload] = yield session.request('peek_ready');
+        [jobID, payload] = yield session.request('peek_ready');
         yield session.request('destroy', jobID);
       }
     } catch (error) {
@@ -302,7 +363,7 @@ class Queue {
     // Delete all delayed jobs.
     try {
       while (true) {
-        var [jobID, payload] = yield session.request('peek_delayed');
+        [jobID, payload] = yield session.request('peek_delayed');
         yield session.request('destroy', jobID);
       }
     } catch (error) {
@@ -346,132 +407,74 @@ class Queue {
 }
 
 
-// Represents a Beanstalkd session.  Since GET requests block, need separate
-// sessions for pushing and processing, and each is also setup differently.
-//
-// Underneath there is a Fivebeans client that gets connected and automatically
-// reconnected after failure (plus some error handling missing from Fivebeans).
-//
-// To use the underlying client, call the method `request`.
-class Session {
+// Abstracts the queue server.
+module.exports = class Server {
 
-  // Construct a new session.
-  //
-  // id      - Session id, used for error reporting
-  // config  - Queue server configuration, used to establish connection
-  // notify  - Logging and errors
-  // setup   - The setup function, see below
-  //
-  // Beanstalkd requires setup to either use or watch a tube, depending on the
-  // session.  The setup function is provided when creating the session, and is
-  // called after the connection has been established (and for Iron.io,
-  // authenticated).
-  //
-  // The setup function is called with two arguments:
-  // client   - Fivebeans client being setup
-  // callback - Call with error or nothing
-  constructor(server, id, setup) {
-    this.id       = id;
-    this.setup    = setup;
-    this._config  = server.config;
-    this._notify  = server.notify;
+  constructor(ironium) {
+    // We need this to automatically start any queue added after ironium.start().
+    this.started  = false;
+
+    this._ironium = ironium;
+    this._queues  = Object.create({});
   }
 
-  // Make a request to the server.
-  //
-  // command  - The command (e.g. put, get, destroy)
-  // args     - Zero or more arguments, depends on command
-  //
-  // This is a simple wrapper around the Fivebeans client with additional error
-  // handling.
-  *request(command, ...args) {
-    // Wait for connection, need open client to send request.
-    var client  = yield this.connect();
-    var results = yield function(resume) {
-      // If connection ends close/error, Fivebeans never terminates the request,
-      // we need to respond to connection error directly.
-      function onError(error) {
-        resume(error);
-      }
-      function onClose() {
-        // The TIMED_OUT error is appropriate because the request failed to
-        // complete in time, and gets silently ignored when reserving jobs.
-        resume(new Error('TIMED_OUT'));
-      }
-      client.once('close', onClose);
-      client.once('error', onError);
-
-      client[command].call(client, ...args, function(error, ...results) {
-        client.removeListener('close', onClose);
-        client.removeListener('error', onError);
-        resume(error, results);
-      });
+  // Returns the named queue, queue created on demand.
+  getQueue(name) {
+    assert(name, "Missing queue name");
+    var queue = this._queues[name];
+    if (!queue) {
+      queue = new Queue(this, name);
+      this._queues[name] = queue;
+      if (this.started)
+        queue.start();
     }
-    return results && (results.length > 1 ? results : results[0]);
+    return queue;
   }
 
-  // Called to establish a new connection, or use existing connections.
-  // Returns a FiveBeans client.
-  *connect(callback) {
-    // this._client is set after first call to `connect`, and until we detect a
-    // connection failure and terminate it.
-    if (this._client)
-      return this._client;
-
-    // This is the Fivebeans client is essentially a session.
-    var config = this._config;
-    var client  = new fivebeans.client(config.queues.hostname, config.queues.port);
-
-    try {
-
-      client.on('error', (error)=> {
-        // On connection error, we automatically discard the connection.
-        if (this._client == client)
-          this._client = null;
-        this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
-        client.end();
-      });
-      client.on('close', ()=> {
-        // Client disconnected
-        if (this._client == client)
-          this._client = null;
-        this._notify.debug("Connection closed for %s", this.id);
-      });
-
-      // Nothing happens until we start the connection.  Must wait for
-      // connection event before we can send anything down the stream.
-      client.connect();
-      // Allows the process to exit when done processing, otherwise, it will
-      // stay running while it's waiting to reserve the next job.
-      client.stream.unref();
-      yield (resume)=> client.on('connect', resume);
-
-      // When working with Iron.io, need to authenticate each connection before
-      // it can be used.  This is the first setup step, followed by the
-      // session-specific setup.
-      if (config.authenticate)
-        yield (resume)=> client.put(0, 0, 0, config.authenticate, resume);
-      
-      // Put/reserve clients have different setup requirements, this are handled by
-      // an externally supplied method.
-      yield this.setup(client);
-
-    } catch (error) {
-      // Gracefully terminate connection.
-      client.end();
-      throw error;
-    }
-
-    // Every call to `connect` should be able to access this client.
-    this._client = client;
-    return client;
+  // Starts processing jobs from all queues.
+  start() {
+    this.notify.debug("Start all queues");
+    this.started = true;
+    for (var queue of this.queues)
+      queue.start();
   }
 
-  end() {
-    if (this._client)
-      this._client.end();
-    this._client = null;
+  // Stops processing jobs from all queues.
+  stop() {
+    this.notify.debug("Stop all queues");
+    this.started = false;
+    for (var queue of this.queues)
+      queue.stop();
   }
 
-}
+  // Use when testing to empty contents of all queues.
+  *reset() {
+    this.notify.debug("Clear all queues");
+    for (var queue of this.queues)
+      yield queue.reset();
+  }
+
+  // Use when testing to wait for all jobs to be processed.
+  *once() {
+    var anyProcessed;
+    do {
+      var processed = yield this.queues.map((queue)=> queue.once());
+      anyProcessed = (processed.indexOf(true) >= 0);
+    } while (anyProcessed);
+  }
+
+  // Returns an array of all queues.
+  get queues() {
+    return Object.keys(this._queues).map((name)=> this._queues[name]);
+  }
+
+  get config() {
+    // Lazy load configuration.
+    return this._ironium.config;
+  }
+
+  get notify() {
+    return this._ironium;
+  }
+};
 

@@ -14,7 +14,7 @@ Module._extensions['.js'] = function(module, filename) {
       blockBinding:           true,
       generators:             true,
       generatorComprehension: true,
-      deferredFunctions:      true,
+      asyncFunctions:         true,
       validate:               true,
       filename:               filename,
       sourceMap:              true
@@ -28,4 +28,4 @@ Module._extensions['.js'] = function(module, filename) {
 
 // Disable Traceur's global promise, available in test environment but not
 // necessarily in application.  This makes sure we always use the polyfill.
-global.Promise = null;
+//global.Promise = null;

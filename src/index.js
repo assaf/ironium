@@ -109,10 +109,10 @@ class Ironium extends EventEmitter {
 
   // Used for logging error messages.
   error(...args) {
-    let error = (args.length == 1 && args[0] instanceof Error) ?
-      args[0] :
-      new Error(format(...args));
-    this.emit('error', error);
+    if (args.length == 1 && args[0] instanceof Error)
+      this.emit('error', args[0]);
+    else
+      this.emit('error', new Error(format(...args)));
   }
 
 }

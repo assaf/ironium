@@ -95,6 +95,36 @@ describe("processing", ()=> {
   });
 
 
+  describe("with async/await", ()=> {
+
+    // Count how many steps run
+    let steps = [];
+    before(()=> {
+      processGenerator.each(async function(job) {
+        var one = await Promise.resolve('A');
+        steps.push(one);
+        var two = await Promise.resolve('B');
+        steps.push(two);
+        var three = await async function() {
+          await Promise.resolve();
+          return 'C';
+        }();
+        steps.push(three);
+        return;
+      });
+    });
+
+    before(processGenerator.push('job'));
+    before(ironium.once());
+
+    it("should run all steps", ()=> {
+      assert.equal(steps.join(''), 'ABC');
+    });
+
+  });
+
+
+
   describe("once", ()=> {
     // Count how many steps run
     let steps = [];

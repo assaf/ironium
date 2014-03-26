@@ -59,9 +59,9 @@ module.exports = function runJob(handler, args, timeout, callback) {
         // A generator object.  Use it to resolve job instead of callback.
         co(result)(function(error) {
           if (error)
-             domain.emit('error', error);
-           else
-             successful();
+            domain.emit('error', error);
+          else
+            successful();
         });
       }
     }
@@ -74,4 +74,4 @@ module.exports = function runJob(handler, args, timeout, callback) {
       callback();
     }
   }
-}
+};

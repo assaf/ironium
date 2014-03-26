@@ -6,102 +6,6 @@ const ms      = require('ms');
 const runJob  = require('./run_job');
 
 
-module.exports = class Scheduler {
-
-  constructor(ironium) {
-    // If true, every new job is started automatically.  Necessary in case you
-    // call schedule() after calling start().
-    this.started      = false;
-
-    this._ironium     = ironium;
-    this._schedules   = Object.create({});
-  }
-
-  // Schedules a new job.
-  schedule(name, time, job) {
-    assert(job instanceof Function, "Third argument must be the job function");
-    assert(!this._schedules[name],   "Attempt to schedule multiple jobs with same name (" + name + ")");
-
-    var schedule = new Schedule(this, name, time, job);
-    this._schedules[name] = schedule;
-
-    if (this.started) {
-      this.notify.debug("Starting schedule %s", name);
-      schedule.start();
-    }
-  }
-
-  // Start all scheduled jobs.
-  start() {
-    this.notify.debug("Starting all schedules");
-    this.started = true;
-    // Not listening until we start up the queue.
-    this.queue;
-    for (var schedule of this.schedules)
-      schedule.start();
-  }
-
-  // Stop all scheduled jobs.
-  stop() {
-    this.notify.debug("Stopping all schedules");
-    this.started = false;
-    for (var schedule of this.schedules)
-      schedule.stop();
-  }
-
-  // Run all schedules jobs in parallel.
-  *once() {
-    yield this.schedules.map((schedule)=> schedule.once());
-  }
-
-  // Returns an array of all schedules.
-  get schedules() {
-    return Object.keys(this._schedules).map((name)=> this._schedules[name]);
-  }
-
-
-  // Schedule calls this to queue the job.
-  queueJob(name, callback) {
-    var thunk = this.queue.push({ name, time: new Date().toISOString()});
-    if (callback)
-      thunk(callback);
-    else
-      return thunk;
-  }
-
-  // This is used to pick up job from the queue and run it.
-  *_runQueuedJob({ name, time }) {
-    var schedule = this._schedules[name];
-    if (schedule)
-      co(schedule.runJob(time))(function() { });
-    else
-      this.notify.error("No schedule %s, ignoring", name);
-  }
-
-  get queue() {
-    // Lazy access to queue -> lazy load configuration.
-    //
-    // If we attempt to access the queue when new Scheduler created, we will
-    // immediately connect to some server, before the application gets a chance
-    // to call ironium.configure().
-    if (!this._queue) {
-      this._queue = this._ironium.queue('$schedule');
-      this._queue.each(this._runQueuedJob.bind(this));
-    }
-    return this._queue;
-  }
-
-  get config() {
-    // Lazy load configuration.
-    return this._ironium.config;
-  }
-
-  get notify() {
-    return this._ironium;
-  }
-}
-
-
 // Job schedule consists of three properties:
 // name  - Schedule name (for reporting)
 // job   - Job to run
@@ -139,7 +43,7 @@ class Schedule {
 
     assert(this.startTime || this.every, "Schedule requires either start time or interval (0 not acceptable)");
     if (this.endTime) {
-      assert(every, "Schedule with end time requires interval");
+      assert(this.every, "Schedule with end time requires interval");
       if (this.startTime)
         assert(this.startTime < this.endTime, "Schedule must start before it ends");
     }
@@ -147,6 +51,7 @@ class Schedule {
 
   // Starts the scheduler for this job.  Sets timer/interval to run the job.
   start() {
+    let now = Date.now();
     if (this.endTime && now >= this.endTime)
       return;
 
@@ -201,7 +106,7 @@ class Schedule {
   }
 
   // Scheduler calls this to actually run the job when picked up from queue.
-  *runJob(time) {
+  *_runJob(time) {
     try {
       this.notify.info("Processing %s, scheduled for %s", this.name, time.toString());
       yield (resume)=> runJob(this.job, [], undefined, resume);
@@ -217,4 +122,103 @@ class Schedule {
   }
 
 }
+
+module.exports = class Scheduler {
+
+  constructor(ironium) {
+    // If true, every new job is started automatically.  Necessary in case you
+    // call schedule() after calling start().
+    this.started      = false;
+
+    this._ironium     = ironium;
+    this._schedules   = Object.create({});
+  }
+
+  // Schedules a new job.
+  schedule(name, time, job) {
+    assert(job instanceof Function, "Third argument must be the job function");
+    assert(!this._schedules[name],   "Attempt to schedule multiple jobs with same name (" + name + ")");
+
+    var newSchedule = new Schedule(this, name, time, job);
+    this._schedules[name] = newSchedule;
+
+    if (this.started) {
+      this.notify.debug("Starting schedule %s", name);
+      newSchedule.start();
+    }
+  }
+
+  // Start all scheduled jobs.
+  start() {
+    this.notify.debug("Starting all schedules");
+    this.started = true;
+    // Not listening until we start up the queue.
+    this._startQueue();
+    for (var schedule of this.schedules)
+      schedule.start();
+  }
+
+  // Stop all scheduled jobs.
+  stop() {
+    this.notify.debug("Stopping all schedules");
+    this.started = false;
+    for (var schedule of this.schedules)
+      schedule.stop();
+  }
+
+  // Run all schedules jobs in parallel.
+  *once() {
+    yield this.schedules.map((schedule)=> schedule.once());
+  }
+
+  // Returns an array of all schedules.
+  get schedules() {
+    return Object.keys(this._schedules).map((name)=> this._schedules[name]);
+  }
+
+
+  // Schedule calls this to queue the job.
+  queueJob(name, callback) {
+    var thunk = this.queue.push({ name: name, time: new Date().toISOString()});
+    if (callback)
+      thunk(callback);
+    else
+      return thunk;
+  }
+
+  // This is used to pick up job from the queue and run it.
+  _runQueuedJob({ name, time }) {
+    var schedule = this._schedules[name];
+    if (schedule)
+      co(schedule._runJob(time))(function() { });
+    else
+      this.notify.error("No schedule %s, ignoring", name);
+  }
+
+  // Lazy access to queue -> lazy load configuration.
+  //
+  // If we attempt to access the queue when new Scheduler created, we will
+  // immediately connect to some server, before the application gets a chance
+  // to call ironium.configure().
+  _startQueue() {
+    if (!this._queue) {
+      this._queue = this._ironium.queue('$schedule');
+      this._queue.each(this._runQueuedJob.bind(this));
+    }
+  }
+
+  get queue() {
+    this._startQueue();
+    return this._queue;
+  }
+
+  get config() {
+    // Lazy load configuration.
+    return this._ironium.config;
+  }
+
+  get notify() {
+    return this._ironium;
+  }
+};
 
