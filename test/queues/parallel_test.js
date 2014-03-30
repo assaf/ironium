@@ -23,9 +23,9 @@ describe.skip("processing", ()=> {
       });
     });
 
-    before(processSerial.push(1));
-    before(processSerial.push(2));
-    before(ironium.once());
+    before(()=> processSerial.push(1));
+    before(()=> processSerial.push(2));
+    before(()=> ironium.once());
 
     it("should run jobs in sequence", ()=> {
       assert.equal(chain.join(''), 'ABAB');
@@ -48,9 +48,9 @@ describe.skip("processing", ()=> {
       }, 2);
     });
 
-    before(processParallel.push(3));
-    before(processParallel.push(4));
-    before(ironium.once());
+    before(()=> processParallel.push(3));
+    before(()=> processParallel.push(4));
+    before(()=> ironium.once());
 
     it("should run jobs in sequence", ()=> {
       assert.equal(chain.join(''), 'AABB');

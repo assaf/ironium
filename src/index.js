@@ -70,31 +70,38 @@ class Ironium extends EventEmitter {
   }
 
   // Used in testing: run all scheduled jobs once (immediately), run all queued
-  // jobs, finally call callback.  If called with no arguments, returns a thunk.
+  // jobs, finally call callback.  If called with no arguments, returns a promise.
   once(callback) {
-    var thunk = co(function*() {
+    let promise = new Promise((resolve, reject)=> {
+      var thunk = co(function*() {
 
-      // Must run all scheduled jobs first, only then can be run any (resulting)
-      // queued jobs to completion.
-      yield this._scheduler.once();
-      yield this._queues.once();
-      this.debug("Completed all jobs");
+        // Must run all scheduled jobs first, only then can be run any (resulting)
+        // queued jobs to completion.
+        yield this._scheduler.once();
+        yield this._queues.once();
+        this.debug("Completed all jobs");
 
-    }.call(this));
+      }.call(this))(function(error) {
+        if (error)
+          reject(error);
+        else
+          resolve();
+      });
+    });
     if (callback)
-      thunk(callback);
+      promise.then(()=> callback(), callback);
     else
-      return thunk;
+      return promise;
   }
 
   // Used in testing: empties all queues.  If called with no arguments, returns
-  // a thunk.
+  // a promise.
   reset(callback) {
-    var thunk = co(this._queues.reset());
+    let promise = this._queues.reset();
     if (callback)
-      thunk(callback);
+      promise(()=> callback, callback);
     else
-      return thunk;
+      return promise;
   }
 
   // Used for logging debug messages.
