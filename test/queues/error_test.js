@@ -1,14 +1,13 @@
-var assert      = require('assert');
-var Helpers     = require('../helpers');
-var { Promise } = require('es6-promise');
-var ironium     = require('../../src');
+/* global describe, before, it */
+const assert      = require('assert');
+const ironium     = require('../../src');
 
 
 describe("processing", ()=> {
 
-  var errorCallback   = ironium.queue('error-callback');
-  var errorPromise    = ironium.queue('error-promise');
-  var errorGenerator  = ironium.queue('error-generator');
+  let errorCallback   = ironium.queue('error-callback');
+  let errorPromise    = ironium.queue('error-promise');
+  let errorGenerator  = ironium.queue('error-generator');
 
   function untilSuccessful(done) {
     ironium.once((error)=> {
@@ -48,7 +47,7 @@ describe("processing", ()=> {
     // First two runs should fail, runs ends at 3
     let runs = 0;
     before(()=> {
-      errorPromise.each((job)=> {
+      errorPromise.each(()=> {
         runs++;
         if (runs > 2)
           return Promise.resolve();
@@ -72,16 +71,16 @@ describe("processing", ()=> {
     // First two runs should fail, runs ends at 3
     let runs = 0;
     before(()=> {
-      errorGenerator.each(function*(job) {
+      errorGenerator.each(function*() {
         runs++;
         switch (runs) {
           case 1: {
-            throw new Error('fail');
-          }
+              throw new Error('fail');
+            }
           case 2: {
-            yield Promise.reject(Error('fail'));
-            break;
-          }
+              yield Promise.reject(Error('fail'));
+              break;
+            }
         }
       });
     });

@@ -1,6 +1,6 @@
+/* global describe, before, it */
 const assert      = require('assert');
-const Helpers     = require('../helpers');
-const { Promise } = require('es6-promise');
+//const { Promise } = require('es6-promise');
 const ironium     = require('../../src');
 
 
@@ -47,7 +47,7 @@ describe("processing", ()=> {
     // Count how many steps run
     let steps = [];
     before(()=> {
-      processPromise.each((job)=> {
+      processPromise.each(()=> {
         let promise = new Promise(setImmediate);
         promise
           .then(()=> steps.push('A'))
@@ -72,15 +72,15 @@ describe("processing", ()=> {
     // Count how many steps run
     let steps = [];
     before(()=> {
-      processGenerator.each(function*(job) {
+      processGenerator.each(function*() {
         var one = yield Promise.resolve('A');
         steps.push(one);
         var two = yield (done)=> done(null, 'B');
         steps.push(two);
-        var three = yield* function*() {
+        var three = yield* (function*() {
           yield setImmediate;
           return 'C';
-        }();
+        })();
         steps.push(three);
       });
     });
@@ -100,7 +100,7 @@ describe("processing", ()=> {
     // Count how many steps run
     let steps = [];
     before(()=> {
-      processGenerator.each(async function(job) {
+      processGenerator.each(async function() {
         var one = await Promise.resolve('A');
         steps.push(one);
         var two = await Promise.resolve('B');

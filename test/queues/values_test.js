@@ -1,5 +1,5 @@
+/* global describe, before, it, after */
 const assert  = require('assert');
-const Helpers = require('../helpers');
 const ironium = require('../../src');
 
 
@@ -77,11 +77,10 @@ describe("queue", ()=> {
     it("should error", (done)=> {
       assert.throws(()=> {
         capture.push(null, done);
-      })
-      assert(processed.length == 0);
+      });
+      assert(processed.length === 0);
       done();
     });
   });
-
 
 });

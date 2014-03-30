@@ -1,5 +1,5 @@
+/* global describe, before, it */
 const assert  = require('assert');
-const Helpers = require('../helpers');
 const ironium = require('../../src');
 
 

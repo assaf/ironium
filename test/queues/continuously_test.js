@@ -1,5 +1,6 @@
-var assert = require('assert');
-var fork   = require('child_process').fork;
+/* global describe, before, it, after */
+const assert = require('assert');
+const fork   = require('child_process').fork;
 
 
 if (typeof(describe) != 'undefined') {
@@ -18,7 +19,7 @@ if (typeof(describe) != 'undefined') {
           console.log('Captured', step);
       });
 
-      child.on('exit', function(code, signal) {
+      child.on('exit', function(code) {
         done(code ? new Error('Exited with code ' + code) : null);
       });
     });
@@ -28,7 +29,7 @@ if (typeof(describe) != 'undefined') {
     });
 
     it("should run three duplicate jobs", function() {
-      var duplicates = steps.filter(function(step) { return step == 'duplicate' });
+      var duplicates = steps.filter(function(step) { return step == 'duplicate'; });
       assert(duplicates.length == 3);
     });
 
@@ -37,7 +38,7 @@ if (typeof(describe) != 'undefined') {
     });
 
     it("should run three failed jobs", function() {
-      var failed = steps.filter(function(step) { return step == 'failed' });
+      var failed = steps.filter(function(step) { return step == 'failed'; });
       assert(failed.length == 3);
     });
 
@@ -49,7 +50,7 @@ if (typeof(describe) != 'undefined') {
 
 } else {
 
-  var ironium = require('../../lib');
+  const ironium = require('../../lib');
 
   if (process.env.DEBUG) {
     ironium.on('debug', console.log);
@@ -106,7 +107,7 @@ if (typeof(describe) != 'undefined') {
   });
 
   // Last job, exit this process successfully.
-  ironium.queue('done').each(function(job, callback) {
+  ironium.queue('done').each(function() {
     process.send('done');
     ironium.stop();
     process.nextTick(function() {
