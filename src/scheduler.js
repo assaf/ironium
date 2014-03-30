@@ -109,7 +109,7 @@ class Schedule {
   *_runJob(time) {
     try {
       this.notify.info("Processing %s, scheduled for %s", this.name, time.toString());
-      yield (resume)=> runJob(this.job, [], undefined, resume);
+      yield runJob(this.job, [], undefined);
       this.notify.info("Completed %s, scheduled for %s", this.name, time.toString());
     } catch (error) {
       this.notify.error("Error %s, scheduled for %s", this.name, time.toString(), error.stack);

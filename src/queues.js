@@ -318,7 +318,7 @@ class Queue {
       this._notify.info("Processing queued job %s:%s", this.name, jobID);
       this._notify.debug("Payload for job %s:%s:", this.name, jobID, payload);
       for (var handler of this._handlers)
-        yield (resume)=> runJob(handler, [payload], PROCESSING_TIMEOUT, resume);
+        yield runJob(handler, [payload], PROCESSING_TIMEOUT);
       this._notify.info("Completed queued job %s:%s", this.name, jobID);
 
       try {
