@@ -61,30 +61,43 @@ class Session {
   //
   // This is a simple wrapper around the Fivebeans client with additional error
   // handling.
-  *request(command, ...args) {
-    // Wait for connection, need open client to send request.
-    var client  = yield this.connect();
-    var results = yield function(resume) {
-      // If connection ends close/error, Fivebeans never terminates the request,
-      // we need to respond to connection error directly.
-      function onError(error) {
-        resume(error);
-      }
-      function onClose() {
-        // The TIMED_OUT error is appropriate because the request failed to
-        // complete in time, and gets silently ignored when reserving jobs.
-        resume(new Error('TIMED_OUT'));
-      }
-      client.once('close', onClose);
-      client.once('error', onError);
+  request(command, ...args) {
+    let promise = new Promise((resolve, reject)=> {
 
-      client[command].call(client, ...args, function(error, ...results) {
-        client.removeListener('close', onClose);
-        client.removeListener('error', onError);
-        resume(error, results);
+      // Wait for connection, need open client to send request.
+      co(this.connect())(function(error, client) {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        // If connection ends close/error, Fivebeans never terminates the request,
+        // we need to respond to connection error directly.
+        function onError(error) {
+          reject(error);
+        }
+        function onClose() {
+          // The TIMED_OUT error is appropriate because the request failed to
+          // complete in time, and gets silently ignored when reserving jobs.
+          reject(new Error('TIMED_OUT'));
+        }
+        client.once('close', onClose);
+        client.once('error', onError);
+
+        client[command].call(client, ...args, function(error, ...results) {
+          client.removeListener('close', onClose);
+          client.removeListener('error', onError);
+          if (error)
+            reject(error);
+          else if (results.length > 1)
+            resolve(results);
+          else
+            resolve(results[0]);
+        });
       });
-    };
-    return results && (results.length > 1 ? results : results[0]);
+
+    });
+    return promise;
   }
 
   // Called to establish a new connection, or use existing connections.
