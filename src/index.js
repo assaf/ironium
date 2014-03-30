@@ -1,7 +1,6 @@
 // Need runtime to support generators.
 require('traceur');
 
-const co                = require('co');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
 const Configuration     = require('./configuration');
@@ -72,22 +71,11 @@ class Ironium extends EventEmitter {
   // Used in testing: run all scheduled jobs once (immediately), run all queued
   // jobs, finally call callback.  If called with no arguments, returns a promise.
   once(callback) {
-    let promise = new Promise((resolve, reject)=> {
-      var thunk = co(function*() {
-
-        // Must run all scheduled jobs first, only then can be run any (resulting)
-        // queued jobs to completion.
-        yield this._scheduler.once();
-        yield this._queues.once();
-        this.debug("Completed all jobs");
-
-      }.call(this))(function(error) {
-        if (error)
-          reject(error);
-        else
-          resolve();
-      });
-    });
+    // Must run all scheduled jobs first, only then can be run any (resulting)
+    // queued jobs to completion.
+    let promise = this._scheduler.once()
+      .then(()=> this._queues.once() )
+      .then(()=> this.debug("Completed all jobs") );
     if (callback)
       promise.then(()=> callback(), callback);
     else

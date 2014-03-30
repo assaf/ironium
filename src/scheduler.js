@@ -1,7 +1,6 @@
 // Essentially cron for scheduling tasks in Node.
 
 const assert  = require('assert');
-const co      = require('co');
 const ms      = require('ms');
 const runJob  = require('./run_job');
 
@@ -83,38 +82,36 @@ class Schedule {
   }
 
   // Run job once.
-  *once() {
+  once() {
     var now = Date.now();
     if ((!this.startTime || now >= this.startTime) &&
         (!this.endTime || now < this.endTime)) {
-      yield this._scheduler.queueJob(this.name);
-    }
+      return this._scheduler.queueJob(this.name);
+    } else
+      return Promise.resolve();
   }
 
   // Queue the job to run one more time.  Cancels interval if past end time.
   _queueNext() {
     if (this._interval && this.endTime && Date.now() >= this.endTime)
       clearInterval(this._interval);
-    this._scheduler.queueJob(this.name, (error)=> {
-      if (error) {
+    this._scheduler.queueJob(this.name)
+      .catch(()=> {
         // Error queuing job. For a one time job, try to queue again. For
         // period job, only queue again if not scheduled to run soon.
         if (!this.every || this.every > ms('1m'))
           setTimeout(this._queueNext.bind(this), ms('5s'));
-      }
-    });
+      });
   }
 
   // Scheduler calls this to actually run the job when picked up from queue.
-  *_runJob(time) {
-    try {
-      this.notify.info("Processing %s, scheduled for %s", this.name, time.toString());
-      yield runJob(this.job, [], undefined);
-      this.notify.info("Completed %s, scheduled for %s", this.name, time.toString());
-    } catch (error) {
-      this.notify.error("Error %s, scheduled for %s", this.name, time.toString(), error.stack);
-      throw error;
-    }
+  _runJob(time) {
+    this.notify.info("Processing %s, scheduled for %s", this.name, time.toString());
+    runJob(this.job, [], undefined)
+      .then(()=> this.notify.info("Completed %s, scheduled for %s", this.name, time.toString()) )
+      .catch((error)=> {
+        this.notify.error("Error %s, scheduled for %s", this.name, time.toString(), error.stack);
+      });
   }
 
   get notify() {
@@ -167,8 +164,9 @@ module.exports = class Scheduler {
   }
 
   // Run all schedules jobs in parallel.
-  *once() {
-    yield this.schedules.map((schedule)=> schedule.once());
+  once() {
+    let schedules = this.schedules.map((schedule)=> schedule.once());
+    return Promise.all(schedules);
   }
 
   // Returns an array of all schedules.
@@ -178,19 +176,15 @@ module.exports = class Scheduler {
 
 
   // Schedule calls this to queue the job.
-  queueJob(name, callback) {
-    var thunk = this.queue.push({ name: name, time: new Date().toISOString()});
-    if (callback)
-      thunk(callback);
-    else
-      return thunk;
+  queueJob(name) {
+    return this.queue.push({ name: name, time: new Date().toISOString()});
   }
 
   // This is used to pick up job from the queue and run it.
   _runQueuedJob({ name, time }) {
     var schedule = this._schedules[name];
     if (schedule)
-      co(schedule._runJob(time))(function() { });
+      schedule._runJob(time);
     else
       this.notify.error("No schedule %s, ignoring", name);
   }

@@ -108,7 +108,7 @@ Pushes a new job into the queue.  The job is serialized as JSON, so objects,
 arrays and strings all work as expected.
 
 If the second argument is a callback, it is called after the job has been queued.
-Otherwise, returns a thunk (function that accepts a callback).
+Otherwise, returns a promise.
 
 For example:
 
@@ -123,16 +123,16 @@ queues('echo').push(job, function(error) {
 });
 ```
 
-Because this function returns a thunk, you can also do this in your test suite:
+Because this function returns a promise, you can also do this in your test suite:
 
 ```
-before(queues('echo').push(job));
+before(()=> queues('echo').push(job));
 ```
 
-And this, if you're using ES6:
+And this, if you're using ES7:
 
 ```
-yield queues('echo').push(job);
+await queues('echo').push(job);
 ```
 
 
@@ -155,14 +155,23 @@ queue, from where it will be picked up after a short delay.
 For example:
 
 ```
-ironium.queue('echo').each(job, callback) {
+ironium.queue('echo').each(function(job, callback) {
   console.log('Echo', job.message);
   callback();
 });
 ```
 
 Alternatively, the function can return a promise or a generator.  We discuss
-promises and generators later on.
+promises and generators later on.  For example:
+
+```
+ironium.queue('echo').each(async function(job) {
+  console.log('Echo', job.message);
+  await fnReturningPromise();
+  await anotherAsyncFunction();
+  return;
+});
+```
 
 You must use either callback, resolve promise, or return from generator to
 indicate completion, and do so within 10 minutes.  Jobs that don't complete
@@ -247,11 +256,11 @@ var schedule = {
   every: ms('2h'),               // Every two hours
   end:   new Date() + ms('24h'), // End in 24 hours
 };
-ironium.schedule('everyTwoForADay', schedule, function*() {
+ironium.schedule('everyTwoForADay', schedule, async function() {
   console.log("I run every 2 hours for 24 hours");
-  var customers = yield Customer.findAll();
+  var customers = await Customer.findAll();
   for (var customer of customers)
-    yield customer.increase('awesome');
+    await customer.increase('awesome');
 });
 ```
 
@@ -281,8 +290,7 @@ Use this method when testing.  It will run all schedules jobs exactly once, and
 then process all queued jobs until the queues are empty.
 
 You can either call `once` with a callback, to be notified when all jobs have
-been processed, or with no arguments, it will return a thunk (function that
-accepts a callback).
+been processed, or with no arguments, it will return a promise.
 
 This method exists since there's no reliable way to use `start` and `stop` for
 running automated tests.
@@ -304,10 +312,10 @@ queue.each(function(text, callback) {
 });
 
 // Queue another job
-before(queue.push('bar'));
+before(()=> queue.push('bar'));
 
 // Running the scheduled job, followed by the two queued jobs
-before(ironium.once());
+before(()=> ironium.once());
 
 it("should have run the foo scheduled job", function() {
   assert(echo.indexOf('foo') >= 0);
@@ -323,13 +331,12 @@ it("should have run the bar job", function() {
 Use this method when testing.  It will delete all queued jobs.
 
 You can either call `reset` with a callback, to be notified when all jobs have
-been deleted, or with no arguments, returns a thunk (function that accepts a
-callback).
+been deleted, or with no arguments, returns a promise.
 
 For example:
 
 ```
-before(ironium.reset());
+before(()=> ironium.reset());
 ```
 
 Is equivalent to:
