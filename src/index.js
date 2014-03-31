@@ -87,7 +87,7 @@ class Ironium extends EventEmitter {
   reset(callback) {
     var promise = this._queues.reset();
     if (callback)
-      promise(()=> callback, callback);
+      promise.then(()=> callback(), callback);
     else
       return promise;
   }

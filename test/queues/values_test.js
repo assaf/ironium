@@ -1,4 +1,5 @@
 /* global describe, before, it, after */
+require('../helpers');
 var assert  = require('assert');
 var ironium = require('../../src');
 

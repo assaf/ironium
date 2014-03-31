@@ -1,9 +1,10 @@
 /* global describe, before, it */
 var assert  = require('assert');
 var ironium = require('../../src');
+require('../helpers');
 
 
-describe.skip("processing", ()=> {
+describe("processing", ()=> {
 
   var processSerial     = ironium.queue('process-serial');
   var processParallel   = ironium.queue('process-parallel');
@@ -34,7 +35,7 @@ describe.skip("processing", ()=> {
   });
 
 
-  describe("with two workers", ()=> {
+  describe.skip("with two workers", ()=> {
 
     // Count how many steps run
     var chain = [];

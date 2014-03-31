@@ -62,5 +62,5 @@ module.exports = class Configuration {
     return this._webhookURL.replace('{queueName}', queueName);
   }
 
-}
+};
 

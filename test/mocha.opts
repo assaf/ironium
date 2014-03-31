@@ -3,3 +3,4 @@
 --reporter spec
 --growl
 --check-leaks
+--timeout=5000

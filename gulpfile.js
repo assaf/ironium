@@ -21,9 +21,8 @@ gulp.task('default', function() {
 // Compile ES6 in src to ES5 in lib
 gulp.task('build', function() {
   const options = {
-    blockBinding: true,
-    sourceMaps:   true,
-    modules:      'commonjs'
+    sourceMaps:     true,
+    modules:        'commonjs'
   };
   const compile = gulp.src('src/**/*.js')
     .pipe(es6(options))
@@ -39,7 +38,7 @@ gulp.task('clean', function() {
 });
 
 // Run mocha, used by release task
-gulp.task('test', ['build'], function(callback) {
+gulp.task('test', ['build'], function() {
   return gulp.src('test').pipe(exec('mocha'));
 });
 
@@ -58,17 +57,17 @@ gulp.task('changelog', function(callback) {
 
     
   // Get the most recent tag
-  Child.exec('git describe --abbrev=0 --tags', function(error, stdout, stderr) {
+  Child.exec('git describe --abbrev=0 --tags', function(error, stdout) {
     const tag = stdout.trim();
     // Get summary of all commits since that tag
-    Child.exec('git log ' + tag + '..HEAD --pretty=format:%s%n', function(error, stdout, stderr) {
+    Child.exec('git log ' + tag + '..HEAD --pretty=format:%s%n', function(error, stdout) {
       const log = stdout;
       File.writeFile('change.log', log, 'utf-8', callback);
     });
   });
 });
 
-gulp.task('release', ['clean', 'build', 'test', 'element', 'changelog'], function(callback) {
+gulp.task('release', ['clean', 'build', 'test', 'element', 'changelog'], function() {
   const version = require('./package.json').version;
   const message = "Release " + version;
 

@@ -7,8 +7,8 @@ process.env.NODE_ENV = 'test';
 
 // Run with env DEBUG=true to see what's happening
 if (process.env.DEBUG) {
-  ironium.on('debug', (message)=> console.log(message));
-  ironium.on('info',  (message)=> console.info(message));
+  ironium.on('debug', console.log);
+  ironium.on('info',  console.info);
   ironium.on('error', (error)=> console.error(error.stack));
 }
 

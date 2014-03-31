@@ -22,13 +22,13 @@ var PROCESSING_TIMEOUT  = ms('10m');
 var RELEASE_DELAY       = ms('1m');
 
 
-function promisify(fn) {
+function promisify(object, method, ...args) {
   return new Promise(function(resolve, reject) {
-    fn(function(error) {
+    object[method].call(object, ...args, function(error) {
       if (error)
         reject(error);
       else
-        resolve(error);
+        resolve();
     });
   });
 }
@@ -76,101 +76,112 @@ class Session {
   // This is a simple wrapper around the Fivebeans client with additional error
   // handling.
   request(command, ...args) {
-    // Ask for connection, we get a promise that resolves into a client.
     // Because callbacks we need to create separate promise, resolved after
     // command executes.
-    return this.connect().then(function(client) {
-
-      return new Promise(function(resolve, reject) {
-
-        // If connection ends close/error, Fivebeans never terminates the request,
-        // we need to respond to connection error directly.
-        function onError(error) {
-          reject(error);
-        }
-        function onClose() {
-          // The TIMED_OUT error is appropriate because the request failed to
-          // complete in time, and gets silently ignored when reserving jobs.
-          reject(new Error('TIMED_OUT'));
-        }
-        client.once('close', onClose);
-        client.once('error', onError);
-
-        client[command].call(client, ...args, function(error, ...results) {
-          client.removeListener('close', onClose);
-          client.removeListener('error', onError);
-          if (error)
-            reject(error);
-          else if (results.length > 1)
-            resolve(results);
-          else
-            resolve(results[0]);
-        });
-      });
-
+    var deferred = {};
+    var result   = new Promise(function(resolve, reject) {
+      deferred.resolve  = resolve;
+      deferred.reject   = reject;
     });
+
+    function resolveRequest(client) {
+      // If connection ends close/error, Fivebeans never terminates the request,
+      // we need to respond to connection error directly.
+      function onError(error) {
+        deferred.reject(error);
+      }
+      function onClose() {
+        // The TIMED_OUT error is appropriate because the request failed to
+        // complete in time, and gets silently ignored when reserving jobs.
+        deferred.reject(new Error('TIMED_OUT'));
+      }
+      client.once('close', onClose);
+      client.once('error', onError);
+      // The only way to detect a command that failed to complete.
+      setTimeout(onClose, RESERVE_TIMEOUT * 2);
+
+      client[command].call(client, ...args, function(error, ...results) {
+        client.removeListener('close', onClose);
+        client.removeListener('error', onError);
+        if (error)
+          deferred.reject(error);
+        else if (results.length > 1)
+          deferred.resolve(results);
+        else
+          deferred.resolve(results[0]);
+      });
+    }
+
+    // Ask for connection, we get a promise that resolves into a client.
+    this.connect().then(resolveRequest, deferred.reject);
+    // This promise resolves to the result of the request.
+    return result;
   }
 
   // Called to establish a new connection, or use existing connections.
   // Returns a FiveBeans client.
-  async connect() {
+  connect() {
     // this._client is set after first call to `connect`, and until we detect a
     // connection failure and terminate it.
     if (this._client)
       return this._client;
 
     // This is the Fivebeans client is essentially a session.
-    var config = this._config;
+    var config  = this._config;
     var client  = new fivebeans.client(config.queues.hostname, config.queues.port);
+    var session = this;
+    var promise = promisify(client, 'on', 'connect');
 
-    try {
-
-      client.on('error', (error)=> {
-        // On connection error, we automatically discard the connection.
-        if (this._client == client)
-          this._client = null;
-        this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
-        client.end();
-      });
-      client.on('close', ()=> {
-        // Client disconnected
-        if (this._client == client)
-          this._client = null;
-        this._notify.debug("Connection closed for %s", this.id);
-      });
-
-      // Nothing happens until we start the connection.  Must wait for
-      // connection event before we can send anything down the stream.
-      client.connect();
-      // Allows the process to exit when done processing, otherwise, it will
-      // stay running while it's waiting to reserve the next job.
-      client.stream.unref();
-      await promisify((callback)=> client.on('connect', callback));
-
-      // When working with Iron.io, need to authenticate each connection before
-      // it can be used.  This is the first setup step, followed by the
-      // session-specific setup.
-      if (config.authenticate)
-        await promisify((callback)=> client.put(0, 0, 0, config.authenticate, callback));
-      
-      // Put/reserve clients have different setup requirements, this are handled by
-      // an externally supplied method.
-      await promisify((callback)=> this.setup(client, callback));
-
-    } catch (error) {
+    // On connection error, we automatically discard the connection.
+    function onError(error) {
       // Gracefully terminate connection.
       client.end();
-      throw error;
+      if (session._client === promise)
+        session._client = null;
+      session._notify.debug("Client error in queue %s: %s", session.id, error.toString());
     }
 
+    function onClose() {
+      if (session._client === promise)
+        session._client = null;
+      session._notify.debug("Connection closed for %s", session.id);
+    }
+
+    client.on('error', onError);
+    client.on('close', onClose);
+
+    // Nothing happens until we start the connection.  Must wait for
+    // connection event before we can send anything down the stream.
+    client.connect();
+    // Allows the process to exit when done processing, otherwise, it will
+    // stay running while it's waiting to reserve the next job.
+    client.stream.unref();
+
+    // When working with Iron.io, need to authenticate each connection before
+    // it can be used.  This is the first setup step, followed by the
+    // session-specific setup.
+    if (config.authenticate) {
+      promise = promise.then(function() {
+        return promisify(client, 'put', 0, 0, 0, config.authenticate);
+      });
+    }
+      
+    // Put/reserve clients have different setup requirements, this are handled by
+    // an externally supplied method.
+    promise = promise.then(()=> {
+      return promisify(this, 'setup', client);
+    });
+
+    promise = promise.then(()=> client, onError);
+
     // Every call to `connect` should be able to access this client.
-    this._client = client;
-    return client;
+    this._client = promise;
+    return promise;
   }
 
   end() {
     if (this._client)
-      this._client.end();
+      this._client.then((client)=> client.end() );
     this._client = null;
   }
 
@@ -298,35 +309,37 @@ class Queue {
   }
 
   // Called to process all jobs, until this._processing is set to false.
-  async _processContinously(session) {
+  _processContinously(session) {
     // Don't do anything without a handler, stop when processing is false.
     if (this._processing && this._handlers.length)
       this._notify.debug("Waiting for jobs on queue %s", this.name);
 
-    while (this._processing && this._handlers.length) {
+    var timeout = RESERVE_TIMEOUT / 1000;
+    var backoff = (process.env.NODE_ENV == 'test' ? 0 : RESERVE_BACKOFF);
+    var queue   = this;
 
-      try {
+    function nextJob() {
+      if (!queue._processing || queue._handlers.length === 0)
+        return Promise.resolve();
 
-        var timeout = RESERVE_TIMEOUT / 1000;
-        var [jobID, payload] = await session.request('reserve_with_timeout', timeout);
-        await this._runAndDestroy(session, jobID, payload);
-
-      } catch (error) {
-
-        if (error == 'TIMED_OUT' || error.message == 'TIMED_OUT') {
-          // No job, go back to wait for next job.
-        } else {
-          // Report on any other error, and back off for a few.
-          this._notify.error(error);
-          var backoff = (process.env.NODE_ENV == 'test' ? 0 : RESERVE_BACKOFF);
-          await new Promise(function(resolve) {
-            setTimeout(resolve, backoff);
-          });
-        }
-
-      }
-
+      var promise = session.request('reserve_with_timeout', timeout)
+        .then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) )
+        .catch(function(error) {
+          if (error == 'TIMED_OUT' || error.message == 'TIMED_OUT') {
+            // No job, go back to wait for next job.
+          } else {
+            // Report on any other error, and back off for a few.
+            queue._notify.error(error);
+            return new Promise(function(resolve) {
+              setTimeout(resolve, backoff);
+            });
+          }
+        })
+        .then(nextJob);
+      return promise;
     }
+
+    return nextJob();
   }
 
 
@@ -346,10 +359,14 @@ class Queue {
     this._notify.info("Processing queued job %s:%s", this.name, jobID);
     this._notify.debug("Payload for job %s:%s:", this.name, jobID, payload);
 
-    var handlers = this._handlers.map(function(handler) {
-      return runJob(handler, [payload], PROCESSING_TIMEOUT);
-    });
-    var runAll = Promise.all(handlers)
+    var handlers = this._handlers.slice();
+    function nextHandler() {
+      var handler = handlers.shift();
+      if (handler)
+        return runJob(handler, [payload], PROCESSING_TIMEOUT).then(nextHandler);
+    }
+
+    return nextHandler()
       .then(()=> {
         this._notify.info("Completed queued job %s:%s", this.name, jobID);
         // Remove job from queue, swallow error
@@ -366,40 +383,35 @@ class Queue {
         session.request('release', jobID, priority, delay);
         throw error;
       });
-
-    return runAll;
   }
 
   // Delete all messages from the queue.
-  async reset() {
+  reset() {
     // We're using the _put session (use), the _reserve session (watch) doesn't
     // return any jobs.
     var session = this._put;
-    var jobID;
-    var payload;
 
-    // Delete all ready jobs.
-    try {
-      while (true) {
-        [jobID, payload] = await session.request('peek_ready');
-        await session.request('destroy', jobID);
-      }
-    } catch (error) {
+    // Ignore NOT_FOUND, we get that if there is no job in the queue.
+    function onError(error) {
       if (error != 'NOT_FOUND')
         throw error;
+    }
+
+    // Delete all ready jobs.
+    function deleteReadyJob() {
+      return session.request('peek_ready')
+        .then(([jobID])=> session.request('destroy', jobID) )
+        .then(()=> deleteReadyJob(), onError);
     }
 
     // Delete all delayed jobs.
-    try {
-      while (true) {
-        [jobID, payload] = await session.request('peek_delayed');
-        await session.request('destroy', jobID);
-      }
-    } catch (error) {
-      if (error != 'NOT_FOUND')
-        throw error;
+    function deleteDelayedJob() {
+      return session.request('peek_delayed')
+        .then(([jobID])=> session.request('destroy', jobID) )
+        .then(()=> deleteDelayedJob(), onError);
     }
-    return;
+
+    return Promise.all([ deleteReadyJob(), deleteDelayedJob() ]);
   }
 
 
@@ -480,23 +492,22 @@ module.exports = class Server {
       queue.stop();
   }
 
-  // Use when testing to empty contents of all queues.
+  // Use when testing to empty contents of all queues.  Returns a promise.
   reset() {
     this.notify.debug("Clear all queues");
-    var queues = this.queues.map((queue)=> queue.reset());
-    return Promise.all(queues);
+    var resets = this.queues.map((queue)=> queue.reset());
+    return Promise.all(resets);
   }
 
-  // Use when testing to wait for all jobs to be processed.
+  // Use when testing to wait for all jobs to be processed.  Returns a promise.
   once() {
-    var queues    = this.queues.map((queue)=> queue.once());
-    var allQueues = Promise.all(queues).
+    var onces = this.queues.map((queue)=> queue.once());
+    return Promise.all(onces).
       then((processed)=> {
         var anyProcessed = (processed.indexOf(true) >= 0);
         if (anyProcessed)
           return this.once();
       });
-    return allQueues;
   }
 
   // Returns an array of all queues.
