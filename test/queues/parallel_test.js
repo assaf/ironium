@@ -1,18 +1,18 @@
 /* global describe, before, it */
-const assert  = require('assert');
-const ironium = require('../../src');
+var assert  = require('assert');
+var ironium = require('../../src');
 
 
 describe.skip("processing", ()=> {
 
-  const processSerial     = ironium.queue('process-serial');
-  const processParallel   = ironium.queue('process-parallel');
+  var processSerial     = ironium.queue('process-serial');
+  var processParallel   = ironium.queue('process-parallel');
 
 
   describe("with one worker", ()=> {
 
     // Count how many steps run
-    let chain = [];
+    var chain = [];
     before(()=> {
       processSerial.each((job, callback)=> {
         chain.push('A');
@@ -37,7 +37,7 @@ describe.skip("processing", ()=> {
   describe("with two workers", ()=> {
 
     // Count how many steps run
-    let chain = [];
+    var chain = [];
     before(()=> {
       processParallel.each((job, callback)=> {
         chain.push('A');

@@ -11,9 +11,7 @@ Module._extensions['.js'] = function(module, filename) {
   } else {
     const source = File.readFileSync(filename, 'utf8');
     const compiled = traceur.compile(source, {
-      blockBinding:           true,
-      generators:             true,
-      generatorComprehension: true,
+      blockBinding:           false,
       asyncFunctions:         true,
       validate:               true,
       filename:               filename,
@@ -24,8 +22,3 @@ Module._extensions['.js'] = function(module, filename) {
     return module._compile(compiled.js, filename);
   }
 };
-
-
-// Disable Traceur's global promise, available in test environment but not
-// necessarily in application.  This makes sure we always use the polyfill.
-//global.Promise = null;

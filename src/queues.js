@@ -1,25 +1,25 @@
-const assert      = require('assert');
-const fivebeans   = require('fivebeans');
-const ms          = require('ms');
-const runJob      = require('./run_job');
+var assert      = require('assert');
+var fivebeans   = require('fivebeans');
+var ms          = require('ms');
+var runJob      = require('./run_job');
 
 
 // How long to wait when reserving a job.  Iron.io closes connection if we wait
 // too long.
-const RESERVE_TIMEOUT     = ms('30s');
+var RESERVE_TIMEOUT     = ms('30s');
 
 // Back-off in case of connection error, prevents continously failing to
 // reserve a job.
-const RESERVE_BACKOFF     = ms('30s');
+var RESERVE_BACKOFF     = ms('30s');
 
 // Timeout for processing job before we consider it failed and release it back
 // to the queue.
-const PROCESSING_TIMEOUT  = ms('10m');
+var PROCESSING_TIMEOUT  = ms('10m');
 
 // Delay before a released job is available for pickup again (in seconds).
 // This is our primary mechanism for dealing with load during failures.
 // Ignored in test environment.
-const RELEASE_DELAY       = ms('1m');
+var RELEASE_DELAY       = ms('1m');
 
 
 function promisify(fn) {
@@ -200,14 +200,14 @@ class Queue {
   push(job, callback) {
     assert(job, "Missing job to queue");
 
-    let priority  = 0;
-    let delay     = 0;
-    let timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000) + 1;
-    let payload   = JSON.stringify(job);
+    var priority  = 0;
+    var delay     = 0;
+    var timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000) + 1;
+    var payload   = JSON.stringify(job);
     // Don't pass jobID to callback, easy to use in test before hook, like
     // this:
     //   before(queue.put(MESSAGE));
-    let promise = this._put.request('put', priority, delay, timeToRun, payload)
+    var promise = this._put.request('put', priority, delay, timeToRun, payload)
       .then((jobID)=> {
         this._notify.debug("Queued job %s on queue %s", jobID, this.name, payload);
         return jobID;
@@ -276,11 +276,11 @@ class Queue {
       return Promise.resolve();
 
     this._notify.debug("Waiting for jobs on queue %s", this.name);
-    let session = this._reserve(0);
-    let anyProcessed = false;
-    let timeout = 0;
+    var session = this._reserve(0);
+    var anyProcessed = false;
+    var timeout = 0;
 
-    let reserveAndProcess = ()=> {
+    var reserveAndProcess = ()=> {
       return session.request('reserve_with_timeout', timeout)
         .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
         .then(()=> {
@@ -307,8 +307,8 @@ class Queue {
 
       try {
 
-        let timeout = RESERVE_TIMEOUT / 1000;
-        let [jobID, payload] = await session.request('reserve_with_timeout', timeout);
+        var timeout = RESERVE_TIMEOUT / 1000;
+        var [jobID, payload] = await session.request('reserve_with_timeout', timeout);
         await this._runAndDestroy(session, jobID, payload);
 
       } catch (error) {
@@ -346,10 +346,10 @@ class Queue {
     this._notify.info("Processing queued job %s:%s", this.name, jobID);
     this._notify.debug("Payload for job %s:%s:", this.name, jobID, payload);
 
-    let handlers = this._handlers.map(function(handler) {
+    var handlers = this._handlers.map(function(handler) {
       return runJob(handler, [payload], PROCESSING_TIMEOUT);
     });
-    let runAll = Promise.all(handlers)
+    var runAll = Promise.all(handlers)
       .then(()=> {
         this._notify.info("Completed queued job %s:%s", this.name, jobID);
         // Remove job from queue, swallow error
@@ -361,8 +361,8 @@ class Queue {
         // Error or timeout: we release the job back to the queue.  Since this
         // may be a transient error condition (e.g. server down), we let it sit
         // in the queue for a while before it becomes available again.
-        let priority = 0;
-        let delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
+        var priority = 0;
+        var delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
         session.request('release', jobID, priority, delay);
         throw error;
       });
@@ -374,12 +374,14 @@ class Queue {
   async reset() {
     // We're using the _put session (use), the _reserve session (watch) doesn't
     // return any jobs.
-    let session = this._put;
+    var session = this._put;
+    var jobID;
+    var payload;
 
     // Delete all ready jobs.
     try {
       while (true) {
-        let [jobID, payload] = await session.request('peek_ready');
+        [jobID, payload] = await session.request('peek_ready');
         await session.request('destroy', jobID);
       }
     } catch (error) {
@@ -390,7 +392,7 @@ class Queue {
     // Delete all delayed jobs.
     try {
       while (true) {
-        let [jobID, payload] = await session.request('peek_delayed');
+        [jobID, payload] = await session.request('peek_delayed');
         await session.request('destroy', jobID);
       }
     } catch (error) {
@@ -481,16 +483,16 @@ module.exports = class Server {
   // Use when testing to empty contents of all queues.
   reset() {
     this.notify.debug("Clear all queues");
-    let queues = this.queues.map((queue)=> queue.reset());
+    var queues = this.queues.map((queue)=> queue.reset());
     return Promise.all(queues);
   }
 
   // Use when testing to wait for all jobs to be processed.
   once() {
-    let queues    = this.queues.map((queue)=> queue.once());
-    let allQueues = Promise.all(queues).
+    var queues    = this.queues.map((queue)=> queue.once());
+    var allQueues = Promise.all(queues).
       then((processed)=> {
-        let anyProcessed = (processed.indexOf(true) >= 0);
+        var anyProcessed = (processed.indexOf(true) >= 0);
         if (anyProcessed)
           return this.once();
       });

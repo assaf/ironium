@@ -1,14 +1,14 @@
-const { format } = require('util');
+var { format } = require('util');
 
 
-const BEANSTALKD_HOSTNAME = 'localhost';
-const BEANSTALKD_PORT     = 11300;
-const QUEUE_TEST_PREFIX   = 'test-';
-const IRONIO_HOSTNAME     = 'mq-aws-us-east-1.iron.io';
+var BEANSTALKD_HOSTNAME = 'localhost';
+var BEANSTALKD_PORT     = 11300;
+var QUEUE_TEST_PREFIX   = 'test-';
+var IRONIO_HOSTNAME     = 'mq-aws-us-east-1.iron.io';
 
-const IRONIO_WEBHOOKURL   = 'https://%s/1/projects/%s/queues/{queueName}/messages/webhook?oauth=%s';
-const IRONIO_AUTHENTICATE = 'oauth %s %s';
-const LOCAL_WEBHOOKURL    = 'https://localhost/webhooks/queues/{queueName}/messages/webhook';
+var IRONIO_WEBHOOKURL   = 'https://%s/1/projects/%s/queues/{queueName}/messages/webhook?oauth=%s';
+var IRONIO_AUTHENTICATE = 'oauth %s %s';
+var LOCAL_WEBHOOKURL    = 'https://localhost/webhooks/queues/{queueName}/messages/webhook';
 
 
 module.exports = class Configuration {

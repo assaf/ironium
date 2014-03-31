@@ -1,13 +1,13 @@
 /* global describe, before, it */
-const assert      = require('assert');
-const ironium     = require('../../src');
+var assert      = require('assert');
+var ironium     = require('../../src');
 
 
 describe("processing", ()=> {
 
-  let errorCallback   = ironium.queue('error-callback');
-  let errorPromise    = ironium.queue('error-promise');
-  let errorGenerator  = ironium.queue('error-generator');
+  var errorCallback   = ironium.queue('error-callback');
+  var errorPromise    = ironium.queue('error-promise');
+  var errorGenerator  = ironium.queue('error-generator');
 
   function untilSuccessful(done) {
     ironium.once((error)=> {
@@ -21,7 +21,7 @@ describe("processing", ()=> {
   describe("with callback error", ()=> {
 
     // First two runs should fail, runs ends at 3
-    let runs = 0;
+    var runs = 0;
     before(()=> {
       errorCallback.each((job, callback)=> {
         runs++;
@@ -45,7 +45,7 @@ describe("processing", ()=> {
   describe("with rejected promise", ()=> {
 
     // First two runs should fail, runs ends at 3
-    let runs = 0;
+    var runs = 0;
     before(()=> {
       errorPromise.each(()=> {
         runs++;
@@ -69,7 +69,7 @@ describe("processing", ()=> {
   describe("with generator error", ()=> {
 
     // First two runs should fail, runs ends at 3
-    let runs = 0;
+    var runs = 0;
     before(()=> {
       errorGenerator.each(function*() {
         runs++;

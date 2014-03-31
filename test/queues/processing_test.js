@@ -1,22 +1,21 @@
 /* global describe, before, it */
-const assert      = require('assert');
-//const { Promise } = require('es6-promise');
-const ironium     = require('../../src');
+var assert      = require('assert');
+var ironium     = require('../../src');
 
 
 describe("processing", ()=> {
 
-  const processMultiple   = ironium.queue('process-multiple');
-  const processPromise    = ironium.queue('process-promise');
-  const processGenerator  = ironium.queue('process-generator');
-  const processOnceA      = ironium.queue('process-once-a');
-  const processOnceB      = ironium.queue('process-once-b');
+  var processMultiple   = ironium.queue('process-multiple');
+  var processPromise    = ironium.queue('process-promise');
+  var processGenerator  = ironium.queue('process-generator');
+  var processOnceA      = ironium.queue('process-once-a');
+  var processOnceB      = ironium.queue('process-once-b');
 
 
   describe("with multiple handlers", ()=> {
 
     // Count how many steps run
-    let steps = [];
+    var steps = [];
     before(()=> {
       processMultiple.each((job, callback)=> {
         steps.push('A');
@@ -45,10 +44,10 @@ describe("processing", ()=> {
   describe("with promises", ()=> {
 
     // Count how many steps run
-    let steps = [];
+    var steps = [];
     before(()=> {
       processPromise.each(()=> {
-        let promise = new Promise(setImmediate);
+        var promise = new Promise(setImmediate);
         promise
           .then(()=> steps.push('A'))
           .then(()=> steps.push('B'))
@@ -70,7 +69,7 @@ describe("processing", ()=> {
   describe("with generator", ()=> {
 
     // Count how many steps run
-    let steps = [];
+    var steps = [];
     before(()=> {
       processGenerator.each(function*() {
         var one = yield Promise.resolve('A');
@@ -98,7 +97,7 @@ describe("processing", ()=> {
   describe("with async/await", ()=> {
 
     // Count how many steps run
-    let steps = [];
+    var steps = [];
     before(()=> {
       processGenerator.each(async function() {
         var one = await Promise.resolve('A');
@@ -127,7 +126,7 @@ describe("processing", ()=> {
 
   describe("once", ()=> {
     // Count how many steps run
-    let steps = [];
+    var steps = [];
     before(()=> {
       // Process A, queue job for B
       // Process B, queue job for A

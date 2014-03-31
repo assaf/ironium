@@ -1,6 +1,6 @@
-const assert            = require('assert');
-const co                = require('co');
-const { createDomain }  = require('domain');
+var assert            = require('assert');
+var co                = require('co');
+var { createDomain }  = require('domain');
 
 
 // Runs the job, returns a promise.
@@ -11,18 +11,18 @@ const { createDomain }  = require('domain');
 module.exports = function runJob(handler, args, timeout) {
   assert(handler, "Handler is missing");
 
-  let promise = new Promise(function(resolve, reject) {
+  var promise = new Promise(function(resolve, reject) {
 
     // Ideally we call the function, function calls the callback, all is well.
     // But the handler may throw an exception, or suffer some other
     // catastrophic outcome: we use a domain to handle that.  It may also
     // never halt, so we set a timer to force early completion.
-    let domain = createDomain();
+    var domain = createDomain();
 
     if (timeout) {
       // This timer trigger if the job doesn't complete in time and rejects the
       // promise.  Server gets a longer timeout than we do.
-      let errorOnTimeout = setTimeout(function() {
+      var errorOnTimeout = setTimeout(function() {
         domain.emit('error', new Error("Timeout processing job"));
       }, timeout);
       domain.add(errorOnTimeout);
@@ -34,7 +34,7 @@ module.exports = function runJob(handler, args, timeout) {
 
       // Good old callback, var's resolve the job.  Since we intercept it,
       // errors are handled by on('error'), successful completion resolves.
-      let result = handler(...args, domain.intercept(resolve));
+      var result = handler(...args, domain.intercept(resolve));
 
       // Job may have returned a promise or a generator, var's see …
       if (result) {

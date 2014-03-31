@@ -1,6 +1,6 @@
 /* global describe, before, it, after */
-const assert = require('assert');
-const fork   = require('child_process').fork;
+var assert = require('assert');
+var fork   = require('child_process').fork;
 
 
 if (typeof(describe) != 'undefined') {
@@ -50,7 +50,7 @@ if (typeof(describe) != 'undefined') {
 
 } else {
 
-  const ironium = require('../../lib');
+  var ironium = require('../../lib');
 
   if (process.env.DEBUG) {
     ironium.on('debug', console.log);

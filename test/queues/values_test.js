@@ -1,14 +1,14 @@
 /* global describe, before, it, after */
-const assert  = require('assert');
-const ironium = require('../../src');
+var assert  = require('assert');
+var ironium = require('../../src');
 
 
 describe("queue", ()=> {
 
-  const capture = ironium.queue('capture');
+  var capture = ironium.queue('capture');
 
   // Capture processed jobs here.
-  let processed = [];
+  var processed = [];
 
   before(function() {
     capture.each((job, callback)=> {
@@ -23,7 +23,7 @@ describe("queue", ()=> {
     before(()=> ironium.once());
 
     it("should process that object", ()=>{
-      let job = processed[0];
+      var job = processed[0];
       assert.equal(job.id, 5);
       assert.equal(job.name, 'job');
     });
@@ -37,7 +37,7 @@ describe("queue", ()=> {
     before(()=> ironium.once());
 
     it("should process that string", ()=>{
-      let job = processed[0];
+      var job = processed[0];
       assert.equal(job, 'job');
     });
 
@@ -50,7 +50,7 @@ describe("queue", ()=> {
     before(()=> ironium.once());
 
     it("should process that number", ()=>{
-      let job = processed[0];
+      var job = processed[0];
       assert.equal(job, 3.1);
     });
 
@@ -63,7 +63,7 @@ describe("queue", ()=> {
     before(()=> ironium.once());
 
     it("should process that array", ()=>{
-      let job = processed[0];
+      var job = processed[0];
       assert.equal(job.length, 2);
       assert.equal(job[0], true);
       assert.equal(job[1], '+');

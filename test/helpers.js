@@ -1,5 +1,5 @@
 /* globals before, after */
-const ironium = require('../src');
+var ironium = require('../src');
 
 
 // Test mode: no delay when failed jobs returned to queue.

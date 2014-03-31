@@ -1,8 +1,8 @@
 // Essentially cron for scheduling tasks in Node.
 
-const assert  = require('assert');
-const ms      = require('ms');
-const runJob  = require('./run_job');
+var assert  = require('assert');
+var ms      = require('ms');
+var runJob  = require('./run_job');
 
 
 // Job schedule consists of three properties:
@@ -50,7 +50,7 @@ class Schedule {
 
   // Starts the scheduler for this job.  Sets timer/interval to run the job.
   start() {
-    let now = Date.now();
+    var now = Date.now();
     if (this.endTime && now >= this.endTime)
       return;
 
@@ -165,7 +165,7 @@ module.exports = class Scheduler {
 
   // Run all schedules jobs in parallel.
   once() {
-    let schedules = this.schedules.map((schedule)=> schedule.once());
+    var schedules = this.schedules.map((schedule)=> schedule.once());
     return Promise.all(schedules);
   }
 
