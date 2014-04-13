@@ -11,7 +11,7 @@ var { createDomain }  = require('domain');
 module.exports = function runJob(handler, args, timeout) {
   assert(handler, "Handler is missing");
 
-  var promise = new Promise(function(resolve, reject) {
+  return new Promise(function(resolve, reject) {
 
     // Ideally we call the function, function calls the callback, all is well.
     // But the handler may throw an exception, or suffer some other
@@ -37,25 +37,22 @@ module.exports = function runJob(handler, args, timeout) {
       var result = handler(...args, domain.intercept(resolve));
 
       // Job may have returned a promise or a generator, var's see …
-      if (result) {
-        if (typeof(result.then) == 'function') {
-          // A thenable object == promise.
-          resolve(result);
-        } else if (typeof(result.next) == 'function' &&
-                   typeof(result.throw) == 'function') {
-          // A generator object.  Use it to resolve job instead of callback.
-          co(result)(function(error) {
-            if (error)
-              domain.emit('error', error);
-            else
-              resolve();
-          });
-        }
+      if (result && typeof(result.then) == 'function') {
+        // A thenable object == promise.
+        resolve(result);
+      } else if (result && typeof(result.next) == 'function' &&
+                 typeof(result.throw) == 'function') {
+        // A generator object.  Use it to resolve job instead of callback.
+        co(result)(function(error) {
+          if (error)
+            domain.emit('error', error);
+          else
+            resolve();
+        });
       }
 
     });
 
   });
-  return promise;
 
 };

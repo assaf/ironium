@@ -107,7 +107,7 @@ class Schedule {
   // Scheduler calls this to actually run the job when picked up from queue.
   _runJob(time) {
     this.notify.info("Processing %s, scheduled for %s", this.name, time.toString());
-    runJob(this.job, [], undefined)
+    return runJob(this.job, [], undefined)
       .then(()=> this.notify.info("Completed %s, scheduled for %s", this.name, time.toString()) )
       .catch((error)=> {
         this.notify.error("Error %s, scheduled for %s", this.name, time.toString(), error.stack);
@@ -184,9 +184,11 @@ module.exports = class Scheduler {
   _runQueuedJob({ name, time }) {
     var schedule = this._schedules[name];
     if (schedule)
-      schedule._runJob(time);
-    else
+      return schedule._runJob(time);
+    else {
       this.notify.error("No schedule %s, ignoring", name);
+      return Promise.resolve();
+    }
   }
 
   // Lazy access to queue -> lazy load configuration.

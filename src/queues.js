@@ -287,25 +287,24 @@ class Queue {
       return Promise.resolve();
 
     this._notify.debug("Waiting for jobs on queue %s", this.name);
+    return this._reserveAndProcess();
+  }
+
+  // Used by once to reserve and process each job recursively.
+  _reserveAndProcess() {
     var session = this._reserve(0);
-    var anyProcessed = false;
     var timeout = 0;
 
-    var reserveAndProcess = ()=> {
-      return session.request('reserve_with_timeout', timeout)
-        .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
-        .then(()=> {
-          anyProcessed = true;
-          return reserveAndProcess();
-        })
-        .catch((error)=> {
-          if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
-            return anyProcessed;
-          else
-            throw error;
-        });
-    };
-    return reserveAndProcess();
+    return session.request('reserve_with_timeout', timeout)
+      .then(([jobID, payload])=> this._runAndDestroy(session, jobID, payload) )
+      .then(()=> this._reserveAndProcess() )
+      .then(()=> true ) // At least one job processed, resolve to true
+      .catch((error)=> {
+        if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+          return false; // Job not processed
+        else
+          throw error;
+      });
   }
 
   // Called to process all jobs, until this._processing is set to false.
