@@ -6,7 +6,7 @@
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
         <rect id="Rectangle-1" stroke="#979797" fill="#004289" sketch:type="MSShapeGroup" x="0" y="0" width="218" height="253"></rect>
         <text id="version-box" sketch:type="MSTextLayer" font-family="Helvetica Neue" font-size="48" font-weight="260" fill="#FFFFFF">
-            <tspan x="22" y="228"><tspan id="version">0.9.15</tspan></tspan>
+            <tspan x="22" y="228"><tspan id="version">0.10.0</tspan></tspan>
         </text>
         <text id="Im" sketch:type="MSTextLayer" font-family="Helvetica Neue" font-size="96" font-weight="bold" fill="#FFFFFF">
             <tspan x="22" y="129">Im</tspan>
