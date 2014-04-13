@@ -1,3 +1,18 @@
+# 0.10.0
+
+Because ES7, Ironium's API changed to return promises instead of thunks.
+
+If you're using Traceur, and you wanted to duplicate a job in queue0 to queue1
+and queue2, you could do this:
+
+```
+queue0.each(async function(job) {
+  await queue1.push(job);
+  await queue2.push(job);
+});
+```
+
+
 # 0.9.15
 
 Upgraded to Traceur 0.0.18.
