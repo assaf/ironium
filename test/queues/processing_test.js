@@ -105,12 +105,10 @@ describe("processing", ()=> {
         steps.push(one);
         var two = await Promise.resolve('B');
         steps.push(two);
-        var three = await async function() {
-          await Promise.resolve();
-          return 'C';
+        var three = await function() {
+          return Promise.resolve('C');
         }();
         steps.push(three);
-        return;
       });
     });
 
