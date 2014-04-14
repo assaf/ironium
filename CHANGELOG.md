@@ -1,3 +1,8 @@
+# 0.10.2
+
+FIXED error handling for sessions and reset
+
+
 # 0.10.0
 
 Because ES7, Ironium's API changed to return promises instead of thunks.

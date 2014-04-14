@@ -76,107 +76,103 @@ class Session {
   // This is a simple wrapper around the Fivebeans client with additional error
   // handling.
   request(command, ...args) {
-    // Because callbacks we need to create separate promise, resolved after
-    // command executes.
-    var deferred = {};
-    var result   = new Promise(function(resolve, reject) {
-      deferred.resolve  = resolve;
-      deferred.reject   = reject;
-    });
+    function executeCommand(client) {
+      return new Promise(function(resolve, reject) {
 
-    function resolveRequest(client) {
-      // If connection ends close/error, Fivebeans never terminates the request,
-      // we need to respond to connection error directly.
-      function onError(error) {
-        deferred.reject(error);
-      }
-      function onClose() {
-        // The TIMED_OUT error is appropriate because the request failed to
-        // complete in time, and gets silently ignored when reserving jobs.
-        deferred.reject(new Error('TIMED_OUT'));
-      }
-      client.once('close', onClose);
-      client.once('error', onError);
-      // The only way to detect a command that failed to complete.
-      setTimeout(onClose, RESERVE_TIMEOUT * 2);
+        // If connection ends close/error, Fivebeans never terminates the request,
+        // we need to respond to connection error directly.
+        client.once('close', reject);
+        client.once('error', reject);
+        // The only way to detect a command that failed to complete.
+        var timeout = setTimeout(function() {
+          client.emit('error', new Error('TIMEOUT'));
+        }, RESERVE_TIMEOUT * 2);
 
-      client[command].call(client, ...args, function(error, ...results) {
-        client.removeListener('close', onClose);
-        client.removeListener('error', onError);
-        if (error)
-          deferred.reject(error);
-        else if (results.length > 1)
-          deferred.resolve(results);
-        else
-          deferred.resolve(results[0]);
+        client[command].call(client, ...args, function(error, ...results) {
+          clearTimeout(timeout);
+          client.removeListener('close', reject);
+          client.removeListener('error', reject);
+          if (error)
+            reject(error);
+          else if (results.length > 1)
+            resolve(results);
+          else
+            resolve(results[0]);
+        });
+
       });
     }
 
     // Ask for connection, we get a promise that resolves into a client.
-    this.connect().then(resolveRequest, deferred.reject);
-    // This promise resolves to the result of the request.
-    return result;
+    // We return a new promise that resolves to the output of the request.
+    return this.connect().then(executeCommand);
   }
 
   // Called to establish a new connection, or use existing connections.
   // Returns a FiveBeans client.
   connect() {
+    var session = this;
     // this._client is set after first call to `connect`, and until we detect a
     // connection failure and terminate it.
-    if (this._client)
-      return this._client;
+    if (session._client)
+      return session._client;
 
     // This is the Fivebeans client is essentially a session.
     var config  = this._config;
     var client  = new fivebeans.client(config.queues.hostname, config.queues.port);
-    var session = this;
-    var promise = promisify(client, 'on', 'connect');
 
     // On connection error, we automatically discard the connection.
-    function onError(error) {
-      // Gracefully terminate connection.
-      client.end();
-      if (session._client === promise)
+    client.on('error', function(error) {
+      if (session._client === clientPromise)
         session._client = null;
       session._notify.debug("Client error in queue %s: %s", session.id, error.toString());
-    }
+      // Gracefully terminate connection.
+      client.end();
+    });
 
-    function onClose() {
-      if (session._client === promise)
+    // On connection close, disassociate with session so we can use a new
+    // connection.
+    client.on('close', function() {
+      if (session._client === clientPromise)
         session._client = null;
       session._notify.debug("Connection closed for %s", session.id);
-    }
+    });
 
-    client.on('error', onError);
-    client.on('close', onClose);
+    var newClient = new Promise(function(resolve, reject) {
+      client.on('connect', resolve);
+      client.on('error', reject);
+      client.on('close', reject);
 
-    // Nothing happens until we start the connection.  Must wait for
-    // connection event before we can send anything down the stream.
-    client.connect();
-    // Allows the process to exit when done processing, otherwise, it will
-    // stay running while it's waiting to reserve the next job.
-    client.stream.unref();
+      // Nothing happens until we start the connection.  Must wait for
+      // connection event before we can send anything down the stream.
+      client.connect();
+      // Allows the process to exit when done processing, otherwise, it will
+      // stay running while it's waiting to reserve the next job.
+      client.stream.unref();
+    });
 
     // When working with Iron.io, need to authenticate each connection before
     // it can be used.  This is the first setup step, followed by the
     // session-specific setup.
+    var authenticatedClient;
     if (config.authenticate) {
-      promise = promise.then(function() {
+      authenticatedClient = newClient.then(function() {
         return promisify(client, 'put', 0, 0, 0, config.authenticate);
       });
-    }
-      
+    } else
+      authenticatedClient = newClient;
+
     // Put/reserve clients have different setup requirements, this are handled by
     // an externally supplied method.
-    promise = promise.then(()=> {
+    var setupClient = authenticatedClient.then(()=> {
       return promisify(this, 'setup', client);
     });
 
-    promise = promise.then(()=> client, onError);
-
+    var clientPromise = setupClient.then(function() { return client; },
+                                         function(error) { client.emit('error', error); });
     // Every call to `connect` should be able to access this client.
-    this._client = promise;
-    return promise;
+    this._client = clientPromise;
+    return clientPromise;
   }
 
   end() {
@@ -386,6 +382,10 @@ class Queue {
 
   // Delete all messages from the queue.
   reset() {
+    // Kill any sessions blocking to reserve a job.
+    for (var reserve of this._reserveSessions)
+      reserve.end();
+
     // We're using the _put session (use), the _reserve session (watch) doesn't
     // return any jobs.
     var session = this._put;
@@ -400,14 +400,16 @@ class Queue {
     function deleteReadyJob() {
       return session.request('peek_ready')
         .then(([jobID])=> session.request('destroy', jobID) )
-        .then(()=> deleteReadyJob(), onError);
+        .then(deleteReadyJob)
+        .catch(onError);
     }
 
     // Delete all delayed jobs.
     function deleteDelayedJob() {
       return session.request('peek_delayed')
         .then(([jobID])=> session.request('destroy', jobID) )
-        .then(()=> deleteDelayedJob(), onError);
+        .then(deleteDelayedJob)
+        .catch(onError);
     }
 
     return Promise.all([ deleteReadyJob(), deleteDelayedJob() ]);
