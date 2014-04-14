@@ -1,3 +1,8 @@
+# 0.10.3
+
+FIXED generate error when one not available
+
+
 # 0.10.2
 
 FIXED error handling for sessions and reset

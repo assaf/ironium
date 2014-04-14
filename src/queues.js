@@ -79,10 +79,14 @@ class Session {
     function executeCommand(client) {
       return new Promise(function(resolve, reject) {
 
+        client.once('error', reject);
         // If connection ends close/error, Fivebeans never terminates the request,
         // we need to respond to connection error directly.
-        client.once('close', reject);
-        client.once('error', reject);
+        function onClose() {
+          reject(new Error('Connection closed'));
+        }
+        client.once('close', onClose);
+
         // The only way to detect a command that failed to complete.
         var timeout = setTimeout(function() {
           client.emit('error', new Error('TIMEOUT'));
@@ -90,8 +94,8 @@ class Session {
 
         client[command].call(client, ...args, function(error, ...results) {
           clearTimeout(timeout);
-          client.removeListener('close', reject);
           client.removeListener('error', reject);
+          client.removeListener('close', onClose);
           if (error)
             reject(error);
           else if (results.length > 1)
@@ -141,7 +145,9 @@ class Session {
     var newClient = new Promise(function(resolve, reject) {
       client.on('connect', resolve);
       client.on('error', reject);
-      client.on('close', reject);
+      client.on('close', function() {
+        reject(new Error('Connection closed'));
+      });
 
       // Nothing happens until we start the connection.  Must wait for
       // connection event before we can send anything down the stream.

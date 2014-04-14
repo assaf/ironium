@@ -39,7 +39,11 @@ module.exports = function runJob(handler, args, timeout) {
       // Job may have returned a promise or a generator, var's see …
       if (result && typeof(result.then) == 'function') {
         // A thenable object == promise.
-        resolve(result);
+        result.then(resolve, function(error) {
+          if (!(error instanceof Error))
+            error = new Error(error.toString() + ' in ' + handler.toString());
+          domain.emit('error', error);
+        });
       } else if (result && typeof(result.next) == 'function' &&
                  typeof(result.throw) == 'function') {
         // A generator object.  Use it to resolve job instead of callback.
