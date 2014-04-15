@@ -39,6 +39,7 @@ retries, etc.
 * **[API](#api)**
   * [queue(name)](#queuename)
   * [queue.push(job, callback)](#queuepushjob-callback)
+  * [queue.delay(job, duration, callback)](#queuedelayjob-duration-callback)
   * [queue.each(handler)](#queueeachhandler)
   * [queue.name](#queuename)
   * [queue.webhookURL](#queuewebhookurl)
@@ -134,6 +135,19 @@ And this, if you're using ES7:
 ```
 await queues('echo').push(job);
 ```
+
+
+### queue.delay(job, duration, callback)
+
+Similar to [`push`](#queuepushjob-callback) but delays processing of the job by
+the set duration.
+
+Duration is either a number or a string.  The default unit is milliseconds, but
+you can specify a string with units, such as "5m" or "3 hours".
+
+Valid units are `ms`, `seconds`, `minutes`, `hours`, `days` and `years`.  You
+can write each unit as plural ("1 hours"), singular ("1 hour") or first letter
+only ("1h").
 
 
 ### queue.each(handler)

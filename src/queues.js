@@ -223,16 +223,26 @@ class Queue {
 
   // Push job to queue.  If called with one argument, returns a promise.
   push(job, callback) {
+    return this.delay(job, 0, callback);
+  }
+
+  // Push job to queue with the given delay.  Delay can be millisecond,
+  // or a string of the form '5s', '2m', etc.  If called with two arguments,
+  // returns a promise.
+  delay(job, duration, callback) {
     assert(job, "Missing job to queue");
+    assert(duration.toString, "Delay must be string or number");
+    // Converts "5m" to 300 seconds.  The toString is necessary to handle
+    // numbers properly, since ms(number) -> string.
+    duration = Math.floor(ms(duration.toString()) / 1000);
 
     var priority  = 0;
-    var delay     = 0;
     var timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000) + 1;
     var payload   = JSON.stringify(job);
     // Don't pass jobID to callback, easy to use in test before hook, like
     // this:
     //   before(queue.put(MESSAGE));
-    var promise = this._put.request('put', priority, delay, timeToRun, payload)
+    var promise = this._put.request('put', priority, duration, timeToRun, payload)
       .then((jobID)=> {
         this._notify.debug("Queued job %s on queue %s", jobID, this.name, payload);
         return jobID;

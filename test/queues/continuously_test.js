@@ -1,4 +1,3 @@
-/* global describe, before, it, after */
 var assert = require('assert');
 var fork   = require('child_process').fork;
 

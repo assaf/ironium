@@ -1,4 +1,3 @@
-/* global describe, before, it */
 var assert  = require('assert');
 var ironium = require('../../src');
 require('../helpers');

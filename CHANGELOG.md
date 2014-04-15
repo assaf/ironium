@@ -1,3 +1,19 @@
+# 0.11.0
+
+ADDED queue.delay works just like queue.push but delays processing of the job.
+
+```
+queue.delay(job, duration, callback?)
+```
+
+Duration is either a number or a string.  The default unit is milliseconds, but
+you can specify a string with units, such as "5m" or "3 hours".
+
+Valid units are `ms`, `seconds`, `minutes`, `hours`, `days` and `years`.  You
+can write each unit as plural ("1 hours"), singular ("1 hour") or first letter
+only ("1h").
+
+
 # 0.10.3
 
 FIXED generate error when one not available
