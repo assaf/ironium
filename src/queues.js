@@ -79,23 +79,26 @@ class Session {
     function executeCommand(client) {
       return new Promise(function(resolve, reject) {
 
-        client.once('error', reject);
-        // If connection ends close/error, Fivebeans never terminates the request,
-        // we need to respond to connection error directly.
-        function onClose() {
-          reject(new Error('Connection closed'));
-        }
-        client.once('close', onClose);
-
-        // The only way to detect a command that failed to complete.
-        var timeout = setTimeout(function() {
-          client.emit('error', new Error('TIMEOUT'));
+        // If request times out, we conside the connection dead, and force a
+        // reconnect.
+        var timeout = setTimeout(()=> {
+          this.end();
+          reject(new Error('TIMEOUT'));
         }, RESERVE_TIMEOUT * 2);
+
+        // Fivebeans client doesn't monitor for connections closing/erroring,
+        // so we catch these events and terminate request early.
+        function failed(error) {
+          reject(error || new Error('Connection closed'));
+        }
+        client.once('close', failed);
+        client.once('error', failed);
 
         client[command].call(client, ...args, function(error, ...results) {
           clearTimeout(timeout);
-          client.removeListener('error', reject);
-          client.removeListener('close', onClose);
+          client.removeListener('close', failed);
+          client.removeListener('error', failed);
+
           if (error)
             reject(error);
           else if (results.length > 1)
@@ -115,39 +118,19 @@ class Session {
   // Called to establish a new connection, or use existing connections.
   // Returns a FiveBeans client.
   connect() {
-    var session = this;
-    // this._client is set after first call to `connect`, and until we detect a
-    // connection failure and terminate it.
-    if (session._client)
-      return session._client;
+    // Returns promise that will resolve to client.
+    if (this._clientPromise)
+      return this._clientPromise;
+
 
     // This is the Fivebeans client is essentially a session.
     var config  = this._config;
     var client  = new fivebeans.client(config.queues.hostname, config.queues.port);
 
-    // On connection error, we automatically discard the connection.
-    client.on('error', function(error) {
-      if (session._client === clientPromise)
-        session._client = null;
-      session._notify.debug("Client error in queue %s: %s", session.id, error.toString());
-      // Gracefully terminate connection.
-      client.end();
-    });
-
-    // On connection close, disassociate with session so we can use a new
-    // connection.
-    client.on('close', function() {
-      if (session._client === clientPromise)
-        session._client = null;
-      session._notify.debug("Connection closed for %s", session.id);
-    });
-
-    var newClient = new Promise(function(resolve, reject) {
+    // This promise resolves when client connects.
+    var connected = new Promise(function(resolve, reject) {
       client.on('connect', resolve);
       client.on('error', reject);
-      client.on('close', function() {
-        reject(new Error('Connection closed'));
-      });
 
       // Nothing happens until we start the connection.  Must wait for
       // connection event before we can send anything down the stream.
@@ -160,31 +143,59 @@ class Session {
     // When working with Iron.io, need to authenticate each connection before
     // it can be used.  This is the first setup step, followed by the
     // session-specific setup.
-    var authenticatedClient;
+    var authenticated;
     if (config.authenticate) {
-      authenticatedClient = newClient.then(function() {
+      authenticated = connected.then(function() {
         return promisify(client, 'put', 0, 0, 0, config.authenticate);
       });
     } else
-      authenticatedClient = newClient;
+      authenticated = connected;
 
     // Put/reserve clients have different setup requirements, this are handled by
     // an externally supplied method.
-    var setupClient = authenticatedClient.then(()=> {
+    var setup = authenticated.then(()=> {
       return promisify(this, 'setup', client);
     });
 
-    var clientPromise = setupClient.then(function() { return client; },
-                                         function(error) { client.emit('error', error); });
-    // Every call to `connect` should be able to access this client.
-    this._client = clientPromise;
+    // This promise resolves when we're done establishing a connection.
+    // Multiple request will wait on this.
+    var clientPromise = setup.then(
+      ()=> {
+        // We need this to terminate connection (see `end` method).
+        this._client = client;
+        return client;
+      },
+      (error)=> {
+        // Failed to establish connection, dissociate _clientPromise and attempt
+        // to connect again.
+        this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
+        client.end();
+        return this.connect();
+      }
+    );
+             
+    client.once('error', (error)=> {
+      if (this._clientPromise == clientPromise)
+        this._clientPromise = null;
+      this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
+    });
+    client.once('close', ()=> {
+      // Connection has been closed. Disassociate from session.
+      if (this._clientPromise == clientPromise)
+        this._clientPromise = null;
+      this._notify.debug("Connection closed for %s", this.id);
+    });
+
+    // This promise available to all subsequent requests, until error/close
+    // event disassociates it.
+    this._clientPromise = clientPromise;
     return clientPromise;
   }
 
   end() {
+    // If client connection established, close it.
     if (this._client)
-      this._client.then((client)=> client.end() );
-    this._client = null;
+      this._client.end();
   }
 
 }
