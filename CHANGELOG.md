@@ -1,8 +1,3 @@
-# 0.10.4
-
-FIXED another attempt at connection error handling
-
-
 # 0.10.3
 
 FIXED generate error when one not available

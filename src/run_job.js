@@ -22,6 +22,9 @@ module.exports = function runJob(handler, args, timeout) {
     if (timeout) {
       // This timer trigger if the job doesn't complete in time and rejects the
       // promise.  Server gets a longer timeout than we do.
+      //
+      // Timeouts occur if handler never calls its callback, resolves promise,
+      // etc.
       var errorOnTimeout = setTimeout(function() {
         domain.emit('error', new Error("Timeout processing job"));
       }, timeout);

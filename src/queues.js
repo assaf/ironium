@@ -76,8 +76,10 @@ class Session {
   // This is a simple wrapper around the Fivebeans client with additional error
   // handling.
   request(command, ...args) {
-    function executeCommand(client) {
-      return new Promise(function(resolve, reject) {
+    // Ask for connection, we get a promise that resolves into a client.
+    // We return a new promise that resolves to the output of the request.
+    return this.connect().then((client)=> {
+      return new Promise((resolve, reject)=> {
 
         // If request times out, we conside the connection dead, and force a
         // reconnect.
@@ -94,7 +96,9 @@ class Session {
         client.once('close', failed);
         client.once('error', failed);
 
-        client[command].call(client, ...args, function(error, ...results) {
+        this._notify.debug(this.id, "$", command, ...args);
+        client[command].call(client, ...args, (error, ...results)=> {
+          this._notify.debug(this.id, "=>", command, error, ...results);
           clearTimeout(timeout);
           client.removeListener('close', failed);
           client.removeListener('error', failed);
@@ -108,11 +112,8 @@ class Session {
         });
 
       });
-    }
 
-    // Ask for connection, we get a promise that resolves into a client.
-    // We return a new promise that resolves to the output of the request.
-    return this.connect().then(executeCommand);
+    });
   }
 
   // Called to establish a new connection, or use existing connections.
