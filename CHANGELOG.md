@@ -1,3 +1,8 @@
+# 0.11.1
+
+CHANGED ignore connection closed error when processing queue
+
+
 # 0.11.0
 
 ADDED queue.delay works just like queue.push but delays processing of the job.

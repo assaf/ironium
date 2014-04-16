@@ -80,28 +80,30 @@ class Session {
     // We return a new promise that resolves to the output of the request.
     return this.connect().then((client)=> {
       return new Promise((resolve, reject)=> {
+        // Processing (continously or not) ignore the TIMED_OUT and CLOSED
+        // errors.
 
         // If request times out, we conside the connection dead, and force a
         // reconnect.
         var timeout = setTimeout(()=> {
           this.end();
-          reject(new Error('TIMEOUT'));
+          reject(new Error('TIMED_OUT'));
         }, RESERVE_TIMEOUT * 2);
 
         // Fivebeans client doesn't monitor for connections closing/erroring,
         // so we catch these events and terminate request early.
-        function failed(error) {
-          reject(error || new Error('Connection closed'));
+        function closed() {
+          reject(new Error('CLOSED'));
         }
-        client.once('close', failed);
-        client.once('error', failed);
+        client.once('close', closed);
+        client.once('error', reject);
 
         this._notify.debug(this.id, "$", command, ...args);
         client[command].call(client, ...args, (error, ...results)=> {
           this._notify.debug(this.id, "=>", command, error, ...results);
           clearTimeout(timeout);
-          client.removeListener('close', failed);
-          client.removeListener('error', failed);
+          client.removeListener('close', closed);
+          client.removeListener('error', reject);
 
           if (error)
             reject(error);
@@ -130,15 +132,15 @@ class Session {
 
     // This promise resolves when client connects.
     var connected = new Promise(function(resolve, reject) {
-      client.on('connect', resolve);
-      client.on('error', reject);
-
       // Nothing happens until we start the connection.  Must wait for
       // connection event before we can send anything down the stream.
       client.connect();
       // Allows the process to exit when done processing, otherwise, it will
       // stay running while it's waiting to reserve the next job.
       client.stream.unref();
+
+      client.on('connect', resolve);
+      client.on('error', reject);
     });
 
     // When working with Iron.io, need to authenticate each connection before
@@ -324,7 +326,7 @@ class Queue {
       .then(()=> this._reserveAndProcess() )
       .then(()=> true ) // At least one job processed, resolve to true
       .catch((error)=> {
-        if (error == 'TIMED_OUT' || (error && error.message == 'TIMED_OUT'))
+        if (error == 'TIMED_OUT' || error == 'CLOSED' || (error && error.message == 'TIMED_OUT'))
           return false; // Job not processed
         else
           throw error;
@@ -348,7 +350,7 @@ class Queue {
       var promise = session.request('reserve_with_timeout', timeout)
         .then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) )
         .catch(function(error) {
-          if (error == 'TIMED_OUT' || error.message == 'TIMED_OUT') {
+          if (error == 'TIMED_OUT' || error == 'CLOSED' || error.message == 'TIMED_OUT') {
             // No job, go back to wait for next job.
           } else {
             // Report on any other error, and back off for a few.
