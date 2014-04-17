@@ -1,3 +1,8 @@
+# 0.11.3
+
+FIXED properly detect error message
+
+
 # 0.11.2
 
 CHANGED ignore DRAINING error

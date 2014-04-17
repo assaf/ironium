@@ -326,7 +326,8 @@ class Queue {
       .then(()=> this._reserveAndProcess() )
       .then(()=> true ) // At least one job processed, resolve to true
       .catch((error)=> {
-        if (error == 'TIMED_OUT' || error == 'CLOSED' || (error && error.message == 'TIMED_OUT'))
+        var reason = error.message || error;
+        if (/^TIMED_OUT|CLOSED|DRAINING$/.test(error))
           return false; // Job not processed
         else
           throw error;
@@ -350,7 +351,8 @@ class Queue {
       var promise = session.request('reserve_with_timeout', timeout)
         .then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) )
         .catch(function(error) {
-          if (error == 'TIMED_OUT' || error == 'CLOSED' || error == 'DRAINING' || error.message == 'TIMED_OUT') {
+          var reason = error.message || error;
+          if (/^TIMED_OUT|CLOSED|DRAINING$/.test(error)) {
             // No job, go back to wait for next job.
           } else {
             // Report on any other error, and back off for a few.
