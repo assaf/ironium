@@ -1,3 +1,8 @@
+# 0.11.2
+
+CHANGED ignore DRAINING error
+
+
 # 0.11.1
 
 CHANGED ignore connection closed error when processing queue
