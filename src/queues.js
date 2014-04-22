@@ -348,11 +348,12 @@ class Queue {
       if (!queue._processing || queue._handlers.length === 0)
         return Promise.resolve();
 
-      var promise = session.request('reserve_with_timeout', timeout)
+      return session.request('reserve_with_timeout', timeout)
         .then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) )
         .catch(function(error) {
-          var reason = error.message || error;
-          if (/^TIMED_OUT|CLOSED|DRAINING$/.test(error)) {
+          // Reject can take anything, including false, undefined.
+          var reason = (error && error.message) || error;
+          if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(error)) {
             // No job, go back to wait for next job.
           } else {
             // Report on any other error, and back off for a few.
@@ -362,8 +363,7 @@ class Queue {
             });
           }
         })
-        .then(nextJob);
-      return promise;
+        .then(nextJob, nextJob);
     }
 
     return nextJob();
@@ -401,7 +401,10 @@ class Queue {
           .catch(()=> this._notify.info("Could not delete job %s:%s", this.name, jobID) );
       })
       .catch((error)=> {
-        this._notify.info("Error processing queued job %s:%ss", this.name, jobID, error.stack);
+        // Ideally an error and we want to log the full stack trace, but promise
+        // may reject false, undefined, etc.
+        var details = (error && error.stack) || error;
+        this._notify.info("Error processing queued job %s:%ss", this.name, jobID, error);
         // Error or timeout: we release the job back to the queue.  Since this
         // may be a transient error condition (e.g. server down), we let it sit
         // in the queue for a while before it becomes available again.

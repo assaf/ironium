@@ -2,8 +2,9 @@
   "name": "ironium",
   "version": "0.11.3",
   "scripts": {
-    "test": "./node_modules/.bin/mocha",
-    "prepublish": "gulp build"
+    "test": "gulp test",
+    "prepublish": "gulp test clean build",
+    "postpublish": "gulp tag-release"
   },
   "engines": {
     "node": "0.10.x"

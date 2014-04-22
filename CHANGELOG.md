@@ -1,3 +1,8 @@
+# 0.11.4
+
+FIXED queue processing may stop for some rejected promises.
+
+
 # 0.11.3
 
 FIXED properly detect error message

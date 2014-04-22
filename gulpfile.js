@@ -43,7 +43,7 @@ gulp.task('test', ['build'], function() {
 });
 
 
-// Tag the release and npm publish
+// Used by gulp release to update element.svg with new version number.
 gulp.task('element', function() {
   const version = require('./package.json').version;
   return gulp.src('element.svg')
@@ -51,6 +51,8 @@ gulp.task('element', function() {
     .pipe(gulp.dest('.'));
           
 });
+
+// Used by gulp release to create a changelog summary in change.log.
 gulp.task('changelog', function(callback) {
   const Child = require('child_process');
   const File  = require('fs');
@@ -67,7 +69,8 @@ gulp.task('changelog', function(callback) {
   });
 });
 
-gulp.task('release', ['clean', 'build', 'test', 'element', 'changelog'], function() {
+// Used by npm publish to create a Version N.N commit and tag it.
+gulp.task('tag-release', ['element', 'changelog'], function() {
   const version = require('./package.json').version;
   const message = "Release " + version;
 
@@ -77,8 +80,7 @@ gulp.task('release', ['clean', 'build', 'test', 'element', 'changelog'], functio
     .pipe(exec('git push origin master'))
     .pipe(exec('git tag -a ' + version + ' --file change.log'))
     .pipe(exec('git push origin ' + version))
-    .pipe(clean())
-    .pipe(exec('npm publish'));
+    .pipe(clean());
 });
 
 
