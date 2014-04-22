@@ -326,8 +326,8 @@ class Queue {
       .then(()=> this._reserveAndProcess() )
       .then(()=> true ) // At least one job processed, resolve to true
       .catch((error)=> {
-        var reason = error.message || error;
-        if (/^TIMED_OUT|CLOSED|DRAINING$/.test(error))
+        var reason = (error && error.message) || error;
+        if (/^TIMED_OUT|CLOSED|DRAINING$/.test(reason))
           return false; // Job not processed
         else
           throw error;
@@ -353,7 +353,7 @@ class Queue {
         .catch(function(error) {
           // Reject can take anything, including false, undefined.
           var reason = (error && error.message) || error;
-          if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(error)) {
+          if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(reason)) {
             // No job, go back to wait for next job.
           } else {
             // Report on any other error, and back off for a few.

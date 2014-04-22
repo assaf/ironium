@@ -1,3 +1,8 @@
+# 0.11.5
+
+FIXED was testing error instead of message, incorrect in some envs
+
+
 # 0.11.4
 
 FIXED queue processing may stop for some rejected promises.
