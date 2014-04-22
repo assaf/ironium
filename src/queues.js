@@ -176,15 +176,15 @@ class Session {
         return this.connect();
       }
     );
-             
+
     client.once('error', (error)=> {
-      if (this._clientPromise == clientPromise)
+      if (this._clientPromise === clientPromise)
         this._clientPromise = null;
       this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
     });
     client.once('close', ()=> {
       // Connection has been closed. Disassociate from session.
-      if (this._clientPromise == clientPromise)
+      if (this._clientPromise === clientPromise)
         this._clientPromise = null;
       this._notify.debug("Connection closed for %s", this.id);
     });
@@ -236,15 +236,15 @@ class Queue {
     assert(duration.toString, "Delay must be string or number");
     // Converts "5m" to 300 seconds.  The toString is necessary to handle
     // numbers properly, since ms(number) -> string.
-    duration = Math.floor(ms(duration.toString()) / 1000);
+    duration = ms(duration.toString()) / 1000;
 
     var priority  = 0;
-    var timeToRun = Math.floor(PROCESSING_TIMEOUT / 1000) + 1;
+    var timeToRun = (PROCESSING_TIMEOUT / 1000) + 1;
     var payload   = JSON.stringify(job);
     // Don't pass jobID to callback, easy to use in test before hook, like
     // this:
     //   before(queue.put(MESSAGE));
-    var promise = this._put.request('put', priority, duration, timeToRun, payload)
+    var promise = this._put.request('put', priority, Math.floor(duration), Math.floor(timeToRun), payload)
       .then((jobID)=> {
         this._notify.debug("Queued job %s on queue %s", jobID, this.name, payload);
         return jobID;
@@ -258,14 +258,14 @@ class Queue {
 
   // Process jobs from queue.
   each(handler, width) {
-    assert(typeof handler == 'function', "Called each without a valid handler");
+    assert(typeof(handler) === 'function', "Called each without a valid handler");
     if (width)
       this._width = width;
     this._handlers.push(handler);
 
     // It is possible start() was already called, but there was no handler, so
     // this is where we start listening.
-    if (this._processing && this._handlers.length == 1)
+    if (this._processing && this._handlers.length === 1)
       for (var i = 0; i < this.width; ++i) {
         var session = this._reserve(i);
         this._processContinously(session);
@@ -341,14 +341,14 @@ class Queue {
       this._notify.debug("Waiting for jobs on queue %s", this.name);
 
     var timeout = RESERVE_TIMEOUT / 1000;
-    var backoff = (process.env.NODE_ENV == 'test' ? 0 : RESERVE_BACKOFF);
+    var backoff = (process.env.NODE_ENV === 'test' ? 0 : RESERVE_BACKOFF);
     var queue   = this;
 
     function nextJob() {
       if (!queue._processing || queue._handlers.length === 0)
         return Promise.resolve();
 
-      return session.request('reserve_with_timeout', timeout)
+      return session.request('reserve_with_timeout', Math.floor(timeout))
         .then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) )
         .catch(function(error) {
           // Reject can take anything, including false, undefined.
@@ -409,8 +409,8 @@ class Queue {
         // may be a transient error condition (e.g. server down), we let it sit
         // in the queue for a while before it becomes available again.
         var priority = 0;
-        var delay = (process.env.NODE_ENV == 'test' ? 0 : Math.floor(RELEASE_DELAY / 1000));
-        session.request('release', jobID, priority, delay);
+        var delay = (process.env.NODE_ENV === 'test' ? 0 : RELEASE_DELAY) / 1000;
+        session.request('release', jobID, priority, Math.floor(delay));
         throw error;
       });
   }

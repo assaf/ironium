@@ -5,7 +5,7 @@ FIXED was testing error instead of message, incorrect in some envs
 
 # 0.11.4
 
-FIXED queue processing may stop for some rejected promises.
+FIXED queue processing may stop for some rejected promises
 
 
 # 0.11.3
