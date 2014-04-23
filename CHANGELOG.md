@@ -1,3 +1,8 @@
+# 0.11.6
+
+Trying better handling when establishing connection
+
+
 # 0.11.5
 
 FIXED was testing error instead of message, incorrect in some envs
