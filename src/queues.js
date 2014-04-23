@@ -4,6 +4,9 @@ var ms          = require('ms');
 var runJob      = require('./run_job');
 
 
+// How long to wait establishing a new connection.
+var CONNECT_TIMEOUT     = ms('5s');
+
 // How long to wait when reserving a job.  Iron.io closes connection if we wait
 // too long.
 var RESERVE_TIMEOUT     = ms('30s');
@@ -118,13 +121,25 @@ class Session {
     });
   }
 
+  // Returns promise that will resolve to Fivebeans client.
+  connect() {
+    // If at first we fail, attempt to reconnect, but only once.  Persistent
+    // errors should reach the application layer instead of endless looping.
+    return this._connect().catch(()=> this._connect());
+  }
+
+  // Close this session
+  end() {
+    if (this._clientPromise)
+      this._clientPromise.then((client)=> client.end());
+    this._clientPromise = null;
+  }
+
   // Called to establish a new connection, or use existing connections.
   // Returns a FiveBeans client.
-  connect() {
-    // Returns promise that will resolve to client.
+  _connect() {
     if (this._clientPromise)
       return this._clientPromise;
-
 
     // This is the Fivebeans client is essentially a session.
     var config  = this._config;
@@ -167,24 +182,21 @@ class Session {
     // step, and Fivebeans doesn't trigger an error.
     var timeout = setTimeout(function() {
       client.emit('error', new Error('TIMED_OUT'));
-      client.destroy();
-    }, RESERVE_TIMEOUT);
+      client.end();
+    }, CONNECT_TIMEOUT);
     
     // This promise resolves when we're done establishing a connection.
     // Multiple request will wait on this.
-    var clientPromise = setup.then(
-      function() {
-        clearTimeout(timeout);
-        return client;
-      },
-      (error)=> {
+    var clientPromise = setup
+      .then(()=> clearTimeout(timeout))
+      .then(()=> client)
+      .catch((error)=> {
         // Failed to establish connection, dissociate _clientPromise and attempt
         // to connect again.
         this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
         client.end();
-        return this.connect();
-      }
-    );
+        throw error;
+      });
 
     // When this method returns, _clientPromise is set but we still haven't
     // established a connection, so none of these had a change to trigger. 
@@ -206,13 +218,6 @@ class Session {
     // event disassociates it.
     this._clientPromise = clientPromise;
     return clientPromise;
-  }
-
-  end() {
-    // If client connection established, close it.
-    if (this._clientPromise)
-      this._clientPromise.then((client)=> client.end());
-    this._clientPromise = null;
   }
 
 }
