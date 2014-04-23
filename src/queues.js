@@ -141,6 +141,9 @@ class Session {
 
       client.on('connect', resolve);
       client.on('error', reject);
+      client.on('close', function() {
+        reject(new Error('CLOSED'));
+      });
     });
 
     // When working with Iron.io, need to authenticate each connection before
@@ -160,12 +163,18 @@ class Session {
       return promisify(this, 'setup', client);
     });
 
+    // If we can't establish a connection of complete the authentication/setup
+    // step, and Fivebeans doesn't trigger an error.
+    var timeout = setTimeout(function() {
+      client.emit('error', new Error('TIMED_OUT'));
+      client.destroy();
+    }, RESERVE_TIMEOUT);
+    
     // This promise resolves when we're done establishing a connection.
     // Multiple request will wait on this.
     var clientPromise = setup.then(
-      ()=> {
-        // We need this to terminate connection (see `end` method).
-        this._client = client;
+      function() {
+        clearTimeout(timeout);
         return client;
       },
       (error)=> {
@@ -177,16 +186,20 @@ class Session {
       }
     );
 
+    // When this method returns, _clientPromise is set but we still haven't
+    // established a connection, so none of these had a change to trigger. 
     client.once('error', (error)=> {
-      if (this._clientPromise === clientPromise)
+      if (this._clientPromise === clientPromise) {
         this._clientPromise = null;
-      this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
+        this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
+      }
     });
     client.once('close', ()=> {
       // Connection has been closed. Disassociate from session.
-      if (this._clientPromise === clientPromise)
+      if (this._clientPromise === clientPromise) {
         this._clientPromise = null;
-      this._notify.debug("Connection closed for %s", this.id);
+        this._notify.debug("Connection closed for %s", this.id);
+      }
     });
 
     // This promise available to all subsequent requests, until error/close
@@ -197,8 +210,9 @@ class Session {
 
   end() {
     // If client connection established, close it.
-    if (this._client)
-      this._client.end();
+    if (this._clientPromise)
+      this._clientPromise.then((client)=> client.end());
+    this._clientPromise = null;
   }
 
 }
