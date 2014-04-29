@@ -73,10 +73,10 @@ gulp.task('changelog', function(callback) {
 gulp.task('tag-release', ['element', 'changelog'], function(callback) {
   var message = "Release " + version;
   var script  =  "\
-    git add package.json CHANGELOG.md element.svg     &&\
-    git commit --allow-empty -m \"" + message + "\")) &&\
-    git push origin master                            &&\
-    git tag -a " + version + " --file change.log      &&\
+    git add package.json CHANGELOG.md element.svg   &&\
+    git commit --allow-empty -m \"" + message + "\" &&\
+    git push origin master                          &&\
+    git tag -a " + version + " --file change.log    &&\
     git push origin " + version;
   exec(script, function(error, stdout) {
     process.stdout.write(stdout);

@@ -89,8 +89,8 @@ class Session {
         // If request times out, we conside the connection dead, and force a
         // reconnect.
         var timeout = setTimeout(()=> {
-          this.end();
           reject(new Error('TIMED_OUT'));
+          this.end();
         }, RESERVE_TIMEOUT * 2);
 
         // Fivebeans client doesn't monitor for connections closing/erroring,
@@ -194,6 +194,7 @@ class Session {
         // Failed to establish connection, dissociate _clientPromise and attempt
         // to connect again.
         this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
+        client.emit('error', error);
         client.end();
         throw error;
       });
@@ -355,13 +356,13 @@ class Queue {
 
   // Called to process all jobs, until this._processing is set to false.
   _processContinously(session) {
+    var queue   = this;
     // Don't do anything without a handler, stop when processing is false.
-    if (this._processing && this._handlers.length)
-      this._notify.debug("Waiting for jobs on queue %s", this.name);
+    if (!queue._processing || queue._handlers.length === 0)
+      return;
 
     var timeout = RESERVE_TIMEOUT / 1000;
     var backoff = (process.env.NODE_ENV === 'test' ? 0 : RESERVE_BACKOFF);
-    var queue   = this;
 
     function nextJob() {
       if (!queue._processing || queue._handlers.length === 0)
@@ -372,19 +373,20 @@ class Queue {
         .catch(function(error) {
           // Reject can take anything, including false, undefined.
           var reason = (error && error.message) || error;
-          if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(reason)) {
+          if (/^TIMED_OUT|CLOSED|DRAINING$/.test(reason)) {
             // No job, go back to wait for next job.
           } else {
-            // Report on any other error, and back off for a few.
-            queue._notify.error(error);
             return new Promise(function(resolve) {
+              // Report on any other error, and back off for a few.
               setTimeout(resolve, backoff);
+              queue._notify.error(error);
             });
           }
         })
         .then(nextJob, nextJob);
     }
 
+    this._notify.debug("Waiting for jobs on queue %s", this.name);
     return nextJob();
   }
 

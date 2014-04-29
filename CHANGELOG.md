@@ -1,3 +1,8 @@
+# 0.11.8
+
+FIXED stupid bug when fetching queued jobs
+
+
 # 0.11.7
 
 CHANGED just in case defensive programming at practice
