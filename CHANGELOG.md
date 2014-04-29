@@ -1,3 +1,8 @@
+# 0.11.7
+
+CHANGED just in case defensive programming at practice
+
+
 # 0.11.6
 
 Trying better handling when establishing connection
