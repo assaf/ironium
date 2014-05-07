@@ -36,6 +36,18 @@ function promisify(object, method, ...args) {
   });
 }
 
+// Return timeout in production, zero in test/development.
+//
+// (Any NODE_ENV value other than test/development is assumed to be production)
+function ifProduction(timeout, quick = 0) {
+  return (/^(development|test)$/.test(process.env.NODE_ENV)) ? quick : timeout;
+}
+
+// Convert milliseconds (JS time) to seconds (Beanstalked time).
+function msToSec(ms) {
+  return Math.round(ms / 1000);
+}
+
 
 // Represents a Beanstalkd session.  Since GET requests block, need separate
 // sessions for pushing and processing, and each is also setup differently.
@@ -256,15 +268,15 @@ class Queue {
     assert(duration.toString, "Delay must be string or number");
     // Converts "5m" to 300 seconds.  The toString is necessary to handle
     // numbers properly, since ms(number) -> string.
-    duration = ms(duration.toString()) / 1000;
+    duration = ifProduction( ms(duration.toString()) );
 
     var priority  = 0;
-    var timeToRun = (PROCESSING_TIMEOUT / 1000) + 1;
+    var timeToRun = PROCESSING_TIMEOUT;
     var payload   = JSON.stringify(job);
     // Don't pass jobID to callback, easy to use in test before hook, like
     // this:
     //   before(queue.put(MESSAGE));
-    var promise = this._put.request('put', priority, Math.floor(duration), Math.floor(timeToRun), payload)
+    var promise = this._put.request('put', priority, msToSec(duration), msToSec(timeToRun), payload)
       .then((jobID)=> {
         this._notify.debug("Queued job %s on queue %s", jobID, this.name, payload);
         return jobID;
@@ -347,7 +359,7 @@ class Queue {
       .then(()=> true ) // At least one job processed, resolve to true
       .catch((error)=> {
         var reason = (error && error.message) || error;
-        if (/^TIMED_OUT|CLOSED|DRAINING$/.test(reason))
+        if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(reason))
           return false; // Job not processed
         else
           throw error;
@@ -361,24 +373,21 @@ class Queue {
     if (!queue._processing || queue._handlers.length === 0)
       return;
 
-    var timeout = RESERVE_TIMEOUT / 1000;
-    var backoff = (process.env.NODE_ENV === 'test' ? 0 : RESERVE_BACKOFF);
-
     function nextJob() {
       if (!queue._processing || queue._handlers.length === 0)
         return Promise.resolve();
 
-      return session.request('reserve_with_timeout', Math.floor(timeout))
+      return session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT))
         .then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) )
         .catch(function(error) {
           // Reject can take anything, including false, undefined.
           var reason = (error && error.message) || error;
-          if (/^TIMED_OUT|CLOSED|DRAINING$/.test(reason)) {
+          if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(reason)) {
             // No job, go back to wait for next job.
           } else {
             return new Promise(function(resolve) {
               // Report on any other error, and back off for a few.
-              setTimeout(resolve, backoff);
+              setTimeout(resolve, ifProduction(RESERVE_BACKOFF));
               queue._notify.error(error);
             });
           }
@@ -430,8 +439,8 @@ class Queue {
         // may be a transient error condition (e.g. server down), we let it sit
         // in the queue for a while before it becomes available again.
         var priority = 0;
-        var delay = (process.env.NODE_ENV === 'test' ? 0 : RELEASE_DELAY) / 1000;
-        session.request('release', jobID, priority, Math.floor(delay));
+        var delay = ifProduction(RELEASE_DELAY);
+        session.request('release', jobID, priority, msToSec(delay));
         throw error;
       });
   }

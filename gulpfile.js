@@ -77,7 +77,8 @@ gulp.task('tag-release', ['element', 'changelog'], function(callback) {
     git commit --allow-empty -m \"" + message + "\" &&\
     git push origin master                          &&\
     git tag -a " + version + " --file change.log    &&\
-    git push origin " + version;
+    git push origin " + version + "                 &&\
+    git clean -f";
   exec(script, function(error, stdout) {
     process.stdout.write(stdout);
     callback(error);

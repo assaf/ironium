@@ -1,3 +1,8 @@
+# 0.11.9
+
+CHANGED zero timeouts and delay when running in development or test environments
+
+
 # 0.11.8
 
 FIXED stupid bug when fetching queued jobs
