@@ -5,24 +5,27 @@ var runJob      = require('./run_job');
 
 
 // How long to wait establishing a new connection.
-var CONNECT_TIMEOUT     = ms('5s');
+var CONNECT_TIMEOUT       = ms('5s');
 
 // How long to wait when reserving a job.  Iron.io closes connection if we wait
 // too long.
-var RESERVE_TIMEOUT     = ms('30s');
+var RESERVE_TIMEOUT       = ms('30s');
 
 // Back-off in case of connection error, prevents continously failing to
 // reserve a job.
-var RESERVE_BACKOFF     = ms('30s');
+var RESERVE_BACKOFF       = ms('30s');
 
 // Timeout for processing job before we consider it failed and release it back
 // to the queue.
-var PROCESSING_TIMEOUT  = ms('10m');
+var PROCESSING_TIMEOUT    = ms('10m');
 
 // Delay before a released job is available for pickup again (in seconds).
 // This is our primary mechanism for dealing with load during failures.
 // Ignored in test environment.
-var RELEASE_DELAY       = ms('1m');
+var RELEASE_DELAY         = ms('1m');
+
+// In testing environment, delay() is artifically limited to this duration.
+var MAX_DELAY_FOR_TESTING = ms('10s');
 
 
 function promisify(object, method, ...args) {
@@ -36,11 +39,10 @@ function promisify(object, method, ...args) {
   });
 }
 
-// Return timeout in production, zero in test/development.
-//
-// (Any NODE_ENV value other than test/development is assumed to be production)
-function ifProduction(timeout, quick = 0) {
-  return (/^(development|test)$/.test(process.env.NODE_ENV)) ? quick : timeout;
+// Returns actual timeout in production.  If NODE_ENV is development or test,
+// return a timeout no larger than the limit (default to zero).
+function ifProduction(timeout, limit = 0) {
+  return (/^(development|test)$/.test(process.env.NODE_ENV)) ?  Math.min(limit, timeout) : timeout;
 }
 
 // Convert milliseconds (JS time) to seconds (Beanstalked time).
@@ -242,6 +244,8 @@ class Queue {
     this._handlers        = [];
     this._putSession      = null;
     this._reserveSessions = [];
+
+    this._config          = server.config.queues;
   }
 
 
@@ -258,7 +262,7 @@ class Queue {
     assert(duration.toString, "Delay must be string or number");
     // Converts "5m" to 300 seconds.  The toString is necessary to handle
     // numbers properly, since ms(number) -> string.
-    duration = ifProduction( ms(duration.toString()) );
+    duration = ifProduction( ms(duration.toString()), this._config.maxDelay || 0 );
 
     var priority  = 0;
     var timeToRun = PROCESSING_TIMEOUT;

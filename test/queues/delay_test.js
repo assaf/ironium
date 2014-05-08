@@ -6,6 +6,8 @@ var ironium = require('../../src');
 describe("queue with delay", ()=> {
 
   var capture = ironium.queue('capture');
+  // Allow up to 2s of delay when running this test suite.
+  ironium.config.queues.maxDelay = 2000;
 
   // Capture processed jobs here.
   var processed = [];
