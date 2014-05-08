@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "0.11.8",
+  "version": "0.11.9",
   "scripts": {
     "test": "gulp test",
     "prepublish": "gulp test clean build",
