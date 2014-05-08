@@ -133,23 +133,9 @@ class Session {
     });
   }
 
-  // Returns promise that will resolve to Fivebeans client.
-  connect() {
-    // If at first we fail, attempt to reconnect, but only once.  Persistent
-    // errors should reach the application layer instead of endless looping.
-    return this._connect().catch(()=> this._connect());
-  }
-
-  // Close this session
-  end() {
-    if (this._clientPromise)
-      this._clientPromise.then((client)=> client.end());
-    this._clientPromise = null;
-  }
-
   // Called to establish a new connection, or use existing connections.
-  // Returns a FiveBeans client.
-  _connect() {
+  // Returns a promise that resolves to a FiveBeans client.
+  connect() {
     if (this._clientPromise)
       return this._clientPromise;
 
@@ -214,23 +200,27 @@ class Session {
     // When this method returns, _clientPromise is set but we still haven't
     // established a connection, so none of these had a change to trigger. 
     client.once('error', (error)=> {
-      if (this._clientPromise === clientPromise) {
-        this._clientPromise = null;
-        this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
-      }
+      // Connection has been closed. Disassociate from session.
+      this.end();
+      this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
     });
     client.once('close', ()=> {
       // Connection has been closed. Disassociate from session.
-      if (this._clientPromise === clientPromise) {
-        this._clientPromise = null;
-        this._notify.debug("Connection closed for %s", this.id);
-      }
+      this.end();
+      this._notify.debug("Connection closed for %s", this.id);
     });
 
     // This promise available to all subsequent requests, until error/close
     // event disassociates it.
     this._clientPromise = clientPromise;
     return clientPromise;
+  }
+
+  // Close this session
+  end() {
+    if (this._clientPromise)
+      this._clientPromise.then((client)=> client.end());
+    this._clientPromise = null;
   }
 
 }
