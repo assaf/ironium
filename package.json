@@ -11,10 +11,10 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "co": "3.0.5",
+    "co": "3.0.6",
     "fivebeans": "1.1.1",
     "ms": "0.6.2",
-    "traceur": "0.0.39"
+    "traceur": "0.0.41"
   },
   "devDependencies": {
     "gulp": "3.6.2",
