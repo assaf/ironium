@@ -109,7 +109,7 @@ if (typeof(describe) != 'undefined') {
   ironium.queue('done').each(function() {
     process.send('done');
     ironium.stop();
-    process.nextTick(function() {
+    setImmediate(function() {
       process.exit(0);
     });
   });

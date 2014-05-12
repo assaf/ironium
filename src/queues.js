@@ -28,13 +28,46 @@ var RELEASE_DELAY         = ms('1m');
 var MAX_DELAY_FOR_TESTING = ms('10s');
 
 
+// You can call this with a function that accepts a single argument, the
+// callback, for example:
+//
+//   promisify(function(callback) {
+//     fs.readFile(filename, callback);
+//   });
+//   promisify((callback)=> fs.readFile(filename, callback));
+//
+// You can also call this with an object, method name and any arguments.  It
+// will call the named method on the object with any supplied arguments and a
+// callback.  For example:
+//
+//   promisify(fs, 'readFile', filename);
+//
 function promisify(object, method, ...args) {
+  var fn;
+
+  if (arguments.length == 1) {
+    fn = arguments[0];
+    assert(_.isFunction(fn), "Expected promisify(fn)");
+  } else {
+    var object = arguments[0];
+    var method = object[arguments[1]];
+    var args   = Array.prototype.slice.call(arguments, 2);
+
+    assert(object, "Expected promisify(object, method, args...)");
+    assert(method, "Method " + arguments[1] + " not found");
+    fn = function(callback) {
+      return method.apply(object, args.concat(callback));
+    };
+  }
+
   return new Promise(function(resolve, reject) {
-    object[method].call(object, ...args, function(error) {
+    fn(function(error) {
       if (error)
         reject(error);
+      else if (arguments.length > 2)
+        resolve(Array.prototype.slice.call(arguments, 1));
       else
-        resolve();
+        resolve(arguments[1]);
     });
   });
 }
@@ -220,8 +253,12 @@ class Session {
 
   // Close this session
   end() {
-    if (this._clientPromise)
-      this._clientPromise.then((client)=> client.end());
+    if (this._clientPromise) {
+      this._clientPromise.then((client)=> {
+        client.end();
+        client.emit('close');
+      });
+    }
     this._clientPromise = null;
   }
 
@@ -363,34 +400,31 @@ class Queue {
   // Called to process all jobs, until this._processing is set to false.
   _processContinously(session) {
     var queue   = this;
-    // Don't do anything without a handler, stop when processing is false.
-    if (!queue._processing || queue._handlers.length === 0)
-      return;
 
     function nextJob() {
       if (!queue._processing || queue._handlers.length === 0)
-        return Promise.resolve();
+        return;
 
-      return session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT))
-        .then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) )
-        .catch(function(error) {
-          // Reject can take anything, including false, undefined.
-          var reason = (error && error.message) || error;
-          if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(reason)) {
-            // No job, go back to wait for next job.
-          } else {
-            return new Promise(function(resolve) {
-              // Report on any other error, and back off for a few.
-              setTimeout(resolve, ifProduction(RESERVE_BACKOFF));
-              queue._notify.error(error);
-            });
-          }
-        })
-        .then(nextJob, nextJob);
+      var reserve       = session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT));
+      var runAndDestory = reserve.then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) );
+      var onError       = runAndDestory.catch(function(error) {
+        // Reject can take anything, including false, undefined.
+        var reason = (error && error.message) || error;
+        if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(reason)) {
+          // No job, go back to wait for next job.
+          session.end();
+        } else {
+          // Report on any other error, and back off for a few.
+          queue._notify.error(error);
+          var backoff = ifProduction(RESERVE_BACKOFF);
+          return promisify((callback)=> setTimeout(callback, backoff) );
+        }
+      });
+      onError.then(nextJob, nextJob);
     }
 
     this._notify.debug("Waiting for jobs on queue %s", this.name);
-    return nextJob();
+    nextJob();
   }
 
 
