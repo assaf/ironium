@@ -41,9 +41,14 @@ gulp.task('clean', function() {
 
 // Run mocha, used by release task
 gulp.task('test', ['build'], function(callback) {
-  exec('mocha', function(error, stdout) {
+  exec('brew services restart beanstalkd', function(error, stdout) {
     process.stdout.write(stdout);
-    callback(error);
+
+    exec('mocha', function(error, stdout) {
+      process.stdout.write(stdout);
+      callback(error);
+    });
+
   });
 });
 
