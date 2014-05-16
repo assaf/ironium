@@ -400,27 +400,46 @@ class Queue {
   // Called to process all jobs, until this._processing is set to false.
   _processContinously(session) {
     var queue   = this;
+    var backoff = ifProduction(RESERVE_BACKOFF);
 
     function nextJob() {
       if (!queue._processing || queue._handlers.length === 0)
         return;
 
+      // Reserve job and resolve
       var reserve       = session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT));
+      // Run job and delete it and resolve
       var runAndDestory = reserve.then(([jobID, payload])=> queue._runAndDestroy(session, jobID, payload) );
-      var onError       = runAndDestory.catch(function(error) {
+      // Handle errors and resolve.
+      var handleError   = runAndDestory.catch(function(error) {
         // Reject can take anything, including false, undefined.
         var reason = (error && error.message) || error;
         if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(reason)) {
           // No job, go back to wait for next job.
-          session.end();
         } else {
           // Report on any other error, and back off for a few.
           queue._notify.error(error);
-          var backoff = ifProduction(RESERVE_BACKOFF);
           return promisify((callback)=> setTimeout(callback, backoff) );
         }
       });
-      onError.then(nextJob, nextJob);
+
+      // Run next job with a timeout and resolve.  Beanstalkd client fails in
+      // mysterious ways, and only way to process continously for long is to use
+      // timesouts.
+      var withTimeout = new Promise(function(resolve, reject) {
+        var timeout = setTimeout(function() {
+          session.end();
+          reject(new Error("Timeout in processContinously for " + queue.name));
+        }, PROCESSING_TIMEOUT);
+
+        // Whether processed or failed, resolve this promise.
+        handleError
+          .then(resolve, resolve)
+          .then(()=> clearTimeout(timeout));
+      });
+
+      // Regardless of outcome, go on to process next job.
+      withTimeout.then(nextJob, nextJob);
     }
 
     this._notify.debug("Waiting for jobs on queue %s", this.name);
