@@ -12,5 +12,5 @@ if (process.env.DEBUG) {
   ironium.on('error', (error)=> console.error(error.stack));
 }
 
-before(()=> ironium.reset());
-after(()=> ironium.reset());
+before(ironium.reset);
+after(ironium.reset);

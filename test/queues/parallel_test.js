@@ -25,7 +25,7 @@ describe("processing", ()=> {
 
     before(()=> processSerial.push(1));
     before(()=> processSerial.push(2));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should run jobs in sequence", ()=> {
       assert.equal(chain.join(''), 'ABAB');
@@ -50,7 +50,7 @@ describe("processing", ()=> {
 
     before(()=> processParallel.push(3));
     before(()=> processParallel.push(4));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should run jobs in sequence", ()=> {
       assert.equal(chain.join(''), 'AABB');

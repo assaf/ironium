@@ -328,7 +328,7 @@ queue.each(function(text, callback) {
 before(()=> queue.push('bar'));
 
 // Running the scheduled job, followed by the two queued jobs
-before(()=> ironium.once());
+before(ironium.once);
 
 it("should have run the foo scheduled job", function() {
   assert(echo.indexOf('foo') >= 0);
@@ -349,7 +349,7 @@ been deleted, or with no arguments, returns a promise.
 For example:
 
 ```
-before(()=> ironium.reset());
+before(ironium.reset);
 ```
 
 Is equivalent to:
@@ -359,6 +359,11 @@ before(function(done) {
   ironium.reset(done);
 });
 ```
+
+**Note:** Mocha before/after runners accept functions that return a promise.
+This is the case for the methods `start`, `stop`, `once` and `reset`.  In
+addition, since these methods are bound to an instance of Ironium, you can pass
+the method directly as an argument to `before` or `after`.
 
 
 ## Using Promises

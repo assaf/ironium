@@ -20,7 +20,7 @@ describe("queue", ()=> {
 
   describe("an object", ()=> {
     before(()=> capture.push({ id: 5, name: 'job' }));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should process that object", ()=>{
       var job = processed[0];
@@ -34,7 +34,7 @@ describe("queue", ()=> {
 
   describe("a string", ()=> {
     before(()=> capture.push('job'));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should process that string", ()=>{
       var job = processed[0];
@@ -47,7 +47,7 @@ describe("queue", ()=> {
 
   describe("a number", ()=> {
     before(()=> capture.push(3.1));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should process that number", ()=>{
       var job = processed[0];
@@ -60,7 +60,7 @@ describe("queue", ()=> {
 
   describe("an array", ()=> {
     before(()=> capture.push([true, '+']));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should process that array", ()=>{
       var job = processed[0];

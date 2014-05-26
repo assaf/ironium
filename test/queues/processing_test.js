@@ -32,7 +32,7 @@ describe("processing", ()=> {
     });
 
     before(()=> processMultiple.push('job'));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -57,7 +57,7 @@ describe("processing", ()=> {
     });
 
     before(()=> processPromise.push('job'));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -85,7 +85,7 @@ describe("processing", ()=> {
     });
 
     before(()=> processGenerator.push('job'));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -112,7 +112,7 @@ describe("processing", ()=> {
     });
 
     before(()=> processGenerator.push('job'));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should run all steps", ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -143,7 +143,7 @@ describe("processing", ()=> {
     });
 
     before(()=> processOnceA.push('job'));
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should run all jobs to completion", ()=> {
       assert.equal(steps.join(''), 'ABA');

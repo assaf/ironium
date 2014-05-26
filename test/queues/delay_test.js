@@ -20,7 +20,7 @@ describe("queue with delay", ()=> {
   });
 
   before(()=> capture.delay('delayed', '2s'));
-  before(()=> ironium.once());
+  before(ironium.once);
 
   it("should not process immediately", ()=>{
     assert.equal(processed.length, 0);
@@ -30,7 +30,7 @@ describe("queue with delay", ()=> {
     before(function(done) {
       setTimeout(done, 1500);
     });
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should not process job", ()=>{
       assert.equal(processed.length, 0);
@@ -41,7 +41,7 @@ describe("queue with delay", ()=> {
     before(function(done) {
       setTimeout(done, 1000);
     });
-    before(()=> ironium.once());
+    before(ironium.once);
 
     it("should process job", ()=>{
       assert.equal(processed.length, 1);
