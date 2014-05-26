@@ -110,7 +110,7 @@ class Schedule {
     return runJob(this.job, [], undefined)
       .then(()=> this.notify.info("Completed %s, scheduled for %s", this.name, time.toString()) )
       .catch((error)=> {
-        this.notify.error("Error %s, scheduled for %s", this.name, time.toString(), error.stack);
+        this.notify.info("Error %s, scheduled for %s", this.name, time.toString(), error.stack);
       });
   }
 
@@ -186,7 +186,7 @@ module.exports = class Scheduler {
     if (schedule)
       return schedule._runJob(time);
     else {
-      this.notify.error("No schedule %s, ignoring", name);
+      this.notify.info("No schedule %s, ignoring", name);
       return Promise.resolve();
     }
   }

@@ -1,3 +1,6 @@
+# 0.12.0
+
+ADDED Ironium will output to console if run with `DEBUG=ironium` or `DEBUG=*`.
 # 0.11.9
 
 CHANGED zero timeouts and delay when running in development or test environments

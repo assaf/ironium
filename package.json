@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "0.11.11",
+  "version": "0.12.0",
   "scripts": {
     "test": "gulp test",
     "prepublish": "gulp test clean build",
@@ -12,6 +12,7 @@
   "main": "lib/index",
   "dependencies": {
     "co": "3.0.6",
+    "debug": "^0.8.1",
     "fivebeans": "1.1.1",
     "ms": "0.6.2",
     "traceur": "0.0.41"

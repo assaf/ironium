@@ -1,6 +1,7 @@
 // Need runtime to support generators.
 require('traceur');
 
+var debug             = require('debug')('ironium');
 var { EventEmitter }  = require('events');
 var { format }        = require('util');
 var Configuration     = require('./configuration');
@@ -94,20 +95,18 @@ class Ironium extends EventEmitter {
 
   // Used for logging debug messages.
   debug(...args) {
-    this.emit('debug', format(...args));
+    if (this.listeners('debug').length)
+      this.emit('debug', format(...args));
+    else
+      debug(...args);
   }
 
   // Used for logging info messages.
   info(...args) {
-    this.emit('info', format(...args));
-  }
-
-  // Used for logging error messages.
-  error(...args) {
-    if (args.length == 1 && args[0] instanceof Error)
-      this.emit('error', args[0]);
+    if (this.listeners('info').length)
+      this.emit('info', format(...args));
     else
-      this.emit('error', new Error(format(...args)));
+      debug(...args);
   }
 
 }

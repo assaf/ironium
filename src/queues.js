@@ -418,7 +418,7 @@ class Queue {
           // No job, go back to wait for next job.
         } else {
           // Report on any other error, and back off for a few.
-          queue._notify.error(error);
+          queue._notify.info("Error processing job", error.stack);
           return promisify((callback)=> setTimeout(callback, backoff) );
         }
       });

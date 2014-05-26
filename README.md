@@ -419,28 +419,27 @@ record (this is an actual [Mongoose API](http://mongoosejs.com/docs/api.html)).
 
 ## Logging
 
-Don't work blind!  There are three events you can listen to:
-
-`error` - Emit errors from failed jobs
-`info`  - Logs job getting processed and successful completion
-`debug` - Way more information, useful for troubleshooting
+By default Ironium produces no messages to the console.  You can ask it to log
+to the console by setting the `DEBUG` environment variable to `ironium` or `*`
+(for more information, see [debug](https://github.com/visionmedia/debug)).
 
 For example:
 
 ```
-if (process.env.DEBUG)
-  ironium.on('debug', function(message) {
-    console.log(message);
-  });
+DEBUG=ironium,express npm start
+```
 
-ironium.on('info', function(message) {
-  console.log(message);
-});
+For more precise error reporting, you can register the following event
+listeners:
 
-ironium.on('error', function(error) {
-  console.error(error.stack);
-  errorService.notify(error);
-});
+- `info`  - Logs job getting processed and successful completion
+- `debug` - Way more information, useful for troubleshooting
+
+For example:
+
+```
+ironium.on('debug', logger.debug);
+ironium.on('info',  logger.info);
 ```
 
 
