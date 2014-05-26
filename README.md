@@ -528,6 +528,10 @@ specifically, see out [`.travis.yml`](.travis.yml).
 
 Ironium is written in ECMAScript 6, because future.
 
+You can run the entire test suite with `npm test`
+([Travis](https://travis-ci.org/assaf/ironium) runs this), or specific
+files/tests with [Mocha](http://visionmedia.github.io/mocha/).
+
 The ES6 source lives in the `src` directory, compiled into ES5 in the `lib`
 directory.  We use [Gulp.js](http://gulpjs.com/) for the convenience plugins of
 compiling, watching and notifying.
@@ -540,8 +544,3 @@ gulp build    # Compile source files from src/ into lib/
 gulp clean    # Clean compiled files
 gulp release  # Publish new release
 ```
-
-You can run the entire test suite with `npm test`
-([Travis](https://travis-ci.org/assaf/ironium) runs this), or specific
-files/tests with [Mocha](http://visionmedia.github.io/mocha/).
-

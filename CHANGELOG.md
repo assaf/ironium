@@ -5,6 +5,9 @@ ADDED Ironium will output to console if run with `DEBUG=ironium` or `DEBUG=*`.
 ADDED The methods start, stop, once and reset are now bound to an instance of
 Ironium, so can be passed directly to Mocha before/after methods.
 
+REMOVED No longer emitting `error` events.
+
+
 # 0.11.9
 
 CHANGED zero timeouts and delay when running in development or test environments
