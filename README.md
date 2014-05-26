@@ -175,8 +175,7 @@ ironium.queue('echo').each(function(job, callback) {
 });
 ```
 
-Alternatively, the function can return a promise or a generator.  We discuss
-promises and generators later on.  For example:
+Alternatively, the function can return a promise or a generator.  For example:
 
 ```
 ironium.queue('echo').each(async function(job) {
@@ -385,64 +384,37 @@ ironium.queue('delayed-echo').each(function(job) {
 ```
 
 
-## Using Generators
+## Async/Await
 
-Jobs that have multiple steps can also use generators in combination with
-promises and callback.  At each step the job can yield with a promise, and act
-on the value of that promise.  For example:
+This option is available when using
+[Traceur](https://github.com/google/traceur-compiler), and allows you to write
+code like this:
 
 ```
-ironium.queue('update-name').each(function(job) {
-  var customer = yield Customer.findById(job.customerID);
+ironium.queue('update-name').each(async function(job) {
+  var customer = await Customer.findById(job.customerID).exec();
 
   // At this point customer is set
-  customer.set('firstName', job.firstName);
-  customer.set('lastName',  job.lastName);
+  customer.firstName = job.firstName;
+  customer.lastName  = job.lastName;
   assert(customer.isModified());
 
-  yield customer.save();
+  await customer.savePromise();
+
   // Customer has been saved in the database
   assert(!customer.isModified());
 });
 ```
 
-If you need to use callbacks, you can return a
-[thunk](https://github.com/visionmedia/co#thunks-vs-promises).  A `thunk` is a
-function that receives a callback, but no other arguments.
-
-For example, Mongoose finders return promises, but the save method doesn't, so
-you'll need to write your code like this:
+An [`async
+function`](http://wiki.ecmascript.org/doku.php?id=strawman:async_functions) is a
+function that returns a promise.  Ironium will wait for the promise to resolve,
+before marking the job as complete, and will retry the job if the promise fails.
 
 
-```
-ironium.queue('update-name').each(function*(job) {
-  // You must call exec() to turn query into a promise
-  var customer = yield Customer.findById(job.customerID).exec();
-
-  // At this point customer is set
-  customer.set('firstName', job.firstName);
-  customer.set('lastName',  job.lastName);
-  assert(customer.isModified());
-
-  // customer.save needs a callback, yields needs a promise
-  yield function(callback) {
-    customer.save(callback);
-  };
-  // Customer has been saved in the database
-  assert(!customer.isModified());
-});
-```
-
-Another example:
-
-```
-ironium.queue('echo-file').each(function*(job) {
-  var contents = yield function(callback) {
-    File.readFile(job.filename, callback);
-  };
-  console.log(contents);
-});
-```
+An `await` expression waits for a promise to resolve.  In this example,
+`findById(job.customerID).exec()` returns a promise that resolves to a customer
+record (this is an actual [Mongoose API](http://mongoosejs.com/docs/api.html)).
 
 
 ## Logging
