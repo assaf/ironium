@@ -50,7 +50,7 @@ retries, etc.
   * [once(callback)](#oncecallback)
   * [reset(callback)](#resetcallback)
 * **[Using Promises](#using-promises)**
-* **[Using Generators](#using-generators)**
+* **[Async/Await](#asyncawait)**
 * **[Logging](#logging)**
 * **[Configuring](#configuring)**
 * **[Testing Your Code](#testing-your-code)**
