@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "scripts": {
     "test": "gulp test",
     "prepublish": "gulp test clean build",
@@ -15,6 +15,7 @@
     "debug": "^0.8.1",
     "fivebeans": "1.1.1",
     "ms": "0.6.2",
+    "passport-google-oauth": "^0.1.5",
     "traceur": "0.0.41"
   },
   "devDependencies": {

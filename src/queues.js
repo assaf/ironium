@@ -139,6 +139,7 @@ class Session {
           reject(new Error('TIMED_OUT'));
           this.end();
         }, RESERVE_TIMEOUT * 2);
+        timeout.unref();
 
         // Fivebeans client doesn't monitor for connections closing/erroring,
         // so we catch these events and terminate request early.
@@ -217,6 +218,7 @@ class Session {
       client.emit('error', new Error('TIMED_OUT'));
       client.end();
     }, CONNECT_TIMEOUT);
+    timeout.unref();
     
     // This promise resolves when we're done establishing a connection.
     // Multiple request will wait on this.
@@ -419,7 +421,11 @@ class Queue {
         } else {
           // Report on any other error, and back off for a few.
           queue._notify.info("Error processing job", error.stack);
-          return promisify((callback)=> setTimeout(callback, backoff) );
+          return promisify((callback)=> {
+            var timeout = setTimeout(callback, backoff);
+            timeout.unref();
+          });
+                          
         }
       });
 
@@ -431,6 +437,7 @@ class Queue {
           session.end();
           reject(new Error("Timeout in processContinously for " + queue.name));
         }, PROCESSING_TIMEOUT);
+        timeout.unref();
 
         // Whether processed or failed, resolve this promise.
         handleError

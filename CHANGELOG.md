@@ -1,3 +1,8 @@
+# 0.12.1
+
+FIXED make sure to unref all timeout/interval.
+
+
 # 0.12.0
 
 ADDED Ironium will output to console if run with `DEBUG=ironium` or `DEBUG=*`.

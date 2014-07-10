@@ -59,13 +59,17 @@ class Schedule {
         this._timeout = null;
         // Set interval first, _queueNext will clear it, if we're already past
         // the end time.
-        if (this.every)
+        if (this.every) {
           this._interval = setInterval(this._queueNext.bind(this), this.every);
+          this._interval.unref();
+        }
         this._queueNext();
       }, now - this.startTime);
+      this._timeout.unref();
     } else if (this.every) {
       // Interval works the same way, except queueNext will call start again.
       this._interval = setInterval(this._queueNext.bind(this), this.every);
+      this._interval.unref();
     }
   }
 
@@ -99,8 +103,10 @@ class Schedule {
       .catch(()=> {
         // Error queuing job. For a one time job, try to queue again. For
         // period job, only queue again if not scheduled to run soon.
-        if (!this.every || this.every > ms('1m'))
-          setTimeout(this._queueNext.bind(this), ms('5s'));
+        if (!this.every || this.every > ms('1m')) {
+          var timeout = setTimeout(this._queueNext.bind(this), ms('5s'));
+          timeout.unref();
+        }
       });
   }
 

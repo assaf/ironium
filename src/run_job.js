@@ -28,6 +28,7 @@ module.exports = function runJob(handler, args, timeout) {
       var errorOnTimeout = setTimeout(function() {
         domain.emit('error', new Error("Timeout processing job"));
       }, timeout);
+      errorOnTimeout.unref();
       domain.add(errorOnTimeout);
     }
 
