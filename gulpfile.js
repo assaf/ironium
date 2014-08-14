@@ -38,7 +38,7 @@ gulp.task('build', function() {
 
 // Delete anything compiled into lib directory
 gulp.task('clean', function() {
-  gulp.src('lib/**', {read: false }).pipe(clean());
+  return gulp.src('lib/**', { read: false }).pipe(clean());
 });
 
 // Run mocha, used by release task
