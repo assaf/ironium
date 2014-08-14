@@ -23,7 +23,9 @@ gulp.task('default', function() {
 // Compile ES6 in src to ES5 in lib
 gulp.task('build', function() {
   var options = {
-    sourceMaps:     true,
+    blockBinding:   true,
+    asyncFunctions: true,
+    validate:       true,
     modules:        'commonjs'
   };
   var compile = gulp.src('src/**/*.js')
