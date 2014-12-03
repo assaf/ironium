@@ -1,12 +1,12 @@
 // Need runtime to support generators.
 require('traceur');
 
-var debug             = require('debug')('ironium');
-var { EventEmitter }  = require('events');
-var { format }        = require('util');
-var Configuration     = require('./configuration');
-var Queues            = require('./queues');
-var Scheduler         = require('./scheduler');
+const debug             = require('debug')('ironium');
+const { EventEmitter }  = require('events');
+const { format }        = require('util');
+const Configuration     = require('./configuration');
+const Queues            = require('./queues');
+const Scheduler         = require('./scheduler');
 
 
 class Ironium extends EventEmitter {
@@ -79,11 +79,12 @@ class Ironium extends EventEmitter {
   once(callback) {
     // Must run all scheduled jobs first, only then can be run any (resulting)
     // queued jobs to completion.
-    var promise = this._scheduler.once()
+    const promise = this._scheduler
+      .once()
       .then(()=> this._queues.once() )
       .then(()=> this.debug("Completed all jobs") );
     if (callback)
-      promise.then(()=> callback(), callback);
+      promise.done(()=> callback(), callback);
     else
       return promise;
   }
@@ -91,9 +92,9 @@ class Ironium extends EventEmitter {
   // Used in testing: empties all queues.  If called with no arguments, returns
   // a promise.
   reset(callback) {
-    var promise = this._queues.reset();
+    const promise = this._queues.reset();
     if (callback)
-      promise.then(()=> callback(), callback);
+      promise.done(()=> callback(), callback);
     else
       return promise;
   }

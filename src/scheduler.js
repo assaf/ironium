@@ -1,9 +1,9 @@
 // Essentially cron for scheduling tasks in Node.
 
-var assert  = require('assert');
-var ms      = require('ms');
-var Promise = require('bluebird');
-var runJob  = require('./run_job');
+const assert  = require('assert');
+const ms      = require('ms');
+const Promise = require('bluebird');
+const runJob  = require('./run_job');
 
 
 // Job schedule consists of three properties:
@@ -34,7 +34,7 @@ class Schedule {
     } else if (typeof(time) == 'number') {
       this.every = parseInt(time, 0);
     } else if (typeof(time) == 'object') {
-      var { start, every, end } = time;
+      const { start, every, end } = time;
       this.startTime = start ? +start : undefined;
       this.endTime   = end   ? +end   : undefined;
       this.every     = (typeof(every) == 'string' ? ms(every) : parseInt(every, 0));
@@ -51,7 +51,7 @@ class Schedule {
 
   // Starts the scheduler for this job.  Sets timer/interval to run the job.
   start() {
-    var now = Date.now();
+    const now = Date.now();
     if (this.endTime && now >= this.endTime)
       return;
 
@@ -88,7 +88,7 @@ class Schedule {
 
   // Run job once.
   once() {
-    var now = Date.now();
+    const now = Date.now();
     if ((!this.startTime || now >= this.startTime) &&
         (!this.endTime || now < this.endTime)) {
       return this._scheduler.queueJob(this.name);
@@ -105,7 +105,7 @@ class Schedule {
         // Error queuing job. For a one time job, try to queue again. For
         // period job, only queue again if not scheduled to run soon.
         if (!this.every || this.every > ms('1m')) {
-          var timeout = setTimeout(this._queueNext.bind(this), ms('5s'));
+          const timeout = setTimeout(this._queueNext.bind(this), ms('5s'));
           timeout.unref();
         }
       });
@@ -143,7 +143,7 @@ module.exports = class Scheduler {
     assert(job instanceof Function, "Third argument must be the job function");
     assert(!this._schedules[name],   "Attempt to schedule multiple jobs with same name (" + name + ")");
 
-    var newSchedule = new Schedule(this, name, time, job);
+    const newSchedule = new Schedule(this, name, time, job);
     this._schedules[name] = newSchedule;
 
     if (this.started) {
@@ -158,7 +158,7 @@ module.exports = class Scheduler {
     this.started = true;
     // Not listening until we start up the queue.
     this._startQueue();
-    for (var schedule of this.schedules)
+    for (let schedule of this.schedules)
       schedule.start();
   }
 
@@ -166,13 +166,13 @@ module.exports = class Scheduler {
   stop() {
     this.notify.debug("Stopping all schedules");
     this.started = false;
-    for (var schedule of this.schedules)
+    for (let schedule of this.schedules)
       schedule.stop();
   }
 
   // Run all schedules jobs in parallel.
   once() {
-    var schedules = this.schedules.map((schedule)=> schedule.once());
+    const schedules = this.schedules.map((schedule)=> schedule.once());
     return Promise.all(schedules);
   }
 
@@ -189,7 +189,7 @@ module.exports = class Scheduler {
 
   // This is used to pick up job from the queue and run it.
   _runQueuedJob({ name, time }) {
-    var schedule = this._schedules[name];
+    const schedule = this._schedules[name];
     if (schedule)
       return schedule._runJob(time);
     else {

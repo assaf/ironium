@@ -22,7 +22,7 @@ describe("processing", ()=> {
   describe("with callback error", ()=> {
 
     // First two runs should fail, runs ends at 3
-    var runs = 0;
+    let runs = 0;
     before(()=> {
       errorCallback.each((job, callback)=> {
         runs++;
@@ -46,7 +46,7 @@ describe("processing", ()=> {
   describe("with rejected promise", ()=> {
 
     // First two runs should fail, runs ends at 3
-    var runs = 0;
+    let runs = 0;
     before(()=> {
       errorPromise.each(()=> {
         runs++;
@@ -70,7 +70,7 @@ describe("processing", ()=> {
   describe("with generator error", ()=> {
 
     // First two runs should fail, runs ends at 3
-    var runs = 0;
+    let runs = 0;
     before(()=> {
       errorGenerator.each(function*() {
         runs++;

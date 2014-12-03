@@ -1,7 +1,7 @@
-var assert            = require('assert');
-var co                = require('co');
-var { createDomain }  = require('domain');
-var Promise           = require('bluebird');
+const assert            = require('assert');
+const co                = require('co');
+const { createDomain }  = require('domain');
+const Promise           = require('bluebird');
 
 
 // Runs the job, returns a promise.
@@ -18,7 +18,7 @@ module.exports = function runJob(handler, args, timeout) {
     // But the handler may throw an exception, or suffer some other
     // catastrophic outcome: we use a domain to handle that.  It may also
     // never halt, so we set a timer to force early completion.
-    var domain = createDomain();
+    const domain = createDomain();
 
     if (timeout) {
       // This timer trigger if the job doesn't complete in time and rejects the
@@ -26,7 +26,7 @@ module.exports = function runJob(handler, args, timeout) {
       //
       // Timeouts occur if handler never calls its callback, resolves promise,
       // etc.
-      var errorOnTimeout = setTimeout(function() {
+      const errorOnTimeout = setTimeout(function() {
         domain.emit('error', new Error("Timeout processing job"));
       }, timeout);
       errorOnTimeout.unref();
@@ -37,9 +37,9 @@ module.exports = function runJob(handler, args, timeout) {
     domain.on('error', reject);
     domain.run(function() {
 
-      // Good old callback, var's resolve the job.  Since we intercept it,
+      // Good old callback resolves the job.  Since we intercept it,
       // errors are handled by on('error'), successful completion resolves.
-      var result = handler(...args, domain.intercept(resolve));
+      const result = handler(...args, domain.intercept(resolve));
 
       // Job may have returned a promise or a generator, var's see …
       if (result && typeof(result.then) == 'function') {

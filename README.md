@@ -81,8 +81,8 @@ Node.js servers, but only process jobs from specific nodes.
 For example, your code may have:
 
 ```
-var ironium          = require('ironium');
-var sendWelcomeEmail = ironium.queue('send-welcome-email');
+const ironium          = require('ironium');
+const sendWelcomeEmail = ironium.queue('send-welcome-email');
 
 // If this is a new customer, queue sending welcome email.
 customer.on('save', function(next) {
@@ -114,7 +114,7 @@ Otherwise, returns a promise.
 For example:
 
 ```
-var job = {
+const job = {
   message: 'wow, such workers, much concurrency'
 };
 
@@ -206,10 +206,10 @@ send text strings, so be ready to process those as well.  For example, some
 services send form encoded pairs, so you may need to handle them like this:
 
 ```
-var QS = require('querystring');
+const QS = require('querystring');
 
 ironium.queue('webhook').each(function(job, callback) {
-  var params = QS.parse(job);
+  const params = QS.parse(job);
   console.log(params.message);
   callback();
 });
@@ -265,13 +265,13 @@ ironium.schedule('inAnHour', new Date() + ms('1h'), function() {
   return Promise.resolve();
 });
 
-var schedule = {
+const schedule = {
   every: ms('2h'),               // Every two hours
   end:   new Date() + ms('24h'), // End in 24 hours
 };
 ironium.schedule('everyTwoForADay', schedule, async function() {
   console.log("I run every 2 hours for 24 hours");
-  var customers = await Customer.findAll();
+  const customers = await Customer.findAll();
   for (var customer of customers)
     await customer.increase('awesome');
 });
@@ -311,8 +311,8 @@ running automated tests.
 For example:
 
 ```
-var queue = ironium.queue('echo');
-var echo  = [];
+const queue = ironium.queue('echo');
+const echo  = [];
 
 // Scheduled worker will queue a job
 ironium.schedule('echo-foo', '* * * *', function(callback) {
@@ -378,7 +378,7 @@ For example:
 
 ```
 ironium.queue('delayed-echo').each(function(job) {
-  var promise = new Promise(function(resolve, reject) {
+  const promise = new Promise(function(resolve, reject) {
 
     console.log('Echo', job.message);
     resolve();
@@ -397,7 +397,7 @@ code like this:
 
 ```
 ironium.queue('update-name').each(async function(job) {
-  var customer = await Customer.findById(job.customerID).exec();
+  const customer = await Customer.findById(job.customerID).exec();
 
   // At this point customer is set
   customer.firstName = job.firstName;
@@ -455,7 +455,7 @@ configuration.  For production, you may want to set the server in use, as simple
 as passing a configuration object to `ironium.configure`:
 
 ```
-var ironium = require('ironium');
+const ironium = require('ironium');
 
 if (process.env.NODE_ENV == 'production')
   ironium.configure({
@@ -469,8 +469,8 @@ if (process.env.NODE_ENV == 'production')
 Or load it form a JSON configuration file:
 
 ```
-var ironium = require('ironium');
-var config  = require('./ironium.json');
+const ironium = require('ironium');
+const config  = require('./ironium.json');
 
 if (process.env.NODE_ENV == 'production')
   ironium.configure(config);
