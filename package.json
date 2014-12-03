@@ -3,7 +3,7 @@
   "version": "0.13.0",
   "scripts": {
     "test": "mocha",
-    "prepublish": "mocha && gulp clean build",
+    "prepublish": "gulp clean build && mocha",
     "postpublish": "gulp tag-release"
   },
   "engines": {
