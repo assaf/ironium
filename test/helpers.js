@@ -14,18 +14,21 @@ if (process.env.DEBUG) {
 
 
 // Restart beanstalkd to discard of any reserved jobs
-before(function(done) {
-  exec('launchctl stop homebrew.mxcl.beanstalk', function(error, stdout) {
-    process.stdout.write(stdout);
-    exec('launchctl start homebrew.mxcl.beanstalk', function(error, stdout) {
+if (process.platform === 'darwin') {
+  before(function(done) {
+    console.log('Restaring beanstalkd ...');
+    exec('launchctl stop homebrew.mxcl.beanstalk', function(error, stdout) {
       process.stdout.write(stdout);
+      exec('launchctl start homebrew.mxcl.beanstalk', function(error, stdout) {
+        process.stdout.write(stdout);
 
-      setTimeout(function() {
-        done(error);
-      }, 1000);
+        setTimeout(function() {
+          done(error);
+        }, 1000);
+      });
     });
   });
-});
+}
 
 before(ironium.reset);
 after(ironium.reset);
