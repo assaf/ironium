@@ -1,6 +1,7 @@
 var assert            = require('assert');
 var co                = require('co');
 var { createDomain }  = require('domain');
+var Promise           = require('bluebird');
 
 
 // Runs the job, returns a promise.
@@ -51,11 +52,8 @@ module.exports = function runJob(handler, args, timeout) {
       } else if (result && typeof(result.next) == 'function' &&
                  typeof(result.throw) == 'function') {
         // A generator object.  Use it to resolve job instead of callback.
-        co(result)(function(error) {
-          if (error)
-            domain.emit('error', error);
-          else
-            resolve();
+        co(result).then(resolve, function(error) {
+          domain.emit('error', error);
         });
       }
 

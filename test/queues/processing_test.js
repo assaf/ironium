@@ -1,21 +1,22 @@
-var assert      = require('assert');
-var ironium     = require('../../src');
 require('../helpers');
+const assert  = require('assert');
+const ironium = require('../../src');
+const Promise = require('bluebird');
 
 
 describe("processing", ()=> {
 
-  var processMultiple   = ironium.queue('process-multiple');
-  var processPromise    = ironium.queue('process-promise');
-  var processGenerator  = ironium.queue('process-generator');
-  var processOnceA      = ironium.queue('process-once-a');
-  var processOnceB      = ironium.queue('process-once-b');
+  const processMultiple   = ironium.queue('process-multiple');
+  const processPromise    = ironium.queue('process-promise');
+  const processGenerator  = ironium.queue('process-generator');
+  const processOnceA      = ironium.queue('process-once-a');
+  const processOnceB      = ironium.queue('process-once-b');
 
 
   describe("with multiple handlers", ()=> {
 
     // Count how many steps run
-    var steps = [];
+    const steps = [];
     before(()=> {
       processMultiple.each((job, callback)=> {
         steps.push('A');
@@ -44,15 +45,14 @@ describe("processing", ()=> {
   describe("with promises", ()=> {
 
     // Count how many steps run
-    var steps = [];
+    const steps = [];
     before(()=> {
       processPromise.each(()=> {
-        var promise = new Promise(setImmediate);
-        promise
+        const promise = new Promise(setImmediate);
+        return promise
           .then(()=> steps.push('A'))
           .then(()=> steps.push('B'))
           .then(()=> steps.push('C'));
-        return promise;
       });
     });
 
@@ -69,14 +69,14 @@ describe("processing", ()=> {
   describe("with generator", ()=> {
 
     // Count how many steps run
-    var steps = [];
+    const steps = [];
     before(()=> {
       processGenerator.each(function*() {
-        var one = yield Promise.resolve('A');
+        const one = yield Promise.resolve('A');
         steps.push(one);
-        var two = yield (done)=> done(null, 'B');
+        const two = yield (done)=> done(null, 'B');
         steps.push(two);
-        var three = yield* (function*() {
+        const three = yield* (function*() {
           yield setImmediate;
           return 'C';
         })();
@@ -97,14 +97,14 @@ describe("processing", ()=> {
   describe("with async/await", ()=> {
 
     // Count how many steps run
-    var steps = [];
+    const steps = [];
     before(()=> {
       processGenerator.each(async function() {
-        var one = await Promise.resolve('A');
+        const one = await Promise.resolve('A');
         steps.push(one);
-        var two = await Promise.resolve('B');
+        const two = await Promise.resolve('B');
         steps.push(two);
-        var three = await function() {
+        const three = await function() {
           return Promise.resolve('C');
         }();
         steps.push(three);
@@ -124,7 +124,7 @@ describe("processing", ()=> {
 
   describe("once", ()=> {
     // Count how many steps run
-    var steps = [];
+    const steps = [];
     before(()=> {
       // Process A, queue job for B
       // Process B, queue job for A

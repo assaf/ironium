@@ -1,6 +1,7 @@
 var assert      = require('assert');
 var fivebeans   = require('fivebeans');
 var ms          = require('ms');
+var Promise     = require('bluebird');
 var runJob      = require('./run_job');
 
 
@@ -488,7 +489,7 @@ class Queue {
         // Ideally an error and we want to log the full stack trace, but promise
         // may reject false, undefined, etc.
         var details = (error && error.stack) || error;
-        this._notify.info("Error processing queued job %s:%ss", this.name, jobID, error);
+        this._notify.info("Error processing queued job %s:%s", this.name, jobID, error);
         // Error or timeout: we release the job back to the queue.  Since this
         // may be a transient error condition (e.g. server down), we let it sit
         // in the queue for a while before it becomes available again.

@@ -6,7 +6,7 @@ const notify  = require('gulp-notify');
 const OS      = require('os');
 const Path    = require('path');
 const replace = require('gulp-replace');
-const traceur = require('traceur');
+const Traceur = require('traceur');
 const through = require('through2');
 const version = require('./package.json').version;
 
@@ -22,13 +22,12 @@ gulp.task('default', function() {
 
 // Compile ES6 in src to ES5 in lib
 gulp.task('build', function() {
-  var options = {
-    blockBinding:   true,
-    asyncFunctions: true,
-    validate:       true,
+  const options = {
+    asyncFunctions:  true,
+    validate:        true,
     modules:        'commonjs'
   };
-  var compile = gulp.src('src/**/*.js')
+  const compile = gulp.src('src/**/*.js')
     .pipe(es6(options))
     .pipe(gulp.dest('lib'));
   // Notifications only available on Mac
@@ -39,19 +38,6 @@ gulp.task('build', function() {
 // Delete anything compiled into lib directory
 gulp.task('clean', function() {
   return gulp.src('lib/**', { read: false }).pipe(clean());
-});
-
-// Run mocha, used by release task
-gulp.task('test', ['build'], function(callback) {
-  exec('brew services restart beanstalkd', function(error, stdout) {
-    process.stdout.write(stdout);
-
-    exec('mocha', function(error, stdout) {
-      process.stdout.write(stdout);
-      callback(error);
-    });
-
-  });
 });
 
 
@@ -67,10 +53,10 @@ gulp.task('element', function() {
 gulp.task('changelog', function(callback) {
   // Get the most recent tag
   exec('git describe --abbrev=0 --tags', function(error, stdout) {
-    var tag = stdout.trim();
+    const tag = stdout.trim();
     // Get summary of all commits since that tag
     exec('git log ' + tag + '..HEAD --pretty=format:%s%n', function(error, stdout) {
-      var log = stdout;
+      const log = stdout;
       File.writeFile('change.log', log, 'utf-8', callback);
     });
   });
@@ -78,8 +64,8 @@ gulp.task('changelog', function(callback) {
 
 // Used by npm publish to create a Version N.N commit and tag it.
 gulp.task('tag-release', ['element', 'changelog'], function(callback) {
-  var message = "Release " + version;
-  var script  =  "\
+  const message = "Release " + version;
+  const script  =  "\
     git add package.json CHANGELOG.md element.svg   &&\
     git commit --allow-empty -m \"" + message + "\" &&\
     git push origin master                          &&\
@@ -97,11 +83,8 @@ function es6(options) {
 	return through.obj(function(file, encoding, callback) {
 		options.filename = Path.basename(file.path);
 		try {
-			var output = traceur.compile(file.contents.toString(), options);
-      if (output.errors.length > 0)
-        this.emit('error', new Error(output.errors.join('\n')));
-			if (output.js)
-				file.contents = new Buffer(output.js);
+			const compiled = Traceur.compile(file.contents.toString(), options);
+      file.contents = new Buffer(compiled);
 		} catch (error) {
 			this.emit('error', error);
 		}

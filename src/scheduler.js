@@ -2,6 +2,7 @@
 
 var assert  = require('assert');
 var ms      = require('ms');
+var Promise = require('bluebird');
 var runJob  = require('./run_job');
 
 

@@ -1,13 +1,13 @@
-var assert = require('assert');
-var fork   = require('child_process').fork;
+const assert = require('assert');
+const fork   = require('child_process').fork;
 
 
 if (typeof(describe) != 'undefined') {
 
   describe('Child process', function() {
 
-    var child;
-    var steps = [];
+    var child   = null;
+    const steps = [];
 
     before(function(done) {
       child = fork(module.filename, { env: { NODE_ENV: 'test' } });
@@ -28,7 +28,7 @@ if (typeof(describe) != 'undefined') {
     });
 
     it("should run three duplicate jobs", function() {
-      var duplicates = steps.filter(function(step) { return step == 'duplicate'; });
+      const duplicates = steps.filter(function(step) { return step == 'duplicate'; });
       assert(duplicates.length == 3);
     });
 
@@ -37,7 +37,7 @@ if (typeof(describe) != 'undefined') {
     });
 
     it("should run three failed jobs", function() {
-      var failed = steps.filter(function(step) { return step == 'failed'; });
+      const failed = steps.filter(function(step) { return step == 'failed'; });
       assert(failed.length == 3);
     });
 
@@ -49,7 +49,7 @@ if (typeof(describe) != 'undefined') {
 
 } else {
 
-  var ironium = require('../../lib');
+  const ironium = require('../../lib');
 
   if (process.env.DEBUG) {
     ironium.on('debug', console.log);

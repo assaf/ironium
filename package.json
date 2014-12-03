@@ -2,7 +2,7 @@
   "name": "ironium",
   "version": "0.12.2",
   "scripts": {
-    "test": "gulp test",
+    "test": "mocha",
     "prepublish": "gulp test clean build",
     "postpublish": "gulp tag-release"
   },
@@ -11,19 +11,20 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "co": "^3.0.0",
-    "debug": "^1.0.0",
+    "bluebird": "^2.3.11",
+    "co": "^4.0.1",
+    "debug": "^2.1.0",
     "fivebeans": "^1.1.1",
-    "ms": "^0.6.2",
-    "traceur": "^0.0.58"
+    "ms": "^0.7.0",
+    "traceur": "^0.0.78"
   },
   "devDependencies": {
-    "gulp": "^3.8.7",
+    "gulp": "^3.8.10",
     "gulp-clean": "^0.3.1",
-    "gulp-notify": "^1.4.2",
-    "gulp-replace": "^0.4.0",
-    "mocha": "^1.21.4",
-    "through2": "^0.6.1"
+    "gulp-notify": "^2.0.1",
+    "gulp-replace": "^0.5.0",
+    "mocha": "^2.0.1",
+    "through2": "^0.6.3"
   },
   "repository": {
     "type": "git",
