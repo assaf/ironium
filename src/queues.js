@@ -478,7 +478,7 @@ class Queue {
     function nextHandler() {
       const handler = handlers.shift();
       if (handler)
-        return runJob(handler, [payload], PROCESSING_TIMEOUT).then(nextHandler);
+        return runJob(jobID, handler, [payload], PROCESSING_TIMEOUT).then(nextHandler);
     }
 
     return nextHandler()

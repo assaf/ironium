@@ -1,3 +1,11 @@
+# 0.13.0
+
+ADDED when executing job, current job ID available from process.domain.jobID
+
+Since the domain is accessible in callbacks and event handlers, you can use this
+to trace the execution of the job, specifically for logging messages.
+
+
 # 0.12.1
 
 FIXED make sure to unref all timeout/interval.

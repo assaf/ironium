@@ -6,10 +6,11 @@ const Promise           = require('bluebird');
 
 // Runs the job, returns a promise.
 //
+// jobID    - Available from domain
 // handler  - Called to process the job
 // args     - With the given arguments
 // timeout  - If set, times out job after that many ms
-module.exports = function runJob(handler, args, timeout) {
+module.exports = function runJob(jobID, handler, args, timeout) {
   assert(handler, "Handler is missing");
 
   return new Promise(function(resolve, reject) {
@@ -32,6 +33,8 @@ module.exports = function runJob(handler, args, timeout) {
       errorOnTimeout.unref();
       domain.add(errorOnTimeout);
     }
+
+    domain.jobID = jobID;
 
     // Uncaught exception in the handler's domain will also fail this job.
     domain.on('error', reject);

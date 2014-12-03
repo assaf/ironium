@@ -114,7 +114,7 @@ class Schedule {
   // Scheduler calls this to actually run the job when picked up from queue.
   _runJob(time) {
     this.notify.info("Processing %s, scheduled for %s", this.name, time.toString());
-    return runJob(this.job, [], undefined)
+    return runJob(this.name, this.job, [], undefined)
       .then(()=> this.notify.info("Completed %s, scheduled for %s", this.name, time.toString()) )
       .catch((error)=> {
         this.notify.info("Error %s, scheduled for %s", this.name, time.toString(), error.stack);
