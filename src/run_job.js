@@ -11,7 +11,7 @@ const Promise           = require('bluebird');
 // args     - With the given arguments
 // timeout  - If set, times out job after that many ms
 module.exports = function runJob(jobID, handler, args, timeout) {
-  assert(handler, "Handler is missing");
+  assert(handler, 'Handler is missing');
 
   return new Promise(function(resolve, reject) {
 
@@ -28,7 +28,7 @@ module.exports = function runJob(jobID, handler, args, timeout) {
       // Timeouts occur if handler never calls its callback, resolves promise,
       // etc.
       const errorOnTimeout = setTimeout(function() {
-        domain.emit('error', new Error("Timeout processing job"));
+        domain.emit('error', new Error('Timeout processing job'));
       }, timeout);
       errorOnTimeout.unref();
       domain.add(errorOnTimeout);
@@ -49,7 +49,7 @@ module.exports = function runJob(jobID, handler, args, timeout) {
         // A thenable object == promise.
         result.then(resolve, function(error) {
           if (!(error instanceof Error))
-            error = new Error(error.toString() + ' in ' + handler.toString());
+            error = new Error(`${error} in ${handler}`);
           domain.emit('error', error);
         });
       } else if (result && typeof(result.next) == 'function' &&

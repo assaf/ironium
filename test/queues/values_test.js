@@ -3,7 +3,7 @@ const assert  = require('assert');
 const ironium = require('../../src');
 
 
-describe("queue", ()=> {
+describe('queue', ()=> {
 
   const capture = ironium.queue('capture');
 
@@ -18,11 +18,11 @@ describe("queue", ()=> {
   });
 
 
-  describe("an object", ()=> {
+  describe('an object', ()=> {
     before(()=> capture.push({ id: 5, name: 'job' }));
     before(ironium.once);
 
-    it("should process that object", ()=>{
+    it('should process that object', ()=>{
       const job = processed[0];
       assert.equal(job.id, 5);
       assert.equal(job.name, 'job');
@@ -32,11 +32,11 @@ describe("queue", ()=> {
   });
 
 
-  describe("a string", ()=> {
+  describe('a string', ()=> {
     before(()=> capture.push('job'));
     before(ironium.once);
 
-    it("should process that string", ()=>{
+    it('should process that string', ()=>{
       const job = processed[0];
       assert.equal(job, 'job');
     });
@@ -45,11 +45,11 @@ describe("queue", ()=> {
   });
 
 
-  describe("a number", ()=> {
+  describe('a number', ()=> {
     before(()=> capture.push(3.1));
     before(ironium.once);
 
-    it("should process that number", ()=>{
+    it('should process that number', ()=>{
       const job = processed[0];
       assert.equal(job, 3.1);
     });
@@ -58,11 +58,11 @@ describe("queue", ()=> {
   });
 
 
-  describe("an array", ()=> {
+  describe('an array', ()=> {
     before(()=> capture.push([true, '+']));
     before(ironium.once);
 
-    it("should process that array", ()=>{
+    it('should process that array', ()=>{
       const job = processed[0];
       assert.equal(job.length, 2);
       assert.equal(job[0], true);
@@ -73,8 +73,8 @@ describe("queue", ()=> {
   });
 
 
-  describe("a null", ()=> {
-    it("should error", (done)=> {
+  describe('a null', ()=> {
+    it('should error', (done)=> {
       assert.throws(()=> {
         capture.push(null, done);
       });

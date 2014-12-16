@@ -82,7 +82,7 @@ class Ironium extends EventEmitter {
     const promise = this._scheduler
       .once()
       .then(()=> this._queues.once() )
-      .then(()=> this.debug("Completed all jobs") );
+      .then(()=> this.debug('Completed all jobs') );
     if (callback)
       promise.done(()=> callback(), callback);
     else
@@ -101,10 +101,7 @@ class Ironium extends EventEmitter {
 
   // Used for logging debug messages.
   debug(...args) {
-    if (this.listeners('debug').length)
-      this.emit('debug', format(...args));
-    else
-      debug(...args);
+    debug(...args);
   }
 
   // Used for logging info messages.
@@ -113,6 +110,18 @@ class Ironium extends EventEmitter {
       this.emit('info', format(...args));
     else
       debug(...args);
+  }
+
+  // Used for logging error messages.
+  //
+  // First argument is formatted string, followed by any number of arguments,
+  // last argument is always the Error object.
+  error(...args) {
+    const error = args.pop();
+    if (this.listeners('error').length)
+      this.emit('error', error);
+    const formatted = format(...args);
+    debug(`${formatted}\n${error.stack}`);
   }
 
 }

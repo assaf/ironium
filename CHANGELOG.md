@@ -1,3 +1,8 @@
+# 1.0.0
+
+ADDED emit `error` events and output error message when `DEBUG=ironium`
+
+
 # 0.13.0
 
 ADDED when executing job, current job ID available from process.domain.jobID

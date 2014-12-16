@@ -23,20 +23,20 @@ if (typeof(describe) != 'undefined') {
       });
     });
 
-    it("should run regular job", function() {
+    it('should run regular job', function() {
       assert(steps.indexOf('regular') >= 0);
     });
 
-    it("should run three duplicate jobs", function() {
+    it('should run three duplicate jobs', function() {
       const duplicates = steps.filter(function(step) { return step == 'duplicate'; });
       assert(duplicates.length == 3);
     });
 
-    it("should run delayed job", function() {
+    it('should run delayed job', function() {
       assert(steps.indexOf('delayed') >= 0);
     });
 
-    it("should run three failed jobs", function() {
+    it('should run three failed jobs', function() {
       const failed = steps.filter(function(step) { return step == 'failed'; });
       assert(failed.length == 3);
     });
@@ -100,7 +100,7 @@ if (typeof(describe) != 'undefined') {
       // Yes, we do have a callback, but by throwing an error we're testing that
       // domains work correctly.
       setImmediate(function() {
-        throw new Error("Failing on purpose");
+        throw new Error('Failing on purpose');
       });
     }
   });

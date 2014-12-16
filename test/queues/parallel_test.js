@@ -3,13 +3,13 @@ const assert  = require('assert');
 const ironium = require('../../src');
 
 
-describe("processing", ()=> {
+describe('processing', ()=> {
 
   const processSerial     = ironium.queue('process-serial');
   const processParallel   = ironium.queue('process-parallel');
 
 
-  describe("with one worker", ()=> {
+  describe('with one worker', ()=> {
 
     // Count how many steps run
     const chain = [];
@@ -27,14 +27,14 @@ describe("processing", ()=> {
     before(()=> processSerial.push(2));
     before(ironium.once);
 
-    it("should run jobs in sequence", ()=> {
+    it('should run jobs in sequence', ()=> {
       assert.equal(chain.join(''), 'ABAB');
     });
 
   });
 
 
-  describe.skip("with two workers", ()=> {
+  describe.skip('with two workers', ()=> {
 
     // Count how many steps run
     const chain = [];
@@ -52,7 +52,7 @@ describe("processing", ()=> {
     before(()=> processParallel.push(4));
     before(ironium.once);
 
-    it("should run jobs in sequence", ()=> {
+    it('should run jobs in sequence', ()=> {
       assert.equal(chain.join(''), 'AABB');
     });
 

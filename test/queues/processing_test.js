@@ -4,7 +4,7 @@ const ironium = require('../../src');
 const Promise = require('bluebird');
 
 
-describe("processing", ()=> {
+describe('processing', ()=> {
 
   const processMultiple   = ironium.queue('process-multiple');
   const processPromise    = ironium.queue('process-promise');
@@ -13,7 +13,7 @@ describe("processing", ()=> {
   const processOnceB      = ironium.queue('process-once-b');
 
 
-  describe("with multiple handlers", ()=> {
+  describe('with multiple handlers', ()=> {
 
     // Count how many steps run
     const steps = [];
@@ -35,14 +35,14 @@ describe("processing", ()=> {
     before(()=> processMultiple.push('job'));
     before(ironium.once);
 
-    it("should run all steps", ()=> {
+    it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
     });
 
   });
 
 
-  describe("with promises", ()=> {
+  describe('with promises', ()=> {
 
     // Count how many steps run
     const steps = [];
@@ -59,14 +59,14 @@ describe("processing", ()=> {
     before(()=> processPromise.push('job'));
     before(ironium.once);
 
-    it("should run all steps", ()=> {
+    it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
     });
 
   });
 
 
-  describe("with generator", ()=> {
+  describe('with generator', ()=> {
 
     // Count how many steps run
     const steps = [];
@@ -87,14 +87,14 @@ describe("processing", ()=> {
     before(()=> processGenerator.push('job'));
     before(ironium.once);
 
-    it("should run all steps", ()=> {
+    it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
     });
 
   });
 
 
-  describe("with async/await", ()=> {
+  describe('with async/await', ()=> {
 
     // Count how many steps run
     const steps = [];
@@ -114,7 +114,7 @@ describe("processing", ()=> {
     before(()=> processGenerator.push('job'));
     before(ironium.once);
 
-    it("should run all steps", ()=> {
+    it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
     });
 
@@ -122,7 +122,7 @@ describe("processing", ()=> {
 
 
 
-  describe("once", ()=> {
+  describe('once', ()=> {
     // Count how many steps run
     const steps = [];
     before(()=> {
@@ -145,7 +145,7 @@ describe("processing", ()=> {
     before(()=> processOnceA.push('job'));
     before(ironium.once);
 
-    it("should run all jobs to completion", ()=> {
+    it('should run all jobs to completion', ()=> {
       assert.equal(steps.join(''), 'ABA');
     });
   });

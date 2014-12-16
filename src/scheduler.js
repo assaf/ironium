@@ -21,10 +21,11 @@ const runJob  = require('./run_job');
 class Schedule {
   constructor(scheduler, name, time, job) {
     this._scheduler = scheduler;
+    this._notify    = scheduler._notify;
 
-    assert(name, "Schedule missing name");
+    assert(name, 'Schedule missing name');
     this.name = name;
-    assert(typeof(job) == 'function', "Schedule missing job function");
+    assert(typeof(job) == 'function', 'Schedule missing job function');
     this.job  = job;
 
     if (time instanceof Date) {
@@ -39,13 +40,13 @@ class Schedule {
       this.endTime   = end   ? +end   : undefined;
       this.every     = (typeof(every) == 'string' ? ms(every) : parseInt(every, 0));
     } else
-      throw new Error("Schedule time must be Date (instance), Number (interval) or object with start/every/end properties");
+      throw new Error('Schedule time must be Date (instance), Number (interval) or object with start/every/end properties');
 
-    assert(this.startTime || this.every, "Schedule requires either start time or interval (0 not acceptable)");
+    assert(this.startTime || this.every, 'Schedule requires either start time or interval (0 not acceptable)');
     if (this.endTime) {
-      assert(this.every, "Schedule with end time requires interval");
+      assert(this.every, 'Schedule with end time requires interval');
       if (this.startTime)
-        assert(this.startTime < this.endTime, "Schedule must start before it ends");
+        assert(this.startTime < this.endTime, 'Schedule must start before it ends');
     }
   }
 
@@ -113,16 +114,12 @@ class Schedule {
 
   // Scheduler calls this to actually run the job when picked up from queue.
   _runJob(time) {
-    this.notify.info("Processing %s, scheduled for %s", this.name, time.toString());
+    this._notify.info('Processing %s, scheduled for %s', this.name, time.toString());
     return runJob(this.name, this.job, [], undefined)
-      .then(()=> this.notify.info("Completed %s, scheduled for %s", this.name, time.toString()) )
+      .then(()=> this._notify.info('Completed %s, scheduled for %s', this.name, time.toString()) )
       .catch((error)=> {
-        this.notify.info("Error %s, scheduled for %s", this.name, time.toString(), error.stack);
+        this._notify.error('Error %s, scheduled for %s', this.name, time.toString(), error);
       });
-  }
-
-  get notify() {
-    return this._scheduler.notify;
   }
 
 }
@@ -136,25 +133,26 @@ module.exports = class Scheduler {
 
     this._ironium     = ironium;
     this._schedules   = Object.create({});
+    this._notify      = ironium;
   }
 
   // Schedules a new job.
   schedule(name, time, job) {
-    assert(job instanceof Function, "Third argument must be the job function");
-    assert(!this._schedules[name],   "Attempt to schedule multiple jobs with same name (" + name + ")");
+    assert(job instanceof Function, 'Third argument must be the job function');
+    assert(!this._schedules[name],  `Attempt to schedule multiple jobs with same name (${name})`);
 
     const newSchedule = new Schedule(this, name, time, job);
     this._schedules[name] = newSchedule;
 
     if (this.started) {
-      this.notify.debug("Starting schedule %s", name);
+      this._notify.debug('Starting schedule %s', name);
       newSchedule.start();
     }
   }
 
   // Start all scheduled jobs.
   start() {
-    this.notify.debug("Starting all schedules");
+    this._notify.debug('Starting all schedules');
     this.started = true;
     // Not listening until we start up the queue.
     this._startQueue();
@@ -164,7 +162,7 @@ module.exports = class Scheduler {
 
   // Stop all scheduled jobs.
   stop() {
-    this.notify.debug("Stopping all schedules");
+    this._notify.debug('Stopping all schedules');
     this.started = false;
     for (let schedule of this.schedules)
       schedule.stop();
@@ -193,7 +191,7 @@ module.exports = class Scheduler {
     if (schedule)
       return schedule._runJob(time);
     else {
-      this.notify.info("No schedule %s, ignoring", name);
+      this._notify.info('No schedule %s, ignoring', name);
       return Promise.resolve();
     }
   }
@@ -220,8 +218,5 @@ module.exports = class Scheduler {
     return this._ironium.config;
   }
 
-  get notify() {
-    return this._ironium;
-  }
 };
 

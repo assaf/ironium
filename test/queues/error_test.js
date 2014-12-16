@@ -4,11 +4,11 @@ const ironium = require('../../src');
 const Promise = require('bluebird');
 
 
-describe("processing", ()=> {
+describe('processing', ()=> {
 
-  const errorCallback   = ironium.queue('error-callback');
-  const errorPromise    = ironium.queue('error-promise');
-  const errorGenerator  = ironium.queue('error-generator');
+  const errorCallbackQueue   = ironium.queue('error-callback');
+  const errorPromiseQueue    = ironium.queue('error-promise');
+  const errorGeneratorQueue  = ironium.queue('error-generator');
 
   function untilSuccessful(done) {
     ironium.once((error)=> {
@@ -19,12 +19,12 @@ describe("processing", ()=> {
     });
   }
 
-  describe("with callback error", ()=> {
+  describe('with callback error', ()=> {
 
     // First two runs should fail, runs ends at 3
     let runs = 0;
     before(()=> {
-      errorCallback.each((job, callback)=> {
+      errorCallbackQueue.each((job, callback)=> {
         runs++;
         if (runs > 2)
           callback();
@@ -33,22 +33,22 @@ describe("processing", ()=> {
       });
     });
 
-    before(()=> errorCallback.push('job'));
+    before(()=> errorCallbackQueue.push('job'));
     before(untilSuccessful);
 
-    it("should repeat until processed", ()=> {
+    it('should repeat until processed', ()=> {
       assert.equal(runs, 3);
     });
 
   });
 
 
-  describe("with rejected promise", ()=> {
+  describe('with rejected promise', ()=> {
 
     // First two runs should fail, runs ends at 3
     let runs = 0;
     before(()=> {
-      errorPromise.each(()=> {
+      errorPromiseQueue.each(()=> {
         runs++;
         if (runs > 2)
           return Promise.resolve();
@@ -57,22 +57,22 @@ describe("processing", ()=> {
       });
     });
 
-    before(()=> errorPromise.push('job'));
+    before(()=> errorPromiseQueue.push('job'));
     before(untilSuccessful);
 
-    it("should repeat until processed", ()=> {
+    it('should repeat until processed', ()=> {
       assert.equal(runs, 3);
     });
 
   });
 
 
-  describe("with generator error", ()=> {
+  describe('with generator error', ()=> {
 
     // First two runs should fail, runs ends at 3
     let runs = 0;
     before(()=> {
-      errorGenerator.each(function*() {
+      errorGeneratorQueue.each(function*() {
         runs++;
         switch (runs) {
           case 1: {
@@ -86,10 +86,10 @@ describe("processing", ()=> {
       });
     });
 
-    before(()=> errorGenerator.push('job'));
+    before(()=> errorGeneratorQueue.push('job'));
     before(untilSuccessful);
 
-    it("should repeat until processed", ()=> {
+    it('should repeat until processed', ()=> {
       assert.equal(runs, 3);
     });
 

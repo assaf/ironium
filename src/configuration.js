@@ -44,7 +44,7 @@ module.exports = class Configuration {
         this.queues.hostname = hostname;
         this.queues.port     = BEANSTALKD_PORT;
       } else if (source.ironio.token || source.ironio.projectID)
-        throw new Error("Configuration error: to use Iron.io, must set both ironio.projectID and ironio.token");
+        throw new Error('Configuration error: to use Iron.io, must set both ironio.projectID and ironio.token');
     }
     this._webhookURL  = this._webhookURL || LOCAL_WEBHOOKURL;
   }

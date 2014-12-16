@@ -48,14 +48,14 @@ function promisify(object, method, ...args) {
 
   if (arguments.length == 1) {
     fn = arguments[0];
-    assert(_.isFunction(fn), "Expected promisify(fn)");
+    assert(_.isFunction(fn), 'Expected promisify(fn)');
   } else {
     const object = arguments[0];
     const method = object[arguments[1]];
     const args   = Array.prototype.slice.call(arguments, 2);
 
-    assert(object, "Expected promisify(object, method, args...)");
-    assert(method, "Method " + arguments[1] + " not found");
+    assert(object, 'Expected promisify(object, method, args...)');
+    assert(method, `Method ${arguments[1]} not found`);
     fn = function(callback) {
       return method.apply(object, args.concat(callback));
     };
@@ -150,9 +150,9 @@ class Session {
         client.once('close', closed);
         client.once('error', reject);
 
-        this._notify.debug(this.id, "$", command, ...args);
+        this._notify.debug(this.id, '$', command, ...args);
         client[command].call(client, ...args, (error, ...results)=> {
-          this._notify.debug(this.id, "=>", command, error, ...results);
+          this._notify.debug(this.id, '=>', command, error, ...results);
           clearTimeout(timeout);
           client.removeListener('close', closed);
           client.removeListener('error', reject);
@@ -220,7 +220,7 @@ class Session {
       client.end();
     }, CONNECT_TIMEOUT);
     timeout.unref();
-    
+
     // This promise resolves when we're done establishing a connection.
     // Multiple request will wait on this.
     const clientPromise = setup
@@ -229,23 +229,23 @@ class Session {
       .catch((error)=> {
         // Failed to establish connection, dissociate _clientPromise and attempt
         // to connect again.
-        this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
+        this._notify.debug('Client error in queue %s: %s', this.id, error.toString());
         client.emit('error', error);
         client.end();
         throw error;
       });
 
     // When this method returns, _clientPromise is set but we still haven't
-    // established a connection, so none of these had a change to trigger. 
+    // established a connection, so none of these had a change to trigger.
     client.once('error', (error)=> {
       // Connection has been closed. Disassociate from session.
       this.end();
-      this._notify.debug("Client error in queue %s: %s", this.id, error.toString());
+      this._notify.debug('Client error in queue %s: %s', this.id, error.toString());
     });
     client.once('close', ()=> {
       // Connection has been closed. Disassociate from session.
       this.end();
-      this._notify.debug("Connection closed for %s", this.id);
+      this._notify.debug('Connection closed for %s', this.id);
     });
 
     // This promise available to all subsequent requests, until error/close
@@ -298,9 +298,9 @@ class Queue {
   // or a string of the form '5s', '2m', etc.  If called with two arguments,
   // returns a promise.
   delay(job, duration, callback) {
-    assert(job, "Missing job to queue");
-    assert(duration.toString, "Delay must be string or number");
-    // Converts "5m" to 300 seconds.  The toString is necessary to handle
+    assert(job, 'Missing job to queue');
+    assert(duration.toString, 'Delay must be string or number');
+    // Converts '5m' to 300 seconds.  The toString is necessary to handle
     // numbers properly, since ms(number) -> string.
     duration = ifProduction( ms(duration.toString()), this._config.maxDelay || 0 );
 
@@ -313,7 +313,7 @@ class Queue {
     const promise = this._put
       .request('put', priority, msToSec(duration), msToSec(timeToRun), payload)
       .then((jobID)=> {
-        this._notify.debug("Queued job %s on queue %s", jobID, this.name, payload);
+        this._notify.debug('Queued job %s on queue %s', jobID, this.name, payload);
         return jobID;
       });
 
@@ -325,7 +325,7 @@ class Queue {
 
   // Process jobs from queue.
   each(handler, width) {
-    assert(typeof(handler) === 'function', "Called each without a valid handler");
+    assert(typeof(handler) === 'function', 'Called each without a valid handler');
     if (width)
       this._width = width;
     this._handlers.push(handler);
@@ -375,11 +375,11 @@ class Queue {
   // Called to process all jobs in this queue.  Returns a promise that resolves
   // to true if any job was processed.
   once() {
-    assert(!this._processing, "Cannot call once while continuously processing jobs");
+    assert(!this._processing, 'Cannot call once while continuously processing jobs');
     if (!this._handlers.length)
       return Promise.resolve();
 
-    this._notify.debug("Waiting for jobs on queue %s", this.name);
+    this._notify.debug('Waiting for jobs on queue %s', this.name);
     return this._reserveAndProcess();
   }
 
@@ -424,12 +424,12 @@ class Queue {
             // No job, go back to wait for next job.
           } else {
             // Report on any other error, and back off for a few.
-            queue._notify.info("Error processing job", error.stack);
+            queue._notify.debug('Error processing job, backing off', error.stack);
             return promisify((callback)=> {
               const timeout = setTimeout(callback, backoff);
               timeout.unref();
             });
-                            
+
           }
         });
 
@@ -439,7 +439,7 @@ class Queue {
       const withTimeout = new Promise(function(resolve, reject) {
         const timeout = setTimeout(function() {
           session.end();
-          reject(new Error("Timeout in processContinously for " + queue.name));
+          reject(new Error(`Timeout in processContinously for ${queue.name}`));
         }, PROCESSING_TIMEOUT);
         timeout.unref();
 
@@ -453,7 +453,7 @@ class Queue {
       withTimeout.then(nextJob, nextJob);
     }
 
-    this._notify.debug("Waiting for jobs on queue %s", this.name);
+    this._notify.debug('Waiting for jobs on queue %s', this.name);
     nextJob();
   }
 
@@ -471,8 +471,8 @@ class Queue {
     } catch(ex) {
     }
 
-    this._notify.info("Processing queued job %s:%s", this.name, jobID);
-    this._notify.debug("Payload for job %s:%s:", this.name, jobID, payload);
+    this._notify.info('Processing queued job %s:%s', this.name, jobID);
+    this._notify.debug('Payload for job %s:%s:', this.name, jobID, payload);
 
     const handlers = this._handlers.slice();
     function nextHandler() {
@@ -483,16 +483,15 @@ class Queue {
 
     return nextHandler()
       .then(()=> {
-        this._notify.info("Completed queued job %s:%s", this.name, jobID);
+        this._notify.info('Completed queued job %s:%s', this.name, jobID);
         // Remove job from queue, swallow error
         return session.request('destroy', jobID)
-          .catch(()=> this._notify.info("Could not delete job %s:%s", this.name, jobID) );
+          .catch(()=> this._notify.info('Could not delete job %s:%s', this.name, jobID) );
       })
       .catch((error)=> {
         // Ideally an error and we want to log the full stack trace, but promise
         // may reject false, undefined, etc.
-        const details = (error && error.stack) || error;
-        this._notify.info("Error processing queued job %s:%s", this.name, jobID, error);
+        this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
         // Error or timeout: we release the job back to the queue.  Since this
         // may be a transient error condition (e.g. server down), we let it sit
         // in the queue for a while before it becomes available again.
@@ -545,7 +544,7 @@ class Queue {
     if (!session) {
       // Setup: tell Beanstalkd which tube to use (persistent to session).
       const tubeName = this._prefixedName;
-      session = new Session(this._server, this.name + '/put', function(client, callback) {
+      session = new Session(this._server, `${this.name}/put`, function(client, callback) {
         client.use(tubeName, callback);
       });
       this._putSession = session;
@@ -560,7 +559,7 @@ class Queue {
     if (!session) {
       // Setup: tell Beanstalkd which tube we're watching (and ignore default tube).
       const tubeName = this._prefixedName;
-      session = new Session(this._server, this.name + '/' + index, function(client, callback) {
+      session = new Session(this._server, `${this.name}/${index}`, function(client, callback) {
         // Must watch a new tube before we can ignore default tube
         client.watch(tubeName, function(error1) {
           client.ignore('default', function(error2) {
@@ -589,7 +588,7 @@ module.exports = class Server {
 
   // Returns the named queue, queue created on demand.
   getQueue(name) {
-    assert(name, "Missing queue name");
+    assert(name, 'Missing queue name');
     let queue = this._queues[name];
     if (!queue) {
       queue = new Queue(this, name);
@@ -602,7 +601,7 @@ module.exports = class Server {
 
   // Starts processing jobs from all queues.
   start() {
-    this.notify.debug("Start all queues");
+    this.notify.debug('Start all queues');
     this.started = true;
     for (let queue of this.queues)
       queue.start();
@@ -610,7 +609,7 @@ module.exports = class Server {
 
   // Stops processing jobs from all queues.
   stop() {
-    this.notify.debug("Stop all queues");
+    this.notify.debug('Stop all queues');
     this.started = false;
     for (let queue of this.queues)
       queue.stop();
@@ -618,7 +617,7 @@ module.exports = class Server {
 
   // Use when testing to empty contents of all queues.  Returns a promise.
   reset() {
-    this.notify.debug("Clear all queues");
+    this.notify.debug('Clear all queues');
     const resets = this.queues.map((queue)=> queue.reset());
     return Promise.all(resets);
   }
