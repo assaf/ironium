@@ -438,14 +438,17 @@ For more precise error reporting, you can register the following event
 listeners:
 
 - `info`  - Logs job getting processed and successful completion
-- `debug` - Way more information, useful for troubleshooting
+- `error` - Emitted each time there's an error in processing a job
 
 For example:
 
 ```
-ironium.on('debug', logger.debug);
-ironium.on('info',  logger.info);
+ironium.on('error', logger.error);
 ```
+
+Because Ironium expects some jobs will fail, and will retry them until
+successful, you do not have to listen to its `error` event.  It's error event
+will not cause the program to exit.
 
 
 ## Configuring
