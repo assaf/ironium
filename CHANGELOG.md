@@ -1,3 +1,9 @@
+# 1.0.1
+
+REMOVED "possible EventEmitter memory leak detected" message when we have
+hundred of writers pushing to the same queue.
+
+
 # 1.0.0
 
 ADDED emit `error` events and output error message when `DEBUG=ironium`

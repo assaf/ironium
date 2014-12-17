@@ -137,6 +137,8 @@ class Session {
     // This is the Fivebeans client is essentially a session.
     const config  = this._config;
     const client  = new fivebeans.client(config.queues.hostname, config.queues.port);
+    // For when we have a lot of writers contending to push to the same queue.
+    client.setMaxListeners(0);
 
     // This promise resolves when client connects.
     const connected = new Promise(function(resolve, reject) {
