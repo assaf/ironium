@@ -84,7 +84,7 @@ class Ironium extends EventEmitter {
       .then(()=> this._queues.once() )
       .then(()=> this.debug('Completed all jobs') );
     if (callback)
-      promise.done(()=> callback(), callback);
+      promise.done(callback, callback);
     else
       return promise;
   }

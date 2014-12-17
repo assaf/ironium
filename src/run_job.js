@@ -44,21 +44,22 @@ module.exports = function runJob(jobID, handler, args, timeout) {
       // errors are handled by on('error'), successful completion resolves.
       const result = handler(...args, domain.intercept(resolve));
 
-      // Job may have returned a promise or a generator, var's see …
-      if (result && typeof(result.then) == 'function') {
-        // A thenable object == promise.
-        result.then(resolve, function(error) {
-          if (!(error instanceof Error))
-            error = new Error(`${error} in ${handler}`);
-          domain.emit('error', error);
-        });
-      } else if (result && typeof(result.next) == 'function' &&
-                 typeof(result.throw) == 'function') {
+      // Job may have returned a promise or a generator
+      if (result && typeof(result.next) === 'function' && typeof(result.throw) === 'function') {
         // A generator object.  Use it to resolve job instead of callback.
         co(result).then(resolve, function(error) {
           domain.emit('error', error);
         });
+      } else if (result && typeof(result.then) === 'function') {
+        // A thenable: cast it to a promise we can handle
+        Promise.resolve(result)
+          .then(resolve, function(error) {
+            if (!(error instanceof Error))
+              error = new Error(`${error} in ${handler}`);
+            domain.emit('error', error);
+          });
       }
+      // Otherwise it's a callback, wait for it to resolve job
 
     });
 

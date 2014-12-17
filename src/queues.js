@@ -1,4 +1,5 @@
 const assert      = require('assert');
+const Bluebird    = require('bluebird');
 const fivebeans   = require('fivebeans');
 const ms          = require('ms');
 const Promise     = require('bluebird');
@@ -28,50 +29,6 @@ const RELEASE_DELAY         = ms('1m');
 // In testing environment, delay() is artifically limited to this duration.
 const MAX_DELAY_FOR_TESTING = ms('10s');
 
-
-// You can call this with a function that accepts a single argument, the
-// callback, for example:
-//
-//   promisify(function(callback) {
-//     fs.readFile(filename, callback);
-//   });
-//   promisify((callback)=> fs.readFile(filename, callback));
-//
-// You can also call this with an object, method name and any arguments.  It
-// will call the named method on the object with any supplied arguments and a
-// callback.  For example:
-//
-//   promisify(fs, 'readFile', filename);
-//
-function promisify(object, method, ...args) {
-  let fn;
-
-  if (arguments.length == 1) {
-    fn = arguments[0];
-    assert(_.isFunction(fn), 'Expected promisify(fn)');
-  } else {
-    const object = arguments[0];
-    const method = object[arguments[1]];
-    const args   = Array.prototype.slice.call(arguments, 2);
-
-    assert(object, 'Expected promisify(object, method, args...)');
-    assert(method, `Method ${arguments[1]} not found`);
-    fn = function(callback) {
-      return method.apply(object, args.concat(callback));
-    };
-  }
-
-  return new Promise(function(resolve, reject) {
-    fn(function(error) {
-      if (error)
-        reject(error);
-      else if (arguments.length > 2)
-        resolve(Array.prototype.slice.call(arguments, 1));
-      else
-        resolve(arguments[1]);
-    });
-  });
-}
 
 // Returns actual timeout in production.  If NODE_ENV is development or test,
 // return a timeout no larger than the limit (default to zero).
@@ -202,7 +159,7 @@ class Session {
     let authenticated;
     if (config.authenticate) {
       authenticated = connected.then(function() {
-        return promisify(client, 'put', 0, 0, 0, config.authenticate);
+        return Bluebird.promisify(client.put, client)(0, 0, 0, config.authenticate);
       });
     } else
       authenticated = connected;
@@ -210,7 +167,7 @@ class Session {
     // Put/reserve clients have different setup requirements, this are handled by
     // an externally supplied method.
     const setup = authenticated.then(()=> {
-      return promisify(this, 'setup', client);
+      return Bluebird.promisify(this.setup, this)(client);
     });
 
     // If we can't establish a connection of complete the authentication/setup
@@ -425,8 +382,8 @@ class Queue {
           } else {
             // Report on any other error, and back off for a few.
             queue._notify.debug('Error processing job, backing off', error.stack);
-            return promisify((callback)=> {
-              const timeout = setTimeout(callback, backoff);
+            return new Promise(function(resolve) {
+              const timeout = setTimeout(resolve, backoff);
               timeout.unref();
             });
 
