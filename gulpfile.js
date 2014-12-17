@@ -2,10 +2,12 @@ const clean   = require('gulp-clean');
 const exec    = require('child_process').exec;
 const File    = require('fs');
 const gulp    = require('gulp');
+const Net     = require('net');
 const notify  = require('gulp-notify');
 const OS      = require('os');
 const Path    = require('path');
 const replace = require('gulp-replace');
+const spawn   = require('child_process').spawn;
 const Traceur = require('traceur');
 const through = require('through2');
 const version = require('./package.json').version;
@@ -21,7 +23,7 @@ gulp.task('default', function() {
 
 
 // Compile ES6 in src to ES5 in lib
-gulp.task('build', function() {
+gulp.task('build', ['clean'], function() {
   const options = {
     asyncFunctions:  true,
     validate:        true,
@@ -38,6 +40,46 @@ gulp.task('build', function() {
 // Delete anything compiled into lib directory
 gulp.task('clean', function() {
   return gulp.src('lib/*', { read: false }).pipe(clean());
+});
+
+
+// Restart beanstalkd (OS X only)
+// Make sure we're running with a clean slate
+gulp.task('restart', function(done) {
+  if (process.platform !== 'darwin') {
+    done();
+    return;
+  }
+
+  console.log('Restaring beanstalkd ...');
+  exec('launchctl stop homebrew.mxcl.beanstalk', function(error, stdout, stderr) {
+    process.stdout.write(stdout);
+    exec('launchctl start homebrew.mxcl.beanstalk', function(error, stdout, stderr) {
+      process.stdout.write(stdout);
+      console.log('Waiting for beanstalkd ...');
+      connect();
+    });
+  });
+
+  function connect() {
+    const connection = Net.connect({ port: 11300 });
+    connection.on('connect', function() {
+      connection.end();
+      done();
+    });
+    connection.on('error', function(error) {
+      setTimeout(connect, 100);
+    });
+  }
+});
+
+
+// Runs the test suite
+//
+// Rebuild ES5 source files in lib directory, one of the test suites runs in ES5
+// Restart Beanstalkd, make sure we're running from a clean slate
+gulp.task('test', ['build', 'restart'], function(done) {
+  spawn('mocha', [], { stdio: 'inherit' }, done);
 });
 
 

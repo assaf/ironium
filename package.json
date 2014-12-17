@@ -2,7 +2,7 @@
   "name": "ironium",
   "version": "1.0.0",
   "scripts": {
-    "test": "gulp clean build && mocha",
+    "test": "gulp test",
     "prepublish": "npm test",
     "postpublish": "gulp tag-release"
   },

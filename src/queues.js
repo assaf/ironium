@@ -86,45 +86,46 @@ class Session {
   request(command, ...args) {
     // Ask for connection, we get a promise that resolves into a client.
     // We return a new promise that resolves to the output of the request.
-    return this.connect().then((client)=> {
-      return new Promise((resolve, reject)=> {
-        // Processing (continously or not) ignore the TIMED_OUT and CLOSED
-        // errors.
+    return this.connect()
+      .then((client)=> {
+        return new Promise((resolve, reject)=> {
+          // Processing (continously or not) ignore the TIMED_OUT and CLOSED
+          // errors.
 
-        // If request times out, we conside the connection dead, and force a
-        // reconnect.
-        const timeout = setTimeout(()=> {
-          reject(new Error('TIMED_OUT'));
-          this.end();
-        }, RESERVE_TIMEOUT * 2);
-        timeout.unref();
+          // If request times out, we conside the connection dead, and force a
+          // reconnect.
+          const timeout = setTimeout(()=> {
+            reject(new Error('TIMED_OUT'));
+            this.end();
+          }, RESERVE_TIMEOUT * 2);
+          timeout.unref();
 
-        // Fivebeans client doesn't monitor for connections closing/erroring,
-        // so we catch these events and terminate request early.
-        function closed() {
-          reject(new Error('CLOSED'));
-        }
-        client.once('close', closed);
-        client.once('error', reject);
+          // Fivebeans client doesn't monitor for connections closing/erroring,
+          // so we catch these events and terminate request early.
+          function closed() {
+            reject(new Error('CLOSED'));
+          }
+          client.once('close', closed);
+          client.once('error', reject);
 
-        this._notify.debug(this.id, '$', command, ...args);
-        client[command].call(client, ...args, (error, ...results)=> {
-          this._notify.debug(this.id, '=>', command, error, ...results);
-          clearTimeout(timeout);
-          client.removeListener('close', closed);
-          client.removeListener('error', reject);
+          this._notify.debug(this.id, '$', command, ...args);
+          client[command].call(client, ...args, (error, ...results)=> {
+            this._notify.debug(this.id, '=>', command, error, ...results);
+            clearTimeout(timeout);
+            client.removeListener('close', closed);
+            client.removeListener('error', reject);
 
-          if (error)
-            reject(error);
-          else if (results.length > 1)
-            resolve(results);
-          else
-            resolve(results[0]);
+            if (error)
+              reject(error);
+            else if (results.length > 1)
+              resolve(results);
+            else
+              resolve(results[0]);
+          });
+
         });
 
       });
-
-    });
   }
 
   // Called to establish a new connection, or use existing connections.
@@ -158,17 +159,13 @@ class Session {
     // session-specific setup.
     let authenticated;
     if (config.authenticate) {
-      authenticated = connected.then(function() {
-        return Bluebird.promisify(client.put, client)(0, 0, 0, config.authenticate);
-      });
+      authenticated = connected.then(()=> Bluebird.promisify(client.put, client)(0, 0, 0, config.authenticate) );
     } else
       authenticated = connected;
 
     // Put/reserve clients have different setup requirements, this are handled by
     // an externally supplied method.
-    const setup = authenticated.then(()=> {
-      return Bluebird.promisify(this.setup, this)(client);
-    });
+    const setup = authenticated.then(()=> Bluebird.promisify(this.setup, this)(client) );
 
     // If we can't establish a connection of complete the authentication/setup
     // step, and Fivebeans doesn't trigger an error.
@@ -214,7 +211,7 @@ class Session {
   // Close this session
   end() {
     if (this._clientPromise) {
-      this._clientPromise.then((client)=> {
+      this._clientPromise.done((client)=> {
         client.end();
         client.emit('close');
       });
@@ -275,7 +272,7 @@ class Queue {
       });
 
     if (callback)
-      promise.then((jobID)=> callback(null, jobID), callback);
+      promise.done((jobID)=> callback(null, jobID), callback);
     else
       return promise;
   }
@@ -403,11 +400,11 @@ class Queue {
         // Whether processed or failed, resolve this promise.
         handleError
           .then(resolve, resolve)
-          .then(()=> clearTimeout(timeout));
+          .done(()=> clearTimeout(timeout));
       });
 
       // Regardless of outcome, go on to process next job.
-      withTimeout.then(nextJob, nextJob);
+      withTimeout.done(nextJob, nextJob);
     }
 
     this._notify.debug('Waiting for jobs on queue %s', this.name);
@@ -582,8 +579,9 @@ module.exports = class Server {
   // Use when testing to wait for all jobs to be processed.  Returns a promise.
   once() {
     const onces = this.queues.map((queue)=> queue.once());
-    return Promise.all(onces).
-      then((processed)=> {
+    return Promise
+      .all(onces)
+      .then((processed)=> {
         const anyProcessed = (processed.indexOf(true) >= 0);
         if (anyProcessed)
           return this.once();
