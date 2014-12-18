@@ -1,3 +1,9 @@
+# 1.0.2
+
+FIXED no longer user timeout to detect connection failure, this allows better
+concurrency for job push on slow connections.
+
+
 # 1.0.1
 
 REMOVED "possible EventEmitter memory leak detected" message when we have

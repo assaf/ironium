@@ -71,6 +71,8 @@ class Session {
     this.setup    = setup;
     this._config  = server.config;
     this._notify  = server.notify;
+
+    this._clientPromise = null;
   }
 
   // Make a request to the server.
@@ -89,31 +91,26 @@ class Session {
     return this.connect()
       .then((client)=> {
         return new Promise((resolve, reject)=> {
-          // Processing (continously or not) ignore the TIMED_OUT and CLOSED
-          // errors.
+          // Processing (continously or not) know to ignore the TIMED_OUT
+          // and CLOSED errors.
 
-          // If request times out, we conside the connection dead, and force a
-          // reconnect.
-          const timeout = setTimeout(()=> {
-            reject(new Error('TIMED_OUT'));
-            this.end();
-          }, RESERVE_TIMEOUT * 2);
-          timeout.unref();
-
-          // Fivebeans client doesn't monitor for connections closing/erroring,
-          // so we catch these events and terminate request early.
-          function closed() {
-            reject(new Error('CLOSED'));
+          // When Fivebeans client executes a command, it doesn't monitor for
+          // connection close/error, so we need to catch these events ourselves
+          // and reject the promise.
+          const onConnectionEnded = (error)=> {
+            reject(error || new Error('CLOSED'));
+            this._notify.debug(this.id, '=>', command, error || 'CLOSED');
           }
-          client.once('close', closed);
-          client.once('error', reject);
+
+          client.once('close', onConnectionEnded);
+          client.once('error', onConnectionEnded);
 
           this._notify.debug(this.id, '$', command, ...args);
           client[command].call(client, ...args, (error, ...results)=> {
+            // This may never get called
             this._notify.debug(this.id, '=>', command, error, ...results);
-            clearTimeout(timeout);
-            client.removeListener('close', closed);
-            client.removeListener('error', reject);
+            client.removeListener('close', onConnectionEnded);
+            client.removeListener('error', onConnectionEnded);
 
             if (error)
               reject(error);
@@ -242,6 +239,7 @@ class Queue {
     this._reserveSessions = [];
 
     this._config          = server.config.queues;
+    this._width           = server.config.width || 1;
   }
 
 
@@ -324,7 +322,7 @@ class Queue {
 
   // Number of workers to run in parallel.
   get width() {
-    return this._width || this._server.config.width || 1;
+    return this._width;
   }
 
 
