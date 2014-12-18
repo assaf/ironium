@@ -1,4 +1,4 @@
-const clean   = require('gulp-clean');
+const del     = require('del');
 const exec    = require('child_process').exec;
 const File    = require('fs');
 const gulp    = require('gulp');
@@ -14,8 +14,7 @@ const version = require('./package.json').version;
 
 
 // Compile then watch -> compile
-gulp.task('default', function() {
-  gulp.run('clean', 'build');
+gulp.task('default', ['build'], function() {
   gulp.watch('src/**/*.js', function() {
     gulp.run('build');
   });
@@ -38,8 +37,8 @@ gulp.task('build', ['clean'], function() {
 });
 
 // Delete anything compiled into lib directory
-gulp.task('clean', function() {
-  return gulp.src('lib/*', { read: false }).pipe(clean());
+gulp.task('clean', function(done) {
+  del('lib/**', done);
 });
 
 
