@@ -31,5 +31,6 @@
   "repository": {
     "type": "git",
     "url": "http://github.com/assaf/ironium"
-  }
+  },
+  "license": "MIT"
 }
