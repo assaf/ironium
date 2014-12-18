@@ -1,4 +1,4 @@
-# 1.0.2
+# 1.0.3
 
 FIXED no longer user timeout to detect connection failure, this allows better
 concurrency for job push on slow connections.

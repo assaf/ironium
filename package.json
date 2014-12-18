@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "scripts": {
     "test": "gulp test",
     "postpublish": "gulp tag-release",
@@ -27,6 +27,7 @@
     "mocha": "^2.0.1",
     "through2": "^0.6.3"
   },
+  "homepage": "https://www.npmjs.com/package/ironium",
   "repository": {
     "type": "git",
     "url": "http://github.com/assaf/ironium"

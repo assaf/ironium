@@ -119,6 +119,10 @@ gulp.task('tag-release', ['element', 'changelog'], function(callback) {
   });
 });
 
+gulp.task('release', function(done) {
+  spawn('npm', ['publish'], { stdio: 'inherit' }, done);
+});
+
 
 function es6(options) {
 	return through.obj(function(file, encoding, callback) {
