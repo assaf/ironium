@@ -3,7 +3,6 @@
   "version": "1.0.1",
   "scripts": {
     "test": "gulp test",
-    "prepublish": "npm test",
     "postpublish": "gulp tag-release"
   },
   "engines": {
