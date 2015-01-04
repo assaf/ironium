@@ -3,16 +3,14 @@ const assert  = require('assert');
 const ironium = require('../../src');
 
 
-describe('queue', ()=> {
+describe('queue', function() {
 
   const captureQueue = ironium.queue('capture');
 
   // Capture processed jobs here.
-  const processed = [];
-
-  before(function() {
+  before(()=> {
     captureQueue.eachJob((job, callback)=> {
-      processed.push(job);
+      this.job = job;
       callback();
     });
   });
@@ -23,12 +21,9 @@ describe('queue', ()=> {
     before(ironium.runOnce);
 
     it('should process that object', ()=>{
-      const job = processed[0];
-      assert.equal(job.id, 5);
-      assert.equal(job.name, 'job');
+      assert.equal(this.job.id, 5);
+      assert.equal(this.job.name, 'job');
     });
-
-    after(()=> processed.length = 0);
   });
 
 
@@ -37,11 +32,8 @@ describe('queue', ()=> {
     before(ironium.runOnce);
 
     it('should process that string', ()=>{
-      const job = processed[0];
-      assert.equal(job, 'job');
+      assert.equal(this.job, 'job');
     });
-
-    after(()=> processed.length = 0);
   });
 
 
@@ -50,11 +42,8 @@ describe('queue', ()=> {
     before(ironium.runOnce);
 
     it('should process that number', ()=>{
-      const job = processed[0];
-      assert.equal(job, 3.1);
+      assert.equal(this.job, 3.1);
     });
-
-    after(()=> processed.length = 0);
   });
 
 
@@ -63,22 +52,44 @@ describe('queue', ()=> {
     before(ironium.runOnce);
 
     it('should process that array', ()=>{
-      const job = processed[0];
-      assert.equal(job.length, 2);
-      assert.equal(job[0], true);
-      assert.equal(job[1], '+');
+      assert.equal(this.job.length, 2);
+      assert.equal(this.job[0], true);
+      assert.equal(this.job[1], '+');
+    });
+  });
+
+
+  describe('a buffer', ()=> {
+
+    describe('(JSON)', ()=> {
+      before(()=> captureQueue.pushJob(new Buffer('{ "x": 1 }')));
+      before(ironium.runOnce);
+
+      it('should process that buffer as object value', ()=>{
+        assert.equal(this.job.x, 1);
+      });
     });
 
-    after(()=> processed.length = 0);
+
+    describe('(not JSON)', ()=> {
+      before(()=> captureQueue.pushJob(new Buffer('x + 1')));
+      before(ironium.runOnce);
+
+      it('should process that buffer as string value', ()=>{
+        assert.equal(this.job, 'x + 1');
+      });
+    });
+
   });
 
 
   describe('a null', ()=> {
     it('should error', (done)=> {
+      this.job = null;
       assert.throws(()=> {
         captureQueue.pushJob(null, done);
       });
-      assert(processed.length === 0);
+      assert(!this.job);
       done();
     });
   });
