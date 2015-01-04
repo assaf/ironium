@@ -59,7 +59,7 @@ class Ironium extends EventEmitter {
   // property is set, the schedule stops at that set time.  If only the every
   // property is set, the schedule runs on that specified interval.
   scheduleJob(name, time, job) {
-    this._scheduler.schedule(name, time, job);
+    this._scheduler.scheduleJob(name, time, job);
   }
 
   // Update configuration.
