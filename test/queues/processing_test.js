@@ -6,11 +6,11 @@ const Promise = require('bluebird');
 
 describe('processing', ()=> {
 
-  const processMultiple   = ironium.queue('process-multiple');
-  const processPromise    = ironium.queue('process-promise');
-  const processGenerator  = ironium.queue('process-generator');
-  const processOnceA      = ironium.queue('process-once-a');
-  const processOnceB      = ironium.queue('process-once-b');
+  const processMultipleQueue   = ironium.queue('process-multiple');
+  const processPromiseQueue    = ironium.queue('process-promise');
+  const processGeneratorQueue  = ironium.queue('process-generator');
+  const processOnceAQueue      = ironium.queue('process-once-a');
+  const processOnceBQueue      = ironium.queue('process-once-b');
 
 
   describe('with multiple handlers', ()=> {
@@ -18,22 +18,22 @@ describe('processing', ()=> {
     // Count how many steps run
     const steps = [];
     before(()=> {
-      processMultiple.each((job, callback)=> {
+      processMultipleQueue.eachJob((job, callback)=> {
         steps.push('A');
         callback();
       });
-      processMultiple.each((job, callback)=> {
+      processMultipleQueue.eachJob((job, callback)=> {
         steps.push('B');
         callback();
       });
-      processMultiple.each((job, callback)=> {
+      processMultipleQueue.eachJob((job, callback)=> {
         steps.push('C');
         callback();
       });
     });
 
-    before(()=> processMultiple.push('job'));
-    before(ironium.once);
+    before(()=> processMultipleQueue.pushJob('job'));
+    before(ironium.runOnce);
 
     it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -47,7 +47,7 @@ describe('processing', ()=> {
     // Count how many steps run
     const steps = [];
     before(()=> {
-      processPromise.each(()=> {
+      processPromiseQueue.eachJob(()=> {
         const promise = new Promise(setImmediate);
         return promise
           .then(()=> steps.push('A'))
@@ -56,8 +56,8 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> processPromise.push('job'));
-    before(ironium.once);
+    before(()=> processPromiseQueue.pushJob('job'));
+    before(ironium.runOnce);
 
     it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -71,7 +71,7 @@ describe('processing', ()=> {
     // Count how many steps run
     const steps = [];
     before(()=> {
-      processGenerator.each(function*() {
+      processGeneratorQueue.eachJob(function*() {
         const one = yield Promise.resolve('A');
         steps.push(one);
         const two = yield (done)=> done(null, 'B');
@@ -84,8 +84,8 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> processGenerator.push('job'));
-    before(ironium.once);
+    before(()=> processGeneratorQueue.pushJob('job'));
+    before(ironium.runOnce);
 
     it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -99,7 +99,7 @@ describe('processing', ()=> {
     // Count how many steps run
     const steps = [];
     before(()=> {
-      processGenerator.each(async function() {
+      processGeneratorQueue.eachJob(async function() {
         const one = await Promise.resolve('A');
         steps.push(one);
         const two = await Promise.resolve('B');
@@ -111,8 +111,8 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> processGenerator.push('job'));
-    before(ironium.once);
+    before(()=> processGeneratorQueue.pushJob('job'));
+    before(ironium.runOnce);
 
     it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -129,21 +129,21 @@ describe('processing', ()=> {
       // Process A, queue job for B
       // Process B, queue job for A
       // Process A, nothing more
-      processOnceA.each(function(job, callback) {
+      processOnceAQueue.eachJob(function(job, callback) {
         steps.push('A');
         if (steps.length == 1)
-          processOnceB.push('job', callback);
+          processOnceBQueue.pushJob('job', callback);
         else
           callback();
       });
-      processOnceB.each(function(job, callback) {
+      processOnceBQueue.eachJob(function(job, callback) {
         steps.push('B');
-        processOnceA.push('job', callback);
+        processOnceAQueue.pushJob('job', callback);
       });
     });
 
-    before(()=> processOnceA.push('job'));
-    before(ironium.once);
+    before(()=> processOnceAQueue.pushJob('job'));
+    before(ironium.runOnce);
 
     it('should run all jobs to completion', ()=> {
       assert.equal(steps.join(''), 'ABA');

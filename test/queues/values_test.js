@@ -5,13 +5,13 @@ const ironium = require('../../src');
 
 describe('queue', ()=> {
 
-  const capture = ironium.queue('capture');
+  const captureQueue = ironium.queue('capture');
 
   // Capture processed jobs here.
   const processed = [];
 
   before(function() {
-    capture.each((job, callback)=> {
+    captureQueue.eachJob((job, callback)=> {
       processed.push(job);
       callback();
     });
@@ -19,8 +19,8 @@ describe('queue', ()=> {
 
 
   describe('an object', ()=> {
-    before(()=> capture.push({ id: 5, name: 'job' }));
-    before(ironium.once);
+    before(()=> captureQueue.pushJob({ id: 5, name: 'job' }));
+    before(ironium.runOnce);
 
     it('should process that object', ()=>{
       const job = processed[0];
@@ -33,8 +33,8 @@ describe('queue', ()=> {
 
 
   describe('a string', ()=> {
-    before(()=> capture.push('job'));
-    before(ironium.once);
+    before(()=> captureQueue.pushJob('job'));
+    before(ironium.runOnce);
 
     it('should process that string', ()=>{
       const job = processed[0];
@@ -46,8 +46,8 @@ describe('queue', ()=> {
 
 
   describe('a number', ()=> {
-    before(()=> capture.push(3.1));
-    before(ironium.once);
+    before(()=> captureQueue.pushJob(3.1));
+    before(ironium.runOnce);
 
     it('should process that number', ()=>{
       const job = processed[0];
@@ -59,8 +59,8 @@ describe('queue', ()=> {
 
 
   describe('an array', ()=> {
-    before(()=> capture.push([true, '+']));
-    before(ironium.once);
+    before(()=> captureQueue.pushJob([true, '+']));
+    before(ironium.runOnce);
 
     it('should process that array', ()=>{
       const job = processed[0];
@@ -76,7 +76,7 @@ describe('queue', ()=> {
   describe('a null', ()=> {
     it('should error', (done)=> {
       assert.throws(()=> {
-        capture.push(null, done);
+        captureQueue.pushJob(null, done);
       });
       assert(processed.length === 0);
       done();

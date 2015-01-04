@@ -11,7 +11,7 @@ describe('processing', ()=> {
   const errorGeneratorQueue  = ironium.queue('error-generator');
 
   function untilSuccessful(done) {
-    ironium.once((error)=> {
+    ironium.runOnce((error)=> {
       if (error)
         setTimeout(()=> untilSuccessful(done));
       else
@@ -24,7 +24,7 @@ describe('processing', ()=> {
     // First two runs should fail, runs ends at 3
     let runs = 0;
     before(()=> {
-      errorCallbackQueue.each((job, callback)=> {
+      errorCallbackQueue.eachJob((job, callback)=> {
         runs++;
         if (runs > 2)
           callback();
@@ -33,7 +33,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> errorCallbackQueue.push('job'));
+    before(()=> errorCallbackQueue.pushJob('job'));
     before(untilSuccessful);
 
     it('should repeat until processed', ()=> {
@@ -48,7 +48,7 @@ describe('processing', ()=> {
     // First two runs should fail, runs ends at 3
     let runs = 0;
     before(()=> {
-      errorPromiseQueue.each(()=> {
+      errorPromiseQueue.eachJob(()=> {
         runs++;
         if (runs > 2)
           return Promise.resolve();
@@ -57,7 +57,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> errorPromiseQueue.push('job'));
+    before(()=> errorPromiseQueue.pushJob('job'));
     before(untilSuccessful);
 
     it('should repeat until processed', ()=> {
@@ -72,7 +72,7 @@ describe('processing', ()=> {
     // First two runs should fail, runs ends at 3
     let runs = 0;
     before(()=> {
-      errorGeneratorQueue.each(function*() {
+      errorGeneratorQueue.eachJob(function*() {
         runs++;
         switch (runs) {
           case 1: {
@@ -86,7 +86,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> errorGeneratorQueue.push('job'));
+    before(()=> errorGeneratorQueue.pushJob('job'));
     before(untilSuccessful);
 
     it('should repeat until processed', ()=> {

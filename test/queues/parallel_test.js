@@ -5,8 +5,8 @@ const ironium = require('../../src');
 
 describe('processing', ()=> {
 
-  const processSerial     = ironium.queue('process-serial');
-  const processParallel   = ironium.queue('process-parallel');
+  const processSerialQueue   = ironium.queue('process-serial');
+  const processParallelQueue = ironium.queue('process-parallel');
 
 
   describe('with one worker', ()=> {
@@ -14,7 +14,7 @@ describe('processing', ()=> {
     // Count how many steps run
     const chain = [];
     before(()=> {
-      processSerial.each((job, callback)=> {
+      processSerialQueue.eachJob((job, callback)=> {
         chain.push('A');
         setTimeout(()=> {
           chain.push('B');
@@ -23,9 +23,9 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> processSerial.push(1));
-    before(()=> processSerial.push(2));
-    before(ironium.once);
+    before(()=> processSerialQueue.pushJob(1));
+    before(()=> processSerialQueue.pushJob(2));
+    before(ironium.runOnce);
 
     it('should run jobs in sequence', ()=> {
       assert.equal(chain.join(''), 'ABAB');
@@ -39,7 +39,7 @@ describe('processing', ()=> {
     // Count how many steps run
     const chain = [];
     before(()=> {
-      processParallel.each((job, callback)=> {
+      processParallelQueue.eachJob((job, callback)=> {
         chain.push('A');
         setTimeout(()=> {
           chain.push('B');
@@ -48,9 +48,9 @@ describe('processing', ()=> {
       }, 2);
     });
 
-    before(()=> processParallel.push(3));
-    before(()=> processParallel.push(4));
-    before(ironium.once);
+    before(()=> processParallelQueue.pushJob(3));
+    before(()=> processParallelQueue.pushJob(4));
+    before(ironium.runOnce);
 
     it('should run jobs in sequence', ()=> {
       assert.equal(chain.join(''), 'AABB');

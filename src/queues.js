@@ -1,9 +1,10 @@
-const assert      = require('assert');
-const Bluebird    = require('bluebird');
-const fivebeans   = require('fivebeans');
-const ms          = require('ms');
-const Promise     = require('bluebird');
-const runJob      = require('./run_job');
+const assert        = require('assert');
+const Bluebird      = require('bluebird');
+const { deprecate } = require('util');
+const fivebeans     = require('fivebeans');
+const ms            = require('ms');
+const Promise       = require('bluebird');
+const runJob        = require('./run_job');
 
 
 // How long to wait establishing a new connection.
@@ -242,16 +243,15 @@ class Queue {
     this._width           = server.config.width || 1;
   }
 
-
   // Push job to queue.  If called with one argument, returns a promise.
-  push(job, callback) {
-    return this.delay(job, 0, callback);
+  pushJob(job, callback) {
+    return this.delayJob(job, 0, callback);
   }
 
   // Push job to queue with the given delay.  Delay can be millisecond,
   // or a string of the form '5s', '2m', etc.  If called with two arguments,
   // returns a promise.
-  delay(job, duration, callback) {
+  delayJob(job, duration, callback) {
     assert(job, 'Missing job to queue');
     assert(duration.toString, 'Delay must be string or number');
     // Converts '5m' to 300 seconds.  The toString is necessary to handle
@@ -278,7 +278,7 @@ class Queue {
   }
 
   // Process jobs from queue.
-  each(handler, width) {
+  eachJob(handler, width) {
     assert(typeof(handler) === 'function', 'Called each without a valid handler');
     if (width)
       this._width = width;
@@ -320,7 +320,13 @@ class Queue {
     this._reserveSessions.length = 0;
   }
 
+
   // Number of workers to run in parallel.
+  get queueWidth() {
+    return this._width;
+  }
+
+  // DEPRECATED
   get width() {
     return this._width;
   }
@@ -328,7 +334,7 @@ class Queue {
 
   // Called to process all jobs in this queue.  Returns a promise that resolves
   // to true if any job was processed.
-  once() {
+  runOnce() {
     assert(!this._processing, 'Cannot call once while continuously processing jobs');
     if (!this._handlers.length)
       return Promise.resolve();
@@ -336,6 +342,7 @@ class Queue {
     this._notify.debug('Waiting for jobs on queue %s', this.name);
     return this._reserveAndProcess();
   }
+
 
   // Used by once to reserve and process each job recursively.
   _reserveAndProcess() {
@@ -457,7 +464,7 @@ class Queue {
   }
 
   // Delete all messages from the queue.
-  reset() {
+  purgeQueues() {
     // Kill any sessions blocking to reserve a job.
     for (let reserve of this._reserveSessions)
       reserve.end();
@@ -529,6 +536,19 @@ class Queue {
 }
 
 
+Queue.prototype.push = deprecate(function() {
+  return this.pushJob.apply(this, arguments);
+}, 'push is deprecated, please use pushJob instead');
+
+Queue.prototype.delay = deprecate(function() {
+  return this.delayJob.apply(this, arguments);
+}, 'delay is deprecated, please use delayJob instead');
+
+Queue.prototype.each = deprecate(function() {
+  return this.eachJob.apply(this, arguments);
+}, 'each is deprecated, please use eachJob instead');
+
+
 // Abstracts the queue server.
 module.exports = class Server {
 
@@ -570,21 +590,21 @@ module.exports = class Server {
   }
 
   // Use when testing to empty contents of all queues.  Returns a promise.
-  reset() {
+  purgeQueues() {
     this.notify.debug('Clear all queues');
-    const resets = this.queues.map((queue)=> queue.reset());
-    return Promise.all(resets);
+    const promises = this.queues.map((queue)=> queue.purgeQueues());
+    return Promise.all(promises);
   }
 
   // Use when testing to wait for all jobs to be processed.  Returns a promise.
-  once() {
-    const onces = this.queues.map((queue)=> queue.once());
+  runOnce() {
+    const onces = this.queues.map((queue)=> queue.runOnce());
     return Promise
       .all(onces)
       .then((processed)=> {
         const anyProcessed = (processed.indexOf(true) >= 0);
         if (anyProcessed)
-          return this.once();
+          return this.runOnce();
       });
   }
 

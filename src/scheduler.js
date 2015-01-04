@@ -88,7 +88,7 @@ class Schedule {
   }
 
   // Run job once.
-  once() {
+  runOnce() {
     const now = Date.now();
     if ((!this.startTime || now >= this.startTime) &&
         (!this.endTime || now < this.endTime)) {
@@ -137,7 +137,7 @@ module.exports = class Scheduler {
   }
 
   // Schedules a new job.
-  schedule(name, time, job) {
+  scheduleJob(name, time, job) {
     assert(job instanceof Function, 'Third argument must be the job function');
     assert(!this._schedules[name],  `Attempt to schedule multiple jobs with same name (${name})`);
 
@@ -169,8 +169,8 @@ module.exports = class Scheduler {
   }
 
   // Run all schedules jobs in parallel.
-  once() {
-    const schedules = this.schedules.map((schedule)=> schedule.once());
+  runOnce() {
+    const schedules = this.schedules.map((schedule)=> schedule.runOnce());
     return Promise.all(schedules);
   }
 
@@ -182,7 +182,7 @@ module.exports = class Scheduler {
 
   // Schedule calls this to queue the job.
   queueJob(name) {
-    return this.queue.push({ name: name, time: new Date().toISOString()});
+    return this.queue.pushJob({ name: name, time: new Date().toISOString()});
   }
 
   // This is used to pick up job from the queue and run it.
@@ -204,7 +204,7 @@ module.exports = class Scheduler {
   _startQueue() {
     if (!this._queue) {
       this._queue = this._ironium.queue('$schedule');
-      this._queue.each(this._runQueuedJob.bind(this));
+      this._queue.eachJob(this._runQueuedJob.bind(this));
     }
   }
 

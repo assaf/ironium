@@ -13,5 +13,5 @@ if (process.env.DEBUG) {
 }
 
 
-before(ironium.reset);
-after(ironium.reset);
+before(ironium.purgeQueues);
+after(ironium.purgeQueues);

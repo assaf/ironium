@@ -2,6 +2,7 @@
 require('traceur');
 
 const debug             = require('debug')('ironium');
+const { deprecate }     = require('util');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
 const Configuration     = require('./configuration');
@@ -13,20 +14,31 @@ class Ironium extends EventEmitter {
 
   constructor() {
     EventEmitter.call(this);
-    this._queues    = new Queues(this);
-    this._scheduler = new Scheduler(this);
+    this._queues      = new Queues(this);
+    this._scheduler   = new Scheduler(this);
     // Bind methods so before(Ironium.once) works.
-    this.start      = this.start.bind(this);
-    this.stop       = this.stop.bind(this);
-    this.once       = this.once.bind(this);
-    this.reset      = this.reset.bind(this);
+    this.start        = this.start.bind(this);
+    this.stop         = this.stop.bind(this);
+    this.runOnce      = this.runOnce.bind(this);
+    this.purgeQueues  = this.purgeQueues.bind(this);
+
+    this.schedule     = deprecate((name, time, job)=> {
+      return this.scheduleJob(name, time, job);
+    }, 'schedule is deprecated, please use scheduleJob');
+    this.once         = deprecate((callback)=> {
+      return this.runOnce(callback);
+    }, 'once is deprecated, please use runOnce');
+    this.reset        = deprecate((callback)=> {
+      return this.purgeQueues(callback);
+    }, 'reset is deprecated, please use purgeQueues');
   }
 
-  // Returns the named queue.  Returned objects has the methods `push` and
-  // `each`, properties `name` and `webhookURL`.
+  // Returns the named queue.  Returned objects has the methods `pushJob` and
+  // `eachJob`, properties `name` and `webhookURL`.
   queue(name) {
     return this._queues.getQueue(name);
   }
+
 
   // Schedules a new job to run periodically/once.
   //
@@ -46,7 +58,7 @@ class Ironium extends EventEmitter {
   // repeatedly if the property every specifies an interval.  If the end
   // property is set, the schedule stops at that set time.  If only the every
   // property is set, the schedule runs on that specified interval.
-  schedule(name, time, job) {
+  scheduleJob(name, time, job) {
     this._scheduler.schedule(name, time, job);
   }
 
@@ -76,12 +88,12 @@ class Ironium extends EventEmitter {
 
   // Used in testing: run all scheduled jobs once (immediately), run all queued
   // jobs, finally call callback.  If called with no arguments, returns a promise.
-  once(callback) {
+  runOnce(callback) {
     // Must run all scheduled jobs first, only then can be run any (resulting)
     // queued jobs to completion.
-    const promise = this._scheduler
-      .once()
-      .then(()=> this._queues.once() )
+    const promise =
+      this._scheduler.runOnce()
+      .then(()=> this._queues.runOnce() )
       .then(()=> this.debug('Completed all jobs') );
     if (callback)
       promise.done(callback, callback);
@@ -91,8 +103,8 @@ class Ironium extends EventEmitter {
 
   // Used in testing: empties all queues.  If called with no arguments, returns
   // a promise.
-  reset(callback) {
-    const promise = this._queues.reset();
+  purgeQueues(callback) {
+    const promise = this._queues.purgeQueues();
     if (callback)
       promise.done(()=> callback(), callback);
     else

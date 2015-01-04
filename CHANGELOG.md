@@ -1,3 +1,20 @@
+# 1.1.0
+
+CHANGED push deprecated, use pushJob instead
+
+CHANGED delay deprecated, use delayJob
+
+CHANGED each deprecated, used eachJob instead
+
+CHANGED schedule deprecated, use scheduleJob instead
+
+CHANGED once deprecated, use runOnce instead
+
+CHANGED reset deprecated, use purgeQueues instead
+
+CHANGED width deprecated, use queueWidth instead
+
+
 # 1.0.3
 
 FIXED no longer user timeout to detect connection failure, this allows better

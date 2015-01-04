@@ -35,17 +35,17 @@ retries, etc.
 
 * **[API](#api)**
   * [queue(name)](#queuename)
-  * [queue.push(job, callback)](#queuepushjob-callback)
-  * [queue.delay(job, duration, callback)](#queuedelayjob-duration-callback)
-  * [queue.each(handler)](#queueeachhandler)
+  * [queue.pushJob(job, callback)](#queuepushjobjob-callback)
+  * [queue.delayJob(job, duration, callback)](#queuedelayjobjob-duration-callback)
+  * [queue.eachJob(handler)](#queueeachjobhandler)
   * [queue.name](#queuename)
   * [queue.webhookURL](#queuewebhookurl)
-  * [schedule(name, time, job)](#schedulename-time-job)
+  * [scheduleJob(name, time, job)](#schedulejobname-time-job)
   * [configure(object)](#configureobject)
   * [start()](#start)
   * [stop()](#stop)
-  * [once(callback)](#oncecallback)
-  * [reset(callback)](#resetcallback)
+  * [runOnce(callback)](#runoncecallback)
+  * [purgeQueues(callback)](#purgequeuescallback)
 * **[Using Promises](#using-promises)**
 * **[Async/Await](#asyncawait)**
 * **[Logging](#logging)**
@@ -57,9 +57,9 @@ retries, etc.
 ## API
 
 Ironium has a simple API with three primary methods:
-- `push` to push a job into a queue
-- `each` to process all jobs from the queue
-- `schedule` to run a job on a given schedule
+- `pushJob` to push a job into a queue
+- `eachJob` to process all jobs from the queue
+- `scheduleJob` to run a job on a given schedule
 
 There are a few more methods to help you with managing workers, running tests,
 and working with Webhooks.
@@ -84,23 +84,23 @@ const sendWelcomeEmail = ironium.queue('send-welcome-email');
 // If this is a new customer, queue sending welcome email.
 customer.on('save', function(next) {
   if (this.isNew)
-    sendWelcomeEmail.push(this.id, next);
+    sendWelcomeEmail.pushJob(this.id, next);
   else
     next();
 });
 
-sendWelcomeEmail.each(function(id, callback) {
+sendWelcomeEmail.eachJob(function(id, callback) {
   // Do something to render and send email
   callback();
 });
 
 ```
 
-As you can see from this example, each queue has two interesting methods, `push`
-and `each`.
+As you can see from this example, each queue has three interesting methods,
+`pushJob`, `delayJob` and `eachJob`.
 
 
-### queue.push(job, callback)
+### queue.pushJob(job, callback)
 
 Pushes a new job into the queue.  The job is serialized as JSON, so objects,
 arrays and strings all work as expected.
@@ -115,7 +115,7 @@ const job = {
   message: 'wow, such workers, much concurrency'
 };
 
-queues('echo').push(job, function(error) {
+queues('echo').pushJob(job, function(error) {
   if (error)
     console.error('No echo for you!');
 });
@@ -124,20 +124,20 @@ queues('echo').push(job, function(error) {
 Because this function returns a promise, you can also do this in your test suite:
 
 ```
-before(()=> queues('echo').push(job));
+before(()=> queues('echo').pushJob(job));
 ```
 
 And this, if you're using ES7:
 
 ```
-await queues('echo').push(job);
+await queues('echo').pushJob(job);
 ```
 
 
-### queue.delay(job, duration, callback)
+### queue.delayJob(job, duration, callback)
 
-Similar to [`push`](#queuepushjob-callback) but delays processing of the job by
-the set duration.
+Similar to [`pushJob`](#queuepushjobjob-callback) but delays processing of the
+job by the set duration.
 
 Duration is either a number or a string.  The default unit is milliseconds, but
 you can specify a string with units, such as "5m" or "3 hours".
@@ -147,11 +147,11 @@ can write each unit as plural ("1 hours"), singular ("1 hour") or first letter
 only ("1h").
 
 
-### queue.each(handler)
+### queue.eachJob(handler)
 
 Processes jobs from the queue. In addition to calling this method, you need to
 either start the workers (see `start` method), or run all queued jobs once (see
-[`once`](#oncecallback)).
+[`runOnce`](#runoncecallback)).
 
 The first argument is the job handler, a function that takes either one or two
 arguments.  The second argument is the number of workers you want processing the
@@ -166,7 +166,7 @@ queue, from where it will be picked up after a short delay.
 For example:
 
 ```
-ironium.queue('echo').each(function(job, callback) {
+ironium.queue('echo').eachJob(function(job, callback) {
   console.log('Echo', job.message);
   callback();
 });
@@ -175,7 +175,7 @@ ironium.queue('echo').each(function(job, callback) {
 Alternatively, the function can return a promise or a generator.  For example:
 
 ```
-ironium.queue('echo').each(async function(job) {
+ironium.queue('echo').eachJob(async function(job) {
   console.log('Echo', job.message);
   await fnReturningPromise();
   await anotherAsyncFunction();
@@ -205,7 +205,7 @@ services send form encoded pairs, so you may need to handle them like this:
 ```
 const QS = require('querystring');
 
-ironium.queue('webhook').each(function(job, callback) {
+ironium.queue('webhook').eachJob(function(job, callback) {
   const params = QS.parse(job);
   console.log(params.message);
   callback();
@@ -225,7 +225,7 @@ Iron.io.  You can pass this URL to a service, and any messages it will post to
 this URL will be queued.
 
 
-### schedule(name, time, job)
+### scheduleJob(name, time, job)
 
 Schedules the named job to run at the specified time.
 
@@ -253,11 +253,11 @@ generator function.
 For example:
 
 ```
-ironium.schedule('everyHour', '1h', function(callback) {
+ironium.scheduleJob('everyHour', '1h', function(callback) {
   console.log("I run every hour");
 });
 
-ironium.schedule('inAnHour', new Date() + ms('1h'), function() {
+ironium.scheduleJob('inAnHour', new Date() + ms('1h'), function() {
   console.log("I run once, after an hour");
   return Promise.resolve();
 });
@@ -266,7 +266,7 @@ const schedule = {
   every: ms('2h'),               // Every two hours
   end:   new Date() + ms('24h'), // End in 24 hours
 };
-ironium.schedule('everyTwoForADay', schedule, async function() {
+ironium.scheduleJob('everyTwoForADay', schedule, async function() {
   console.log("I run every 2 hours for 24 hours");
   const customers = await Customer.findAll();
   for (var customer of customers)
@@ -286,7 +286,8 @@ You must call this method to start the workers.  Until you call this method, no
 scheduled or queued jobs are processed.
 
 The `start` method allows you to run the same codebase in multiple environments,
-but only enable processing on select servers.  For testing, have a look at `once`.
+but only enable processing on select servers.  For testing, have a look at
+`runOnce`.
 
 
 ### stop()
@@ -294,12 +295,12 @@ but only enable processing on select servers.  For testing, have a look at `once
 You can call this method to stop the workers.
 
 
-### once(callback)
+### runOnce(callback)
 
 Use this method when testing.  It will run all schedules jobs exactly once, and
 then process all queued jobs until the queues are empty.
 
-You can either call `once` with a callback, to be notified when all jobs have
+You can either call `runOnce` with a callback, to be notified when all jobs have
 been processed, or with no arguments, it will return a promise.
 
 This method exists since there's no reliable way to use `start` and `stop` for
@@ -312,20 +313,20 @@ const queue = ironium.queue('echo');
 const echo  = [];
 
 // Scheduled worker will queue a job
-ironium.schedule('echo-foo', '* * * *', function(callback) {
-  queue.push('foo', callback);
+ironium.scheduleJob('echo-foo', '* * * *', function(callback) {
+  queue.pushJob('foo', callback);
 });
 
-queue.each(function(text, callback) {
-  echo.push(text);
+queue.eachJob(function(text, callback) {
+  echo.pushJob(text);
   callback();
 });
 
 // Queue another job
-before(()=> queue.push('bar'));
+before(()=> queue.pushJob('bar'));
 
 // Running the scheduled job, followed by the two queued jobs
-before(ironium.once);
+before(ironium.runOnce);
 
 it("should have run the foo scheduled job", function() {
   assert(echo.indexOf('foo') >= 0);
@@ -336,31 +337,31 @@ it("should have run the bar job", function() {
 });
 ```
 
-### reset(callback)
+### purgeQueues(callback)
 
 Use this method when testing.  It will delete all queued jobs.
 
-You can either call `reset` with a callback, to be notified when all jobs have
-been deleted, or with no arguments, returns a promise.
+You can either call `purgeQueues` with a callback, to be notified when all jobs
+have been deleted, or with no arguments, returns a promise.
 
 For example:
 
 ```
-before(ironium.reset);
+before(ironium.purgeQueues);
 ```
 
 Is equivalent to:
 
 ```
 before(function(done) {
-  ironium.reset(done);
+  ironium.purgeQueues(done);
 });
 ```
 
 **Note:** Mocha before/after runners accept functions that return a promise.
-This is the case for the methods `start`, `stop`, `once` and `reset`.  In
-addition, since these methods are bound to an instance of Ironium, you can pass
-the method directly as an argument to `before` or `after`.
+This is the case for the methods `start`, `stop`, `runOnce` and `purgeQueues`.
+In addition, since these methods are bound to an instance of Ironium, you can
+pass the method directly as an argument to `before` or `after`.
 
 
 ## Using Promises
@@ -374,7 +375,7 @@ return to the queue and processed again.
 For example:
 
 ```
-ironium.queue('delayed-echo').each(function(job) {
+ironium.queue('delayed-echo').eachJob(function(job) {
   const promise = new Promise(function(resolve, reject) {
 
     console.log('Echo', job.message);
@@ -393,7 +394,7 @@ This option is available when using
 code like this:
 
 ```
-ironium.queue('update-name').each(async function(job) {
+ironium.queue('update-name').eachJob(async function(job) {
   const customer = await Customer.findById(job.customerID).exec();
 
   // At this point customer is set
