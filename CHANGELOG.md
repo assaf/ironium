@@ -1,5 +1,8 @@
 # 1.1.0
 
+ADDED you can now use pushJob with a string or buffer; objects are always
+serialized to JSON.
+
 CHANGED push deprecated, use pushJob instead
 
 CHANGED delay deprecated, use delayJob

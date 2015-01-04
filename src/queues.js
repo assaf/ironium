@@ -260,7 +260,7 @@ class Queue {
 
     const priority  = 0;
     const timeToRun = PROCESSING_TIMEOUT;
-    const payload   = JSON.stringify(job);
+    const payload   = (Buffer.isBuffer(job) || typeof(job) === 'string') ? job : JSON.stringify(job);
     // Don't pass jobID to callback, easy to use in test before hook, like
     // this:
     //   before(queue.put(MESSAGE));
