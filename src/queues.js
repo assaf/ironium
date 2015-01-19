@@ -1,10 +1,12 @@
-const assert        = require('assert');
-const Bluebird      = require('bluebird');
-const { deprecate } = require('util');
-const Fivebeans     = require('fivebeans');
-const ms            = require('ms');
-const Promise       = require('bluebird');
-const runJob        = require('./run_job');
+const assert            = require('assert');
+const Bluebird          = require('bluebird');
+const { EventEmitter }  = require('events');
+const { deprecate }     = require('util');
+const Fivebeans         = require('fivebeans');
+const ms                = require('ms');
+const Promise           = require('bluebird');
+const runJob            = require('./run_job');
+const Stream            = require('stream');
 
 
 // How long to wait establishing a new connection.
@@ -222,9 +224,84 @@ class Session {
 }
 
 
+// Stream transform: writeable stream that accepts jobs, and readable strem that
+// provides their job IDs, after queuing.
+//
+// This stream will terminate on the first error.
+//
+// This stream throttles its input based on the queuing bandwidth.
+class QueuingTransform extends Stream.Transform {
+
+  constructor(queue) {
+    super();
+    // Allow queuing objects
+    this._writableState.objectMode = true;
+    this._readableState.objectMode = true;
+    // No bufferring. This is intentional, we want to throttle stream processing
+    // to queuing bandwidth.
+    this._writableState.highWaterMark = 0;
+    this._readableState.highWaterMark = 0;
+
+    this._queue     = queue;
+    // Stop stream when we encounter an error
+    this._lastError = null;
+    // Count how many jobs we're queuing but still waiting for confirmation and
+    // job ID.  We're not done processing until this goes back to zero.
+    this._queuing   = 0;
+  }
+
+  _transform(job, encoding, callback) {
+    // We throttle stream processing based on our queuing bandwidth.  We can
+    // push as many jobs as we want to queueJob, they will just get bufferred in
+    // memory.  Instead, we ask the queue to throttle us, by calling the
+    // throttle() callback when it's ready to take on the next job.
+    this._queue.throttle(()=> {
+
+      // Since we operate asynchronously, we can only react to the previous
+      // error
+      if (!this._lastError) {
+
+        // Reference counting so we don't finish this transform until we're done
+        // queuing all the jobs (see _flush).
+        ++this._queuing;
+
+        this._queue.queueJob(job, (error, jobID)=> {
+          // If there's an error, next _transform or _flush will find it
+          if (error)
+            this._lastError = error;
+          else
+            this.push(jobID);
+
+          // Once we've queued all jobs, emit the drain event so _flush can
+          // complete
+          --this._queuing;
+          if (this._queuing === 0)
+            this.emit('drain');
+        });
+
+      }
+      // Let the next job in, so we're running multiple queueJob in parallel,
+      // but no more than concurrently allowed by throttle.
+      //
+      // Or stop processing if we hit an error in previous _transform.
+      callback(this._lastError);
+    });
+  }
+
+  _flush(callback) {
+    // There are no more jobs coming on the writeable end, but we're not done
+    // with the readable end of things until we queued all the jobs,
+    if (this._queuing === 0)
+      callback(this._lastError);
+    else
+      this.once('drain', this._flush.bind(this, callback));
+  }
+}
+
+
 // Abstraction for a queue.  Has two sessions, one for pushing messages, one
 // for processing them.
-class Queue {
+class Queue extends EventEmitter {
 
   constructor(server, name) {
     this.name             = name;
@@ -239,13 +316,19 @@ class Queue {
     this._putSession      = null;
     this._reserveSessions = [];
 
+    // Used to limit concurrency for stream processing (see throttle method)
+    this._queuing         = 0;
+    this._concurrency     = 3;
+
     this._config          = server.config.queues;
     this._width           = server.config.width || 1;
 
     this.queueJob         = this.queueJob.bind(this);
     this.delayJob         = this.delayJob.bind(this);
     this.eachJob          = this.eachJob.bind(this);
+    this.stream           = this.stream.bind(this);
   }
+
 
   // Queue job.  If called with one argument, returns a promise.
   queueJob(job, callback) {
@@ -261,7 +344,7 @@ class Queue {
   // or a string of the form '5s', '2m', etc.  If called with two arguments,
   // returns a promise.
   delayJob(job, duration, callback) {
-    assert(job, 'Missing job to queue');
+    assert(job != null, 'Missing job to queue');
     assert(duration.toString, 'Delay must be string or number');
     // Converts '5m' to 300 seconds.  The toString is necessary to handle
     // numbers properly, since ms(number) -> string.
@@ -270,6 +353,8 @@ class Queue {
     const priority  = 0;
     const timeToRun = PROCESSING_TIMEOUT;
     const payload   = Buffer.isBuffer(job) ? job : JSON.stringify(job);
+
+    ++this._queuing;
     // Don't pass jobID to callback, easy to use in test before hook, like
     // this:
     //   before(queue.put(MESSAGE));
@@ -278,6 +363,10 @@ class Queue {
       .then((jobID)=> {
         this._notify.debug('Queued job %s on queue %s', jobID, this.name, payload);
         return jobID;
+      })
+      .finally(()=> {
+        --this._queuing;
+        this.emit('ready');
       });
 
     if (callback)
@@ -285,6 +374,14 @@ class Queue {
     else
       return promise;
   }
+
+  // Returns a stream transform for queueing jobs.  This is a duplex stream, for
+  // each job you write to the stream, you can read one job ID of the queued
+  // job.
+  stream() {
+    return new QueuingTransform(this);
+  }
+
 
   // Process jobs from queue.
   eachJob(handler, width) {
@@ -350,6 +447,24 @@ class Queue {
 
     this._notify.debug('Waiting for jobs on queue %s', this.name);
     return this._reserveAndProcess();
+  }
+
+
+  // For stream processing, we want to throttle the stream based on our queuing
+  // bandwidth.  The callback is called when it's good time to queue the next
+  // job.
+  //
+  // We do allow some jobs to be queued in parallel, we don't need to wait for
+  // one job to be queued before sending the next one.  But we limit it to a
+  // reasonable number, since queueJob will take any number of jobs you throw at
+  // it, and simply buffer them all in memory.
+  //
+  // At the moment _concurrency is derived from Works On My Machine(tm).
+  throttle(callback) {
+    if (this._queuing < this._concurrency)
+      callback();
+    else
+      this.once('ready', this.throttle.bind(this, callback));
   }
 
 

@@ -39,6 +39,7 @@ retries, etc.
   * [queue.queueJob(job, callback)](#queuejobname-job-callback)
   * [queue.delayJob(job, duration, callback)](#queuedelayjobjob-duration-callback)
   * [queue.eachJob(handler)](#queueeachjobhandler)
+  * [queue.stream()](#queuestream)
   * [queue.name](#queuename)
   * [queue.webhookURL](#queuewebhookurl)
   * [scheduleJob(name, time, job)](#schedulejobname-time-job)
@@ -217,6 +218,19 @@ ironium.queue('webhook').eachJob(function(job, callback) {
   console.log(params.message);
   callback();
 });
+```
+
+### queue.stream()
+
+You can use this to queue jobs from a Node stream.  It returns a duplex stream
+to which you can write a stream of jobs, and read back a stream of job IDs.
+
+For example:
+
+```javascript
+source
+  .pipe( queue.stream() )
+  .pipe( process.stdout );
 ```
 
 ### queue.name

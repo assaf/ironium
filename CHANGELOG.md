@@ -1,5 +1,14 @@
 # 1.2.0
 
+ADDED support for queuing with streams.
+
+For example, to queue all the jobs from the source stream, and log the queued
+job IDs:
+
+  source
+    .pipe( queue.stream() )
+    .pipe( process.stdout );
+
 ADDED `queueJob` as alias for `pushJob` and `Ironium.queueJob` shortcut.
 
 ADDED you can use queueJob, delayJob, etc without an object reference.
