@@ -213,7 +213,7 @@ class Session {
   // Close this session
   end() {
     if (this._clientPromise) {
-      this._clientPromise.done((client)=> {
+      this._clientPromise.then((client)=> {
         client.end();
         client.emit('close');
       });
@@ -362,15 +362,17 @@ class Queue extends EventEmitter {
       .request('put', priority, msToSec(duration), msToSec(timeToRun), payload)
       .then((jobID)=> {
         this._notify.debug('Queued job %s on queue %s', jobID, this.name, payload);
-        return jobID;
-      })
-      .finally(()=> {
         --this._queuing;
         this.emit('ready');
+        return jobID;
+      }, (error)=> {
+        --this._queuing;
+        this.emit('ready');
+        throw error;
       });
 
     if (callback)
-      promise.done((jobID)=> callback(null, jobID), callback);
+      promise.then((jobID)=> callback(null, jobID), callback);
     else
       return promise;
   }
@@ -531,11 +533,11 @@ class Queue extends EventEmitter {
         // Whether processed or failed, resolve this promise.
         handleError
           .then(resolve, resolve)
-          .done(()=> clearTimeout(timeout));
+          .then(()=> clearTimeout(timeout));
       });
 
       // Regardless of outcome, go on to process next job.
-      withTimeout.done(nextJob, nextJob);
+      withTimeout.then(nextJob, nextJob);
     }
 
     this._notify.debug('Waiting for jobs on queue %s', this.name);

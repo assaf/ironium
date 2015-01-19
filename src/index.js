@@ -1,6 +1,3 @@
-// Need runtime to support generators.
-require('traceur');
-
 const debug             = require('debug')('ironium');
 const { deprecate }     = require('util');
 const { EventEmitter }  = require('events');
@@ -105,7 +102,7 @@ class Ironium extends EventEmitter {
       .then(()=> this._queues.runOnce() )
       .then(()=> this.debug('Completed all jobs') );
     if (callback)
-      promise.done(callback, callback);
+      promise.then(callback, callback);
     else
       return promise;
   }
@@ -115,7 +112,7 @@ class Ironium extends EventEmitter {
   purgeQueues(callback) {
     const promise = this._queues.purgeQueues();
     if (callback)
-      promise.done(()=> callback(), callback);
+      promise.then(()=> callback(), callback);
     else
       return promise;
   }

@@ -1,16 +1,18 @@
-const del     = require('del');
-const exec    = require('child_process').exec;
-const File    = require('fs');
-const gulp    = require('gulp');
-const Net     = require('net');
-const notify  = require('gulp-notify');
-const OS      = require('os');
-const Path    = require('path');
-const replace = require('gulp-replace');
-const spawn   = require('child_process').spawn;
-const Traceur = require('traceur');
-const through = require('through2');
-const version = require('./package.json').version;
+const del         = require('del');
+const exec        = require('child_process').exec;
+const File        = require('fs');
+const gulp        = require('gulp');
+const Net         = require('net');
+const notify      = require('gulp-notify');
+const OS          = require('os');
+const Path        = require('path');
+const replace     = require('gulp-replace');
+const sourcemaps  = require("gulp-sourcemaps");
+const spawn       = require('child_process').spawn;
+const through     = require('through2');
+const version     = require('./package.json').version;
+const to5         = require('gulp-6to5');
+
 
 
 // Compile then watch -> compile
@@ -24,12 +26,14 @@ gulp.task('default', ['build'], function() {
 // Compile ES6 in src to ES5 in lib
 gulp.task('build', ['clean'], function() {
   const options = {
-    asyncFunctions:  true,
-    validate:        true,
-    modules:        'commonjs'
+    // Support iterators without polyfill
+    optional:     ['coreAliasing']
   };
   const compile = gulp.src('src/**/*.js')
-    .pipe(es6(options))
+    .pipe(sourcemaps.init())
+    .pipe(to5(options))
+    //.pipe(concat("all.js"))
+    .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest('lib'));
   // Notifications only available on Mac
   if (OS.type() == 'Darwin')
@@ -122,19 +126,4 @@ gulp.task('tag-release', ['element', 'changelog'], function(callback) {
 gulp.task('release', function(done) {
   spawn('npm', ['publish'], { stdio: 'inherit' }, done);
 });
-
-
-function es6(options) {
-	return through.obj(function(file, encoding, callback) {
-		options.filename = Path.basename(file.path);
-		try {
-			const compiled = Traceur.compile(file.contents.toString(), options);
-      file.contents = new Buffer(compiled);
-		} catch (error) {
-			this.emit('error', error);
-		}
-		this.push(file);
-		callback();
-	});
-}
 
