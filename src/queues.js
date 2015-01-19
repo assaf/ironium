@@ -1,7 +1,7 @@
 const assert        = require('assert');
 const Bluebird      = require('bluebird');
 const { deprecate } = require('util');
-const fivebeans     = require('fivebeans');
+const Fivebeans     = require('fivebeans');
 const ms            = require('ms');
 const Promise       = require('bluebird');
 const runJob        = require('./run_job');
@@ -134,7 +134,7 @@ class Session {
 
     // This is the Fivebeans client is essentially a session.
     const config  = this._config;
-    const client  = new fivebeans.client(config.queues.hostname, config.queues.port);
+    const client  = new Fivebeans.client(config.queues.hostname, config.queues.port);
     // For when we have a lot of writers contending to push to the same queue.
     client.setMaxListeners(0);
 
@@ -242,9 +242,14 @@ class Queue {
     this._config          = server.config.queues;
     this._width           = server.config.width || 1;
 
-    this.pushJob          = this.pushJob.bind(this);
+    this.queueJob         = this.queueJob.bind(this);
     this.delayJob         = this.delayJob.bind(this);
     this.eachJob          = this.eachJob.bind(this);
+  }
+
+  // Queue job.  If called with one argument, returns a promise.
+  queueJob(job, callback) {
+    return this.delayJob(job, 0, callback);
   }
 
   // Push job to queue.  If called with one argument, returns a promise.
@@ -541,8 +546,8 @@ class Queue {
 
 
 Queue.prototype.push = deprecate(function() {
-  return this.pushJob.apply(this, arguments);
-}, 'push is deprecated, please use pushJob instead');
+  return this.queueJob.apply(this, arguments);
+}, 'push is deprecated, please use queueJob instead');
 
 Queue.prototype.delay = deprecate(function() {
   return this.delayJob.apply(this, arguments);

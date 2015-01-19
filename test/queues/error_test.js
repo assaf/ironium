@@ -33,7 +33,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> errorCallbackQueue.pushJob('job'));
+    before(()=> errorCallbackQueue.queueJob('job'));
     before(untilSuccessful);
 
     it('should repeat until processed', ()=> {
@@ -57,7 +57,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> errorPromiseQueue.pushJob('job'));
+    before(()=> errorPromiseQueue.queueJob('job'));
     before(untilSuccessful);
 
     it('should repeat until processed', ()=> {
@@ -86,7 +86,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> errorGeneratorQueue.pushJob('job'));
+    before(()=> errorGeneratorQueue.queueJob('job'));
     before(untilSuccessful);
 
     it('should repeat until processed', ()=> {

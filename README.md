@@ -35,7 +35,8 @@ retries, etc.
 
 * **[API](#api)**
   * [queue(name)](#queuename)
-  * [queue.pushJob(job, callback)](#queuepushjobjob-callback)
+  * [queueJob(name, job, callback)](#queuejobname-job-callback)
+  * [queue.queueJob(job, callback)](#queuejobname-job-callback)
   * [queue.delayJob(job, duration, callback)](#queuedelayjobjob-duration-callback)
   * [queue.eachJob(handler)](#queueeachjobhandler)
   * [queue.name](#queuename)
@@ -57,7 +58,7 @@ retries, etc.
 ## API
 
 Ironium has a simple API with three primary methods:
-- `pushJob` to push a job into a queue
+- `queueJob` to push a job into a queue
 - `eachJob` to process all jobs from the queue
 - `scheduleJob` to run a job on a given schedule
 
@@ -84,7 +85,7 @@ const sendWelcomeEmail = ironium.queue('send-welcome-email');
 // If this is a new customer, queue sending welcome email.
 customer.on('save', function(next) {
   if (this.isNew)
-    sendWelcomeEmail.pushJob(this.id, next);
+    sendWelcomeEmail.queueJob(this.id, next);
   else
     next();
 });
@@ -97,25 +98,31 @@ sendWelcomeEmail.eachJob(function(id, callback) {
 ```
 
 As you can see from this example, each queue has three interesting methods,
-`pushJob`, `delayJob` and `eachJob`.
+`queueJob`, `delayJob` and `eachJob`.
 
 
-### queue.pushJob(job, callback)
+### queueJob(name, job, callback)
+### queue.queueJob(job, callback)
 
 Pushes a new job into the queue.  The job is serialized as JSON, so objects,
 arrays and strings all work as expected.
 
-If the second argument is a callback, it is called after the job has been queued.
+If the last argument is a callback, it is called after the job has been queued.
 Otherwise, returns a promise.
+
+Calling `Ironium.queueJob(name, job)` is the same as
+`Ironium.queue(name).queueJob(job)`.
 
 For example:
 
 ```
+const echoQueue = ironium.queue('queue');
+
 const job = {
   message: 'wow, such workers, much concurrency'
 };
 
-queues('echo').pushJob(job, function(error) {
+echoQueue.queuedJob(job, function(error) {
   if (error)
     console.error('No echo for you!');
 });
@@ -124,19 +131,19 @@ queues('echo').pushJob(job, function(error) {
 Because this function returns a promise, you can also do this in your test suite:
 
 ```
-before(()=> queues('echo').pushJob(job));
+before(()=> echoQueue.queueJob(job));
 ```
 
 And this, if you're using ES7:
 
 ```
-await queues('echo').pushJob(job);
+await echoQueue.queuedJob(job);
 ```
 
 
 ### queue.delayJob(job, duration, callback)
 
-Similar to [`pushJob`](#queuepushjobjob-callback) but delays processing of the
+Similar to [`queuedJob`](#queuequeuejobjob-callback) but delays processing of the
 job by the set duration.
 
 Duration is either a number or a string.  The default unit is milliseconds, but
@@ -314,16 +321,16 @@ const echo  = [];
 
 // Scheduled worker will queue a job
 ironium.scheduleJob('echo-foo', '* * * *', function(callback) {
-  queue.pushJob('foo', callback);
+  queue.queueJob('foo', callback);
 });
 
 queue.eachJob(function(text, callback) {
-  echo.pushJob(text);
+  echo.queueJob(text);
   callback();
 });
 
 // Queue another job
-before(()=> queue.pushJob('bar'));
+before(()=> queue.queueJob('bar'));
 
 // Running the scheduled job, followed by the two queued jobs
 before(ironium.runOnce);

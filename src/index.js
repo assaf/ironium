@@ -18,6 +18,7 @@ class Ironium extends EventEmitter {
     this._scheduler   = new Scheduler(this);
     // Bind methods so before(Ironium.once) works.
     this.queue        = this.queue.bind(this);
+    this.queueJob     = this.queueJob.bind(this);
     this.scheduleJob  = this.scheduleJob.bind(this);
     this.start        = this.start.bind(this);
     this.stop         = this.stop.bind(this);
@@ -35,10 +36,16 @@ class Ironium extends EventEmitter {
     }, 'reset is deprecated, please use purgeQueues');
   }
 
-  // Returns the named queue.  Returned objects has the methods `pushJob` and
+  // Returns the named queue.  Returned objects has the methods `queueJob` and
   // `eachJob`, properties `name` and `webhookURL`.
   queue(name) {
     return this._queues.getQueue(name);
+  }
+
+  // Queues job in the named queue.  Same as queue(name).queueJob(job,
+  // callback).  If called with two arguments, returns a promise.
+  queueJob(name, job, callback) {
+    return this.queue(name).queueJob(job, callback);
   }
 
 

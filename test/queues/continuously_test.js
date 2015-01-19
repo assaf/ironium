@@ -64,10 +64,10 @@ if (typeof(describe) != 'undefined') {
   ironium.queue('regular').eachJob(function(job, callback) {
     process.send('regular');
 
-    ironium.queue('duplicate').pushJob('job', function() {
-      ironium.queue('duplicate').pushJob('job', function() {
-        ironium.queue('duplicate').pushJob('job', function() {
-          ironium.queue('delayed').pushJob('job', callback);
+    ironium.queueJob('duplicate', 'job', function() {
+      ironium.queueJob('duplicate', 'job', function() {
+        ironium.queueJob('duplicate', 'job', function() {
+          ironium.queueJob('delayed', 'job', callback);
         });
       });
     });
@@ -84,7 +84,7 @@ if (typeof(describe) != 'undefined') {
     setTimeout(function() {
       process.send('delayed');
 
-      ironium.queue('failed').pushJob('job', callback);
+      ironium.queueJob('failed', 'job', callback);
     }, 500);
   });
 
@@ -93,7 +93,7 @@ if (typeof(describe) != 'undefined') {
   // Failed job: fails three times, then succeeds.
   ironium.queue('failed').eachJob(function(job, callback) {
     if (failed == 3) {
-      ironium.queue('done').pushJob('job', callback);
+      ironium.queueJob('done', 'job', callback);
     } else {
       process.send('failed');
       failed++;
@@ -118,7 +118,7 @@ if (typeof(describe) != 'undefined') {
   // Delete all jobs from previous run before starting this one.
   // We need to have all the queues before we can call this.
   ironium.purgeQueues(function() {
-    ironium.queue('regular').pushJob('job', function() {});
+    ironium.queueJob('regular', 'job', function() {});
     ironium.start();
   });
 

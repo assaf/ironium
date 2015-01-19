@@ -1,3 +1,10 @@
+# 1.2.0
+
+ADDED `queueJob` as alias for `pushJob` and `Ironium.queueJob` shortcut.
+
+ADDED you can use queueJob, delayJob, etc without an object reference.
+
+
 # 1.1.0
 
 ADDED you can now use pushJob with a string or buffer; objects are always

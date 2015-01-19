@@ -17,7 +17,7 @@ describe('queue', function() {
 
 
   describe('an object', ()=> {
-    before(()=> captureQueue.pushJob({ id: 5, name: 'job' }));
+    before(()=> captureQueue.queueJob({ id: 5, name: 'job' }));
     before(ironium.runOnce);
 
     it('should process that object', ()=>{
@@ -28,7 +28,7 @@ describe('queue', function() {
 
 
   describe('a string', ()=> {
-    before(()=> captureQueue.pushJob('job'));
+    before(()=> captureQueue.queueJob('job'));
     before(ironium.runOnce);
 
     it('should process that string', ()=>{
@@ -38,7 +38,7 @@ describe('queue', function() {
 
 
   describe('a number', ()=> {
-    before(()=> captureQueue.pushJob(3.1));
+    before(()=> captureQueue.queueJob(3.1));
     before(ironium.runOnce);
 
     it('should process that number', ()=>{
@@ -48,7 +48,7 @@ describe('queue', function() {
 
 
   describe('an array', ()=> {
-    before(()=> captureQueue.pushJob([true, '+']));
+    before(()=> captureQueue.queueJob([true, '+']));
     before(ironium.runOnce);
 
     it('should process that array', ()=>{
@@ -62,7 +62,7 @@ describe('queue', function() {
   describe('a buffer', ()=> {
 
     describe('(JSON)', ()=> {
-      before(()=> captureQueue.pushJob(new Buffer('{ "x": 1 }')));
+      before(()=> captureQueue.queueJob(new Buffer('{ "x": 1 }')));
       before(ironium.runOnce);
 
       it('should process that buffer as object value', ()=>{
@@ -72,7 +72,7 @@ describe('queue', function() {
 
 
     describe('(not JSON)', ()=> {
-      before(()=> captureQueue.pushJob(new Buffer('x + 1')));
+      before(()=> captureQueue.queueJob(new Buffer('x + 1')));
       before(ironium.runOnce);
 
       it('should process that buffer as string value', ()=>{
@@ -87,7 +87,7 @@ describe('queue', function() {
     it('should error', (done)=> {
       this.job = null;
       assert.throws(()=> {
-        captureQueue.pushJob(null, done);
+        captureQueue.queueJob(null, done);
       });
       assert(!this.job);
       done();
