@@ -17,6 +17,8 @@ class Ironium extends EventEmitter {
     this._queues      = new Queues(this);
     this._scheduler   = new Scheduler(this);
     // Bind methods so before(Ironium.once) works.
+    this.queue        = this.queue.bind(this);
+    this.scheduleJob  = this.scheduleJob.bind(this);
     this.start        = this.start.bind(this);
     this.stop         = this.stop.bind(this);
     this.runOnce      = this.runOnce.bind(this);

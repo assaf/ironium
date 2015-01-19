@@ -241,6 +241,10 @@ class Queue {
 
     this._config          = server.config.queues;
     this._width           = server.config.width || 1;
+
+    this.pushJob          = this.pushJob.bind(this);
+    this.delayJob         = this.delayJob.bind(this);
+    this.eachJob          = this.eachJob.bind(this);
   }
 
   // Push job to queue.  If called with one argument, returns a promise.
