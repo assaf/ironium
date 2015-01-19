@@ -13,6 +13,9 @@ ADDED `queueJob` as alias for `pushJob` and `Ironium.queueJob` shortcut.
 
 ADDED you can use queueJob, delayJob, etc without an object reference.
 
+CHANGED switched from Traceur to 6to5, which works much better for 3rd party
+libraries.
+
 
 # 1.1.0
 

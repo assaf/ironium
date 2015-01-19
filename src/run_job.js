@@ -1,7 +1,22 @@
 const assert            = require('assert');
-const co                = require('co');
+const Bluebird          = require('bluebird');
 const { createDomain }  = require('domain');
 const Promise           = require('bluebird');
+
+
+// Support for generators and thunks, see
+// https://github.com/petkaantonov/bluebird/blob/master/API.md#promisecoroutineaddyieldhandlerfunction-handler---void
+function yieldHandler(value) {
+  if (typeof(value) === 'function') {
+    const def = Promise.defer();
+    try {
+      value(def.callback);
+    } catch(error) {
+      def.reject(error);
+    }
+    return def.promise;
+  }
+}
 
 
 // Runs the job, returns a promise.
@@ -39,6 +54,15 @@ module.exports = function runJob(jobID, handler, args, timeout) {
     // Uncaught exception in the handler's domain will also fail this job.
     domain.on('error', reject);
     domain.run(function() {
+      // Handler is a generator function (ES6, 6to5)
+      if (handler.constructor.name === 'GeneratorFunction') {
+        Bluebird.coroutine(handler, { yieldHandler })(...args)
+          .then(resolve)
+          .catch(function(error) {
+            domain.emit('error', error);
+          });
+        return;
+      }
 
       // Good old callback resolves the job.  Since we intercept it,
       // errors are handled by on('error'), successful completion resolves.
@@ -46,14 +70,18 @@ module.exports = function runJob(jobID, handler, args, timeout) {
 
       // Job may have returned a promise or a generator
       if (result && typeof(result.next) === 'function' && typeof(result.throw) === 'function') {
-        // A generator object.  Use it to resolve job instead of callback.
-        co(result).then(resolve, function(error) {
-          domain.emit('error', error);
-        });
+        console.log('Non-generator functions that return generators are no longer supported');
+        // Handler did not identify as generator function, but returned a generator (Traceur)
+        Bluebird.coroutine(()=> result, { yieldHandler })()
+          .then(resolve)
+          .catch(function(error) {
+            domain.emit('error', error);
+          });
       } else if (result && typeof(result.then) === 'function') {
         // A thenable: cast it to a promise we can handle
         Promise.resolve(result)
-          .then(resolve, function(error) {
+          .then(resolve)
+          .catch(function(error) {
             if (!(error instanceof Error))
               error = new Error(`${error} in ${handler}`);
             domain.emit('error', error);

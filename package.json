@@ -12,7 +12,7 @@
   "main": "lib/index",
   "dependencies": {
     "bluebird": "^2.0",
-    "co": "^4.0",
+    "core-js": "^0.4.5",
     "debug": "^2.0",
     "fivebeans": "^1.1.1",
     "ms": "^0.7.0"
