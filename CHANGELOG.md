@@ -1,3 +1,8 @@
+# 1.2.1
+
+Upgraded to 6to5 3.0.
+
+
 # 1.2.0
 
 ADDED support for queuing with streams.

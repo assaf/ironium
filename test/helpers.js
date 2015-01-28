@@ -8,9 +8,8 @@ const ironium   = require('../src');
 process.env.NODE_ENV = 'test';
 
 // Run with env DEBUG=true to see what's happening
-if (process.env.DEBUG) {
+if (process.env.DEBUG)
   ironium.on('info',  debug('ironium'));
-}
 
 
 before(ironium.purgeQueues);
