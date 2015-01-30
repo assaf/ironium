@@ -1,3 +1,8 @@
+# 1.2.2
+
+FIXED trying to catch "write after" end errors.
+
+
 # 1.2.1
 
 Upgraded to 6to5 3.0.

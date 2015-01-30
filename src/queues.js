@@ -91,7 +91,8 @@ class Session {
   request(command, ...args) {
     // Ask for connection, we get a promise that resolves into a client.
     // We return a new promise that resolves to the output of the request.
-    return this.connect()
+    return this
+      .connect()
       .then((client)=> {
         return new Promise((resolve, reject)=> {
           // Processing (continously or not) know to ignore the TIMED_OUT
@@ -159,15 +160,14 @@ class Session {
     // When working with Iron.io, need to authenticate each connection before
     // it can be used.  This is the first setup step, followed by the
     // session-specific setup.
-    let authenticated;
-    if (config.authenticate) {
-      authenticated = connected.then(()=> Bluebird.promisify(client.put, client)(0, 0, 0, config.authenticate) );
-    } else
-      authenticated = connected;
+    const authenticated = config.authenticate ?
+      connected.then(()=> Bluebird.promisify(client.put, client)(0, 0, 0, config.authenticate) ) :
+      connected;
 
     // Put/reserve clients have different setup requirements, this are handled by
     // an externally supplied method.
-    const setup = authenticated.then(()=> Bluebird.promisify(this.setup, this)(client) );
+    const setup = authenticated
+      .then(()=> Bluebird.promisify(this.setup, this)(client) );
 
     // If we can't establish a connection of complete the authentication/setup
     // step, and Fivebeans doesn't trigger an error.
@@ -198,7 +198,7 @@ class Session {
       this.end();
       this._notify.debug('Client error in queue %s: %s', this.id, error.toString());
     });
-    client.once('close', ()=> {
+    client.stream.once('end', ()=> {
       // Connection has been closed. Disassociate from session.
       this.end();
       this._notify.debug('Connection closed for %s', this.id);
@@ -213,12 +213,13 @@ class Session {
   // Close this session
   end() {
     if (this._clientPromise) {
-      this._clientPromise.then((client)=> {
-        client.end();
-        client.emit('close');
-      });
+      this._clientPromise
+        .then((client)=> {
+          client.end();
+          client.emit('close');
+        });
+      this._clientPromise = null;
     }
-    this._clientPromise = null;
   }
 
 }
