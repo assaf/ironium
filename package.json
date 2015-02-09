@@ -12,14 +12,14 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "6to5-runtime": "^3.4.0",
+    "6to5-runtime": "^3.5.3",
     "bluebird": "^2.0",
     "debug": "^2.0",
     "fivebeans": "^1.1.1",
     "ms": "^0.7"
   },
   "devDependencies": {
-    "6to5": "^3.4.0",
+    "6to5": "^3.5.3",
     "del": "^1.1.1",
     "gulp": "^3.8.10",
     "gulp-6to5": "^3.0.0",
