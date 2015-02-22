@@ -1,5 +1,5 @@
 {
   "experimental": true,
   "loose":        "all",
-  "optional":     [ "selfContained" ]
+  "optional":     [ "runtime" ]
 }

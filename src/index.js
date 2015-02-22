@@ -13,6 +13,8 @@ class Ironium extends EventEmitter {
     EventEmitter.call(this);
     this._queues      = new Queues(this);
     this._scheduler   = new Scheduler(this);
+    this.debug        = debug;
+
     // Bind methods so before(Ironium.once) works.
     this.queue        = this.queue.bind(this);
     this.queueJob     = this.queueJob.bind(this);
@@ -117,17 +119,12 @@ class Ironium extends EventEmitter {
       return promise;
   }
 
-  // Used for logging debug messages.
-  debug(...args) {
-    debug(...args);
-  }
-
   // Used for logging info messages.
   info(...args) {
     if (this.listeners('info').length)
       this.emit('info', format(...args));
     else
-      debug(...args);
+      this.debug(...args);
   }
 
   // Used for logging error messages.
@@ -139,7 +136,7 @@ class Ironium extends EventEmitter {
     if (this.listeners('error').length)
       this.emit('error', error);
     const formatted = format(...args);
-    debug(`${formatted}\n${error.stack}`);
+    this.debug(`${formatted}\n${error.stack}`);
   }
 
 }

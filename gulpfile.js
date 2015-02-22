@@ -10,7 +10,7 @@ const replace     = require('gulp-replace');
 const sourcemaps  = require("gulp-sourcemaps");
 const spawn       = require('child_process').spawn;
 const version     = require('./package.json').version;
-const to5         = require('gulp-6to5');
+const babel       = require('gulp-babel');
 
 
 
@@ -24,10 +24,10 @@ gulp.task('default', ['build'], function() {
 
 // Compile ES6 in src to ES5 in lib
 gulp.task('build', ['clean'], function() {
-  const options = require('./src/6to5.json');
+  const options = require('./src/babel.json');
   const compile = gulp.src('src/**/*.js')
     .pipe(sourcemaps.init())
-    .pipe(to5(options))
+    .pipe(babel(options))
     //.pipe(concat("all.js"))
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest('lib'));

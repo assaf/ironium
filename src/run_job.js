@@ -54,7 +54,7 @@ module.exports = function runJob(jobID, handler, args, timeout) {
     // Uncaught exception in the handler's domain will also fail this job.
     domain.on('error', reject);
     domain.run(function() {
-      // Handler is a generator function (ES6, 6to5)
+      // Handler is a generator function (ES6, Babel.js)
       if (handler.constructor.name === 'GeneratorFunction') {
         Bluebird.coroutine(handler, { yieldHandler })(...args)
           .then(resolve)

@@ -1,3 +1,8 @@
+# 1.2.3
+
+Updated to Babel.js 4.4.5.
+
+
 # 1.2.2
 
 FIXED trying to catch "write after" end errors.
