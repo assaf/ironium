@@ -7,9 +7,6 @@
     "precommit": "gulp build",
     "reset": "launchctl stop homebrew.mxcl.beanstalk && launchctl start homebrew.mxcl.beanstalk"
   },
-  "engines": {
-    "node": "0.10.x"
-  },
   "main": "lib/index",
   "dependencies": {
     "babel-runtime": "4.7.1",
