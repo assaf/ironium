@@ -1,3 +1,8 @@
+# 1.2.4
+
+Updated to Babel.js 4.7.1.
+
+
 # 1.2.3
 
 Updated to Babel.js 4.4.5.
