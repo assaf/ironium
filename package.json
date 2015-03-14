@@ -9,14 +9,14 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "babel-runtime": "4.7.1",
+    "babel-runtime": "4.7.2",
     "bluebird": "^2.0",
     "debug": "^2.0",
     "fivebeans": "^1.1.1",
     "ms": "^0.7"
   },
   "devDependencies": {
-    "babel": "4.7.1",
+    "babel": "4.7.2",
     "del": "^1.1.1",
     "gulp": "^3.8.10",
     "gulp-babel": "^4.0.0",
@@ -24,7 +24,7 @@
     "gulp-replace": "^0.5.2",
     "gulp-sourcemaps": "^1.5.0",
     "husky": "^0.7.0",
-    "mocha": "^2.2.0"
+    "mocha": "^2.2.1"
   },
   "homepage": "https://www.npmjs.com/package/ironium",
   "repository": {

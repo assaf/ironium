@@ -62,7 +62,7 @@ class Schedule {
         // Set interval first, _queueNext will clear it, if we're already past
         // the end time.
         if (this.every) {
-          this._interval = setInterval(this._queueNext.bind(this), this.every);
+          this._interval = setInterval(()=> this._queueNext(), this.every);
           this._interval.unref();
         }
         this._queueNext();
@@ -70,7 +70,7 @@ class Schedule {
       this._timeout.unref();
     } else if (this.every) {
       // Interval works the same way, except queueNext will call start again.
-      this._interval = setInterval(this._queueNext.bind(this), this.every);
+      this._interval = setInterval(()=> this._queueNext(), this.every);
       this._interval.unref();
     }
   }
@@ -106,20 +106,21 @@ class Schedule {
         // Error queuing job. For a one time job, try to queue again. For
         // period job, only queue again if not scheduled to run soon.
         if (!this.every || this.every > ms('1m')) {
-          const timeout = setTimeout(this._queueNext.bind(this), ms('5s'));
+          const timeout = setTimeout(()=> this._queueNext(), ms('5s'));
           timeout.unref();
         }
       });
   }
 
   // Scheduler calls this to actually run the job when picked up from queue.
-  _runJob(time) {
-    this._notify.info('Processing %s, scheduled for %s', this.name, time.toString());
-    return runJob(this.name, this.job, [], undefined)
-      .then(()=> this._notify.info('Completed %s, scheduled for %s', this.name, time.toString()) )
-      .catch((error)=> {
-        this._notify.error('Error %s, scheduled for %s', this.name, time.toString(), error);
-      });
+  async _runJob(time) {
+    try {
+      this._notify.info('Processing %s, scheduled for %s', this.name, time.toString());
+      await runJob(this.name, this.job, [], undefined);
+      this._notify.info('Completed %s, scheduled for %s', this.name, time.toString());
+    } catch (error) {
+      this._notify.error('Error %s, scheduled for %s', this.name, time.toString(), error);
+    }
   }
 
 }
@@ -186,14 +187,12 @@ module.exports = class Scheduler {
   }
 
   // This is used to pick up job from the queue and run it.
-  _runQueuedJob({ name, time }) {
+  async _runQueuedJob({ name, time }) {
     const schedule = this._schedules[name];
     if (schedule)
-      return schedule._runJob(time);
-    else {
+      await schedule._runJob(time);
+    else
       this._notify.info('No schedule %s, ignoring', name);
-      return Promise.resolve();
-    }
   }
 
   // Lazy access to queue -> lazy load configuration.
@@ -204,7 +203,7 @@ module.exports = class Scheduler {
   _startQueue() {
     if (!this._queue) {
       this._queue = this._ironium.queue('$schedule');
-      this._queue.eachJob(this._runQueuedJob.bind(this));
+      this._queue.eachJob(()=> this._runQueuedJob());
     }
   }
 

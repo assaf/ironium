@@ -1,5 +1,4 @@
 const debug             = require('debug')('ironium');
-const { deprecate }     = require('util');
 const { EventEmitter }  = require('events');
 const { format }        = require('util');
 const Configuration     = require('./configuration');
@@ -23,16 +22,6 @@ class Ironium extends EventEmitter {
     this.stop         = this.stop.bind(this);
     this.runOnce      = this.runOnce.bind(this);
     this.purgeQueues  = this.purgeQueues.bind(this);
-
-    this.schedule     = deprecate((name, time, job)=> {
-      return this.scheduleJob(name, time, job);
-    }, 'schedule is deprecated, please use scheduleJob');
-    this.once         = deprecate((callback)=> {
-      return this.runOnce(callback);
-    }, 'once is deprecated, please use runOnce');
-    this.reset        = deprecate((callback)=> {
-      return this.purgeQueues(callback);
-    }, 'reset is deprecated, please use purgeQueues');
   }
 
   // Returns the named queue.  Returned objects has the methods `queueJob` and
@@ -114,7 +103,7 @@ class Ironium extends EventEmitter {
   purgeQueues(callback) {
     const promise = this._queues.purgeQueues();
     if (callback)
-      promise.then(()=> callback(), callback);
+      promise.then(callback, callback);
     else
       return promise;
   }

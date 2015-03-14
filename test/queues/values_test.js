@@ -9,9 +9,8 @@ describe('queue', function() {
 
   // Capture processed jobs here.
   before(()=> {
-    captureQueue.eachJob((job, callback)=> {
+    captureQueue.eachJob(async (job, callback)=> {
       this.job = job;
-      callback();
     });
   });
 

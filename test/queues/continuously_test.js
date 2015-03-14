@@ -10,7 +10,7 @@ if (typeof(describe) != 'undefined') {
     const steps = [];
 
     before(function(done) {
-      child = fork(module.filename, { env: { NODE_ENV: 'test' } });
+      child = fork(module.filename, { env: { NODE_ENV: 'test', DEBUG: process.env.DEBUG } });
 
       child.on('message', function(step) {
         steps.push(step);
@@ -28,8 +28,8 @@ if (typeof(describe) != 'undefined') {
     });
 
     it('should run three duplicate jobs', function() {
-      const duplicates = steps.filter(function(step) { return step == 'duplicate'; });
-      assert(duplicates.length == 3);
+      const duplicates = steps.filter(function(step) { return step === 'duplicate'; });
+      assert.equal(duplicates.length, 3);
     });
 
     it('should run delayed job', function() {
@@ -51,11 +51,6 @@ if (typeof(describe) != 'undefined') {
 
   const ironium = require('../../lib');
 
-  if (process.env.DEBUG) {
-    ironium.on('debug', console.log);
-    ironium.on('info',  console.info);
-    ironium.on('error', console.error);
-  }
   // Catch ironium.emit('error'), otherwise process fails on failed job
   ironium.on('error', function() { });
 
@@ -83,7 +78,6 @@ if (typeof(describe) != 'undefined') {
   ironium.queue('delayed').eachJob(function(job, callback) {
     setTimeout(function() {
       process.send('delayed');
-
       ironium.queueJob('failed', 'job', callback);
     }, 500);
   });

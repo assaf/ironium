@@ -25,7 +25,7 @@ function yieldHandler(value) {
 // handler  - Called to process the job
 // args     - With the given arguments
 // timeout  - If set, times out job after that many ms
-module.exports = function runJob(jobID, handler, args, timeout) {
+module.exports = async function runJob(jobID, handler, args, timeout) {
   assert(handler, 'Handler is missing');
 
   return new Promise(function(resolve, reject) {

@@ -27,10 +27,7 @@ gulp.task('build', ['clean'], function() {
   const options = {
     experimental: true,
     loose:        'all',
-    optional:     [
-      'runtime',
-      'bluebirdCoroutines'
-    ]
+    optional:     [ 'runtime' ]
   };
   const compile = gulp.src('src/**/*.js')
     .pipe(sourcemaps.init())

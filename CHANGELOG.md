@@ -1,3 +1,8 @@
+# 2.0.0
+
+REMOVED deprecated methods.
+
+
 # 1.2.4
 
 Updated to Babel.js 4.7.1.
