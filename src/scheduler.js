@@ -203,7 +203,7 @@ module.exports = class Scheduler {
   _startQueue() {
     if (!this._queue) {
       this._queue = this._ironium.queue('$schedule');
-      this._queue.eachJob(()=> this._runQueuedJob());
+      this._queue.eachJob((job)=> this._runQueuedJob(job));
     }
   }
 

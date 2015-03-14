@@ -563,7 +563,7 @@ class Queue extends EventEmitter {
     // Delete all ready jobs.
     try {
       while (true) {
-        let readyJobID = await session.request('peek_ready');
+        let [readyJobID] = await session.request('peek_ready');
         await session.request('destroy', readyJobID);
       }
     } catch (error) {
@@ -575,7 +575,7 @@ class Queue extends EventEmitter {
     // Delete all delayed jobs.
     try {
       while (true) {
-        let delayedJobID = await session.request('peek_delayed');
+        let [delayedJobID] = await session.request('peek_delayed');
         await session.request('destroy', delayedJobID);
       }
     } catch (error) {

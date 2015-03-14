@@ -2,6 +2,8 @@
 
 REMOVED deprecated methods.
 
+FIXED bug in purgeQueues.
+
 
 # 1.2.4
 
