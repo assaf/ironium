@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "scripts": {
     "test": "gulp test",
     "postpublish": "gulp tag-release",
@@ -9,14 +9,14 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "babel-runtime": "4.7.2",
+    "babel-runtime": "4.7.12",
     "bluebird": "^2.0",
     "debug": "^2.0",
     "fivebeans": "^1.1.1",
     "ms": "^0.7"
   },
   "devDependencies": {
-    "babel": "4.7.2",
+    "babel": "4.7.12",
     "del": "^1.1.1",
     "gulp": "^3.8.10",
     "gulp-babel": "^4.0.0",
