@@ -134,43 +134,42 @@ class Session {
   async connect() {
     // This may be called multiple times, we only want to establish the
     // connection once, so we reuse the same promise
-    const _connectPromise = this._connectPromise || this._connect();
-    this._connectPromise  = _connectPromise;
+    if (this._connectPromise)
+      return await this._connectPromise;
+
+    const _connectPromise = this._connect(()=> {
+      // If client connection closed/end, discard the promise
+      if (this._connectPromise === _connectPromise)
+        this._connectPromise = null;
+    });
+    this._connectPromise = _connectPromise;
 
     try {
-      const client = await Bluebird.resolve(_connectPromise).timeout(CONNECT_TIMEOUT);
-
-      // Once we established a connection, need to monitor for errors of when
-      // server decides to close it
-      client.once('error', (error)=> {
-        if (this._connectPromise === _connectPromise)
-          this._connectPromise = null;
-        this._notify.debug('Client error in queue %s: %s', this.id, error.toString());
-      });
-
-      // Watch for end and switch to new session
-      client.stream.once('end', ()=> {
-        if (this._connectPromise === _connectPromise)
-          this._connectPromise = null;
-        this._notify.debug('Connection closed for %s', this.id);
-      });
-
-      return client;
+      return await _connectPromise;
     } catch (error) {
-      this._connectPromise = null;
+      // If connection errors, discard the promise
+      if (this._connectPromise === _connectPromise)
+        this._connectPromise = null;
       throw error;
     }
   }
 
-  async _connect() {
+  async _connect(onClosed) {
     // This is the Fivebeans client is essentially a session.
     const config  = this._config;
     const client  = new Fivebeans.client(config.queues.hostname, config.queues.port);
     // For when we have a lot of writers contending to push to the same queue.
     client.setMaxListeners(0);
 
+    // Once we established a connection, need to monitor for errors of when
+    // server decides to close it
+    client.once('error', (error)=> {
+      onClosed();
+      this._notify.debug('Client error in queue %s: %s', this.id, error.toString());
+    });
+
     // This promise resolves when client connects.
-    await new Promise(function(resolve, reject) {
+    const establishConnection = new Promise(function(resolve, reject) {
       // Nothing happens until we start the connection.  Must wait for
       // connection event before we can send anything down the stream.
       client.connect();
@@ -183,6 +182,14 @@ class Session {
       client.on('close', function() {
         reject(new Error('CLOSED'));
       });
+    });
+    // Make sure we timeout on slow connections, and try again
+    await Bluebird.resolve(establishConnection).timeout(CONNECT_TIMEOUT);
+
+    // Watch for end and switch to new session
+    client.stream.once('end', ()=> {
+      onClosed();
+      this._notify.debug('Connection closed for %s', this.id);
     });
 
     // When working with Iron.io, need to authenticate each connection before
