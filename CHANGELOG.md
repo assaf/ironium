@@ -1,3 +1,8 @@
+# 2.0.1
+
+FIXED race condition that causes write after end errors
+
+
 # 2.0.0
 
 REMOVED deprecated methods.

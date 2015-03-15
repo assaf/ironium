@@ -130,12 +130,36 @@ class Session {
   }
 
   // Called to establish a new connection, or use existing connections.
-  // Returns a promise that resolves to a FiveBeans client.
+  // Resolves to a FiveBeans client.
   async connect() {
-    if (!this._connectPromise)
-      this._connectPromise = this._connect();
-    const client = await this._connectPromise;
-    return client;
+    // This may be called multiple times, we only want to establish the
+    // connection once, so we reuse the same promise
+    const _connectPromise = this._connectPromise || this._connect();
+    this._connectPromise  = _connectPromise;
+
+    try {
+      const client = await Bluebird.resolve(_connectPromise).timeout(CONNECT_TIMEOUT);
+
+      // Once we established a connection, need to monitor for errors of when
+      // server decides to close it
+      client.once('error', (error)=> {
+        if (this._connectPromise === _connectPromise)
+          this._connectPromise = null;
+        this._notify.debug('Client error in queue %s: %s', this.id, error.toString());
+      });
+
+      // Watch for end and switch to new session
+      client.stream.once('end', ()=> {
+        if (this._connectPromise === _connectPromise)
+          this._connectPromise = null;
+        this._notify.debug('Connection closed for %s', this.id);
+      });
+
+      return client;
+    } catch (error) {
+      this._connectPromise = null;
+      throw error;
+    }
   }
 
   async _connect() {
@@ -144,18 +168,6 @@ class Session {
     const client  = new Fivebeans.client(config.queues.hostname, config.queues.port);
     // For when we have a lot of writers contending to push to the same queue.
     client.setMaxListeners(0);
-
-    client.once('error', (error)=> {
-      this.end();
-      this._notify.debug('Client error in queue %s: %s', this.id, error.toString());
-    });
-
-    // If we can't establish a connection of complete the authentication/setup
-    // step, and Fivebeans doesn't trigger an error.
-    const timeout = setTimeout(function() {
-      client.emit('error', new Error('TIMED_OUT'));
-    }, CONNECT_TIMEOUT);
-    timeout.unref();
 
     // This promise resolves when client connects.
     await new Promise(function(resolve, reject) {
@@ -173,40 +185,26 @@ class Session {
       });
     });
 
-    // Watch for end and switch to new session
-    client.stream.once('end', ()=> {
-      this.end();
-      this._notify.debug('Connection closed for %s', this.id);
-    });
+    // When working with Iron.io, need to authenticate each connection before
+    // it can be used.  This is the first setup step, followed by the
+    // session-specific setup.
+    if (config.authenticate)
+      await Bluebird.promisify(client.put, client)(0, 0, 0, config.authenticate);
 
-    try {
-      // When working with Iron.io, need to authenticate each connection before
-      // it can be used.  This is the first setup step, followed by the
-      // session-specific setup.
-      if (config.authenticate)
-        await Bluebird.promisify(client.put, client)(0, 0, 0, config.authenticate);
+    // Put/reserve clients have different setup requirements, this are handled by
+    // an externally supplied method.
+    await this.setup(client);
 
-      // Put/reserve clients have different setup requirements, this are handled by
-      // an externally supplied method.
-      await this.setup(client);
-    } catch (error) {
-      client.emit('error', error);
-      throw error;
-    }
-    clearTimeout(timeout);
     return client;
   }
 
   // Close this session
-  async end() {
+  end() {
     if (this._connectPromise) {
-      // If we have/setting up a session, wait for it and close it
-      // But let another client open new session
-      const connectPromise  = this._connectPromise;
-      this._connectPromise  = null;
-      const client          = await connectPromise;
-      client.end();
-      client.emit('close');
+      this._connectPromise
+        .then(client => client.end())
+        .catch(()=> null);
+      this._connectPromise = null;
     }
   }
 
@@ -480,29 +478,30 @@ class Queue extends EventEmitter {
     const backoff = ifProduction(RESERVE_BACKOFF);
 
     this._notify.debug('Waiting for jobs on queue %s', this.name);
-    while (queue._processing || queue._handlers.length) {
+    if (!(queue._processing && queue._handlers.length))
+      return;
 
-      try {
+    try {
 
-        const [jobID, payload]  = await session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT));
-        const promise           = queue._runAndDestroy(session, jobID, payload);
-        await Bluebird.resolve(promise).timeout(PROCESSING_TIMEOUT);
+      const [jobID, payload]  = await session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT));
+      await queue._runAndDestroy(session, jobID, payload);
 
-      } catch (error) {
+    } catch (error) {
 
-        // Reject can take anything, including false, undefined.
-        const reason = error.message || error;
-        if (/^TIMED_OUT/.test(reason)) {
-          await session.end();
-        } else if (/^(CLOSED|DRAINING)$/.test(reason)) {
-          // No job, go back to wait for next job.
-        } else {
-          // Report on any other error, and back off for a few.
-          queue._notify.debug('Error processing job, backing off', error.stack);
-          await Bluebird.delay(backoff);
-        }
-
+      // Reject can take anything, including false, undefined.
+      const reason = error.message || error;
+      if (/^TIMED_OUT/.test(reason)) {
+        session.end();
+      } else if (/^(CLOSED|DRAINING)$/.test(reason)) {
+        // No job, go back to wait for next job.
+      } else {
+        // Report on any other error, and back off for a few.
+        queue._notify.debug('Error processing job, backing off', error.stack);
+        await Bluebird.delay(backoff);
       }
+
+    } finally {
+      this._processContinously(session);
     }
   }
 
@@ -593,7 +592,7 @@ class Queue extends EventEmitter {
       // Setup: tell Beanstalkd which tube to use (persistent to session).
       const tubeName  = this._prefixedName;
       const session   = new Session(this._server, `${this.name}/put`, async function(client) {
-        Bluebird.promisify(client.use, client)(tubeName);
+        await Bluebird.promisify(client.use, client)(tubeName);
       });
 
       this._putSession = session;
@@ -611,8 +610,8 @@ class Queue extends EventEmitter {
       const tubeName  = this._prefixedName;
       const session   = new Session(this._server, `${this.name}/${index}`, async function(client) {
         // Must watch a new tube before we can ignore default tube
-        Bluebird.promisify(client.watch, client)(tubeName);
-        Bluebird.promisify(client.ignore, client)('default');
+        await Bluebird.promisify(client.watch, client)(tubeName);
+        await Bluebird.promisify(client.ignore, client)('default');
       });
 
       this._reserveSessions[index] = session;
