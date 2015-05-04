@@ -123,7 +123,7 @@ const job = {
   message: 'wow, such workers, much concurrency'
 };
 
-echoQueue.queuedJob(job, function(error) {
+echoQueue.queueJob(job, function(error) {
   if (error)
     console.error('No echo for you!');
 });
@@ -138,13 +138,13 @@ before(()=> echoQueue.queueJob(job));
 And this, if you're using ES7:
 
 ```
-await echoQueue.queuedJob(job);
+await echoQueue.queueJob(job);
 ```
 
 
 ### queue.delayJob(job, duration, callback)
 
-Similar to [`queuedJob`](#queuequeuejobjob-callback) but delays processing of the
+Similar to [`queueJob`](#queuequeuejobjob-callback) but delays processing of the
 job by the set duration.
 
 Duration is either a number or a string.  The default unit is milliseconds, but
