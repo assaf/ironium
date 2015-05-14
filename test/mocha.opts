@@ -1,5 +1,5 @@
+--compilers js:babel/register
 --recursive
---require test/es6.js
 --reporter spec
 --growl
 --check-leaks

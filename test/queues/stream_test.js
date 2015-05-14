@@ -5,6 +5,7 @@ const Stream  = require('stream');
 
 
 class SourceStream extends Stream.Readable {
+
   constructor(stopAt) {
     super({ objectMode: true });
     this._count   = 0;

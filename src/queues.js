@@ -173,9 +173,6 @@ class Session {
       // Nothing happens until we start the connection.  Must wait for
       // connection event before we can send anything down the stream.
       client.connect();
-      // Allows the process to exit when done processing, otherwise, it will
-      // stay running while it's waiting to reserve the next job.
-      client.stream.unref();
 
       client.on('connect', resolve);
       client.on('error', reject);
@@ -298,6 +295,7 @@ class QueuingTransform extends Stream.Transform {
 class Queue extends EventEmitter {
 
   constructor(server, name) {
+    super();
     this.name             = name;
     this.webhookURL       = server.config.webhookURL(name);
 
@@ -600,6 +598,9 @@ class Queue extends EventEmitter {
       const tubeName  = this._prefixedName;
       const session   = new Session(this._server, `${this.name}/put`, async function(client) {
         await Bluebird.promisify(client.use, client)(tubeName);
+        // Allows the process to exit when done processing, otherwise, it will
+        // stay running while it's waiting to reserve the next job.
+        client.stream.unref();
       });
 
       this._putSession = session;

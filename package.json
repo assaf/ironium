@@ -9,22 +9,22 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "babel-runtime": "4.7.12",
+    "babel-runtime": "5.3.3",
     "bluebird": "^2.0",
     "debug": "^2.0",
-    "fivebeans": "^1.1.1",
+    "fivebeans": "^1.2.0",
     "ms": "^0.7"
   },
   "devDependencies": {
-    "babel": "4.7.12",
+    "babel": "5.3.3",
     "del": "^1.1.1",
     "gulp": "^3.8.10",
-    "gulp-babel": "^4.0.0",
+    "gulp-babel": "^5.1.0",
     "gulp-notify": "^2.2.0",
     "gulp-replace": "^0.5.2",
-    "gulp-sourcemaps": "^1.5.0",
+    "gulp-sourcemaps": "^1.5.2",
     "husky": "^0.7.0",
-    "mocha": "^2.2.1"
+    "mocha": "^2.2.4"
   },
   "homepage": "https://www.npmjs.com/package/ironium",
   "repository": {

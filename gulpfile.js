@@ -24,14 +24,9 @@ gulp.task('default', ['build'], function() {
 
 // Compile ES6 in src to ES5 in lib
 gulp.task('build', ['clean'], function() {
-  const options = {
-    experimental: true,
-    loose:        'all',
-    optional:     [ 'runtime' ]
-  };
   const compile = gulp.src('src/**/*.js')
     .pipe(sourcemaps.init())
-    .pipe(babel(options))
+    .pipe(babel())
     //.pipe(concat("all.js"))
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest('lib'));

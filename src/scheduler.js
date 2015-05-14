@@ -63,15 +63,12 @@ class Schedule {
         // the end time.
         if (this.every) {
           this._interval = setInterval(()=> this._queueNext(), this.every);
-          this._interval.unref();
         }
         this._queueNext();
       }, now - this.startTime);
-      this._timeout.unref();
     } else if (this.every) {
       // Interval works the same way, except queueNext will call start again.
       this._interval = setInterval(()=> this._queueNext(), this.every);
-      this._interval.unref();
     }
   }
 

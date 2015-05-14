@@ -1,3 +1,8 @@
+# 2.1.0
+
+FIXED keep server alive until stop()
+
+
 # 2.0.1
 
 FIXED race condition that causes write after end errors

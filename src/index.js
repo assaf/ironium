@@ -9,7 +9,7 @@ const Scheduler         = require('./scheduler');
 class Ironium extends EventEmitter {
 
   constructor() {
-    EventEmitter.call(this);
+    super();
     this._queues      = new Queues(this);
     this._scheduler   = new Scheduler(this);
     this.debug        = debug;
