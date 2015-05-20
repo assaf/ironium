@@ -1,3 +1,9 @@
+# 2.3.0
+
+ADDED configures itself from IRON_MQ_PROJECT_ID and IRON_MQ_TOKEN environment
+variables (e.g. when running in Heroku)
+
+
 # 2.2.0
 
 CHANGED run all job handlers at once

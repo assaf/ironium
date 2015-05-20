@@ -35,17 +35,24 @@ module.exports = class Configuration {
     this.scheduler = {};
 
     // Configurating for Iron.io.
-    if (source.ironio) {
-      if (source.ironio.token && source.ironio.projectID) {
-        const hostname    = source.ironio.hostname || IRONIO_HOSTNAME;
-        this.authenticate = format(IRONIO_AUTHENTICATE, source.ironio.token, source.ironio.projectID);
-        this._webhookURL  = format(IRONIO_WEBHOOKURL, hostname, source.ironio.projectID, source.ironio.token);
-        // When using Iron.io, force hostname/port configuration.
-        this.queues.hostname = hostname;
-        this.queues.port     = BEANSTALKD_PORT;
-      } else if (source.ironio.token || source.ironio.projectID)
-        throw new Error('Configuration error: to use Iron.io, must set both ironio.projectID and ironio.token');
-    }
+    if (source.ironio && source.ironio.token && source.ironio.projectID) {
+      const hostname    = source.ironio.hostname || IRONIO_HOSTNAME;
+      this.authenticate = format(IRONIO_AUTHENTICATE, source.ironio.token, source.ironio.projectID);
+      this._webhookURL  = format(IRONIO_WEBHOOKURL, hostname, source.ironio.projectID, source.ironio.token);
+      // When using Iron.io, force hostname/port configuration.
+      this.queues.hostname = hostname;
+      this.queues.port     = BEANSTALKD_PORT;
+    } else if (source.ironio)
+      throw new Error('Configuration error: to use Iron.io, must set both ironio.projectID and ironio.token');
+    else if (process.env.IRON_MQ_PROJECT_ID && process.env.IRON_MQ_TOKEN) {
+      this.authenticate = format(IRONIO_AUTHENTICATE, process.env.IRON_MQ_TOKEN, process.env.IRON_MQ_PROJECT_ID);
+      this._webhookURL  = format(IRONIO_WEBHOOKURL, IRONIO_HOSTNAME, process.env.IRON_MQ_PROJECT_ID, process.env.IRON_MQ_TOKEN);
+      // When using Iron.io, force hostname/port configuration.
+      this.queues.hostname = IRONIO_HOSTNAME;
+      this.queues.port     = BEANSTALKD_PORT;
+    } else if (process.env.IRON_MQ_PROJECT_ID || process.env.IRON_MQ_TOKEN)
+      throw new Error('Configuration error: to use Iron.io, must set both IRON_MQ_PROJECT_ID and IRON_MQ_TOKEN');
+
     this._webhookURL  = this._webhookURL || LOCAL_WEBHOOKURL;
   }
 
