@@ -3,6 +3,7 @@ const Bluebird          = require('bluebird');
 const { EventEmitter }  = require('events');
 const Fivebeans         = require('fivebeans');
 const ms                = require('ms');
+const hrTime            = require('pretty-hrtime');
 const Promise           = require('bluebird');
 const runJob            = require('./run_job');
 const Stream            = require('stream');
@@ -529,9 +530,12 @@ class Queue extends EventEmitter {
       this._notify.info('Processing queued job %s:%s', this.name, jobID);
       this._notify.debug('Payload for job %s:%s:', this.name, jobID, payload);
 
-      for (let handler of this._handlers)
-        await runJob(jobID, handler, [payload], PROCESSING_TIMEOUT);
-      this._notify.info('Completed queued job %s:%s', this.name, jobID);
+      const start = process.hrtime();
+      const working = this._handlers
+        .map(handler => runJob(jobID, handler, [payload], PROCESSING_TIMEOUT));
+      await Promise.all(working);
+      const elapsed = hrTime(process.hrtime(start));
+      this._notify.info('Completed queued job %s:%s in %s', this.name, jobID, elapsed);
 
     } catch (error) {
 

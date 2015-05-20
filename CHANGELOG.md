@@ -1,3 +1,10 @@
+# 2.2.0
+
+CHANGED run all job handlers at once
+
+ADDED log job processing time
+
+
 # 2.1.0
 
 FIXED keep server alive until stop()
