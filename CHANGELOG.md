@@ -1,3 +1,7 @@
+# 2.3.2
+
+FIXED bug in logging failed job.
+
 # 2.3.1
 
 CHANGED runOnce throws error, no need to log it as well.

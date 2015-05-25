@@ -488,28 +488,19 @@ class Queue extends EventEmitter {
       return;
 
     try {
-
       const [jobID, payload]  = await session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT));
-      await queue._runAndDestroy(session, jobID, payload);
 
-    } catch (error) {
-
-      // Ideally an error and we want to log the full stack trace, but promise
-      // may reject false, undefined, etc.
-      this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
-
-      // Reject can take anything, including false, undefined.
-      const reason = error.message || error;
-      if (/^TIMED_OUT/.test(reason)) {
-        session.end();
-      } else if (/^(CLOSED|DRAINING)$/.test(reason)) {
-        // No job, go back to wait for next job.
-      } else {
-        // Report on any other error, and back off for a few.
-        queue._notify.debug('Error processing job, backing off', error.stack);
+      try {
+        await queue._runAndDestroy(session, jobID, payload);
+      } catch (error) {
+        this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
         await Bluebird.delay(backoff);
       }
 
+    } catch (error) {
+      const reason = error.message || error;
+      if (/^TIMED_OUT/.test(reason))
+        session.end();
     } finally {
       this._processContinously(session);
     }
