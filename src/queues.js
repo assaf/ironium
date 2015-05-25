@@ -494,6 +494,10 @@ class Queue extends EventEmitter {
 
     } catch (error) {
 
+      // Ideally an error and we want to log the full stack trace, but promise
+      // may reject false, undefined, etc.
+      this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
+
       // Reject can take anything, including false, undefined.
       const reason = error.message || error;
       if (/^TIMED_OUT/.test(reason)) {
@@ -539,9 +543,6 @@ class Queue extends EventEmitter {
 
     } catch (error) {
 
-      // Ideally an error and we want to log the full stack trace, but promise
-      // may reject false, undefined, etc.
-      this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
       // Error or timeout: we release the job back to the queue.  Since this
       // may be a transient error condition (e.g. server down), we let it sit
       // in the queue for a while before it becomes available again.

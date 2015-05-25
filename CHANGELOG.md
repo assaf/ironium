@@ -1,3 +1,8 @@
+# 2.3.1
+
+CHANGED runOnce throws error, no need to log it as well.
+
+
 # 2.3.0
 
 ADDED configures itself from IRON_MQ_PROJECT_ID and IRON_MQ_TOKEN environment
