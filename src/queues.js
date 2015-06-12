@@ -16,7 +16,7 @@ const CONNECT_TIMEOUT       = ms('5s');
 // too long.
 const RESERVE_TIMEOUT       = ms('30s');
 
-// Back-off in case of connection error, prevents continously failing to
+// Back-off in case of connection error, prevents continuously failing to
 // reserve a job.
 const RESERVE_BACKOFF       = ms('30s');
 
@@ -93,7 +93,7 @@ class Session {
     // We return a new promise that resolves to the output of the request.
     const client  = await this.connect();
     const promise = new Promise((resolve, reject)=> {
-      // Processing (continously or not) know to ignore the TIMED_OUT
+      // Processing (continuously or not) know to ignore the TIMED_OUT
       // and CLOSED errors.
 
       // When Fivebeans client executes a command, it doesn't monitor for
@@ -395,7 +395,7 @@ class Queue extends EventEmitter {
       return;
     this._processing = true;
 
-    // Only call _processContinously if there are any handlers associated with
+    // Only call _processContinuously if there are any handlers associated with
     // this queue.  A queue may have no handle (e.g. one process queues,
     // another processes), in which case we don't want to listen on it.
     if (this._handlers.length)
@@ -470,16 +470,16 @@ class Queue extends EventEmitter {
   }
 
 
-  // Calls _processContinously for each session
+  // Calls _processContinuously for each session
   async _startProcessing() {
     for (let i = 0; i < this._width; ++i) {
       let session = await this._reserve(i);
-      this._processContinously(session);
+      this._processContinuously(session);
     }
   }
 
   // Called to process all jobs, until this._processing is set to false.
-  async _processContinously(session) {
+  async _processContinuously(session) {
     const queue   = this;
     const backoff = ifProduction(RESERVE_BACKOFF);
 
@@ -502,7 +502,7 @@ class Queue extends EventEmitter {
       if (/^TIMED_OUT/.test(reason))
         session.end();
     } finally {
-      this._processContinously(session);
+      this._processContinuously(session);
     }
   }
 
