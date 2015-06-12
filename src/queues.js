@@ -272,6 +272,7 @@ class QueuingTransform extends Stream.Transform {
         });
 
       }
+
       // Let the next job in, so we're running multiple queueJob in parallel,
       // but no more than concurrently allowed by throttle.
       //
