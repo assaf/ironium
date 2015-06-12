@@ -1,3 +1,8 @@
+# 2.3.3
+
+Updated dependencies.
+
+
 # 2.3.2
 
 FIXED bug in logging failed job.
