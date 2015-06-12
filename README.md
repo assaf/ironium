@@ -561,7 +561,7 @@ compiling, watching and notifying.
 Specifically:
 
 ```
-gulp          # Run this in development, continously compiles on every change
+gulp          # Run this in development, continuously compiles on every change
 gulp build    # Compile source files from src/ into lib/
 gulp clean    # Clean compiled files
 gulp release  # Publish new release
