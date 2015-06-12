@@ -361,6 +361,9 @@ class Queue extends EventEmitter {
       const jobID = await this._put.request('put', priority, delay, timeToRun, payload)
       this._notify.debug('Queued job %s on queue %s', jobID, this.name, payload);
       return jobID;
+    } catch (error) {
+      error.message = `Error queuing to ${this.name}: ${error.message}`;
+      throw error;
     } finally {
       --this._queuing;
       this.emit('ready');
