@@ -100,8 +100,8 @@ class Session {
       // connection close/error, so we need to catch these events ourselves
       // and reject the promise.
       const onConnectionEnded = (error)=> {
-        reject(error || new Error('CLOSED'));
-        this._notify.debug('%s: %s => %s', this.id, command, error || 'CLOSED');
+        reject(error);
+        this._notify.debug('%s: %s => %s', this.id, command, error);
       }
 
       client.once('close', onConnectionEnded);
