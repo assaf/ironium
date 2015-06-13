@@ -362,8 +362,8 @@ class Queue extends EventEmitter {
       this._notify.debug('Queued job %s on queue %s', jobID, this.name, payload);
       return jobID;
     } catch (error) {
-      error.message = `Error queuing to ${this.name}: ${error.message}`;
-      throw error;
+      // This will typically be connection error, not helpful until we include the queue name.
+      throw new Error(`Error queuing to ${this.name}: ${error.message}`);
     } finally {
       --this._queuing;
       this.emit('ready');
