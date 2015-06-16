@@ -1,3 +1,8 @@
+# 2.3.5
+
+FIXED automatically retry first failed attempt to queue job.
+
+
 # 2.3.3
 
 Updated dependencies.
