@@ -110,10 +110,9 @@ class Ironium extends EventEmitter {
 
   // Used for logging info messages.
   info(...args) {
-    if (this.listeners('info').length)
-      this.emit('info', format(...args));
-    else
-      this.debug(...args);
+    const formatted = format(...args);
+    this.debug('%s', formatted);
+    this.emit('info', formatted);
   }
 
   // Used for logging error messages.
@@ -121,11 +120,11 @@ class Ironium extends EventEmitter {
   // First argument is formatted string, followed by any number of arguments,
   // last argument is always the Error object.
   error(...args) {
-    const error = args.pop();
+    const error   = args.pop();
+    error.message = `${format(...args)} - ${error.message}`;
+    this.debug(error.stack);
     if (this.listeners('error').length)
       this.emit('error', error);
-    const formatted = format(...args);
-    this.debug(`${formatted}\n${error.stack}`);
   }
 
 }

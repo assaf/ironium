@@ -2,6 +2,7 @@
 
 FIXED should exit domain after running job handler.
 
+FIXED show queue name / job ID for failed job.
 
 
 # 2.3.5
