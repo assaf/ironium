@@ -1,3 +1,9 @@
+# 2.3.6
+
+FIXED should exit domain after running job handler.
+
+
+
 # 2.3.5
 
 FIXED automatically retry first failed attempt to queue job.

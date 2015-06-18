@@ -28,13 +28,18 @@ function yieldHandler(value) {
 module.exports = async function runJob(jobID, handler, args, timeout) {
   assert(handler, 'Handler is missing');
 
+  // Ideally we call the function, function calls the callback, all is well.
+  // But the handler may throw an exception, or suffer some other
+  // catastrophic outcome: we use a domain to handle that.  It may also
+  // never halt, so we set a timer to force early completion.
+  const domain = createDomain();
+
   return new Promise(function(resolve, reject) {
 
-    // Ideally we call the function, function calls the callback, all is well.
-    // But the handler may throw an exception, or suffer some other
-    // catastrophic outcome: we use a domain to handle that.  It may also
-    // never halt, so we set a timer to force early completion.
-    const domain = createDomain();
+    domain.jobID = jobID;
+
+    // Uncaught exception in the handler's domain will also fail this job.
+    domain.on('error', reject);
 
     if (timeout) {
       // This timer trigger if the job doesn't complete in time and rejects the
@@ -49,48 +54,63 @@ module.exports = async function runJob(jobID, handler, args, timeout) {
       domain.add(errorOnTimeout);
     }
 
-    domain.jobID = jobID;
-
-    // Uncaught exception in the handler's domain will also fail this job.
-    domain.on('error', reject);
     domain.run(function() {
       // Handler is a generator function (ES6, Babel.js)
       if (handler.constructor.name === 'GeneratorFunction') {
         Bluebird.coroutine(handler, { yieldHandler })(...args)
-          .then(resolve)
+          .then(function() {
+            domain.exit();
+            resolve();
+          })
           .catch(function(error) {
             domain.emit('error', error);
+            domain.exit();
           });
         return;
       }
 
       // Good old callback resolves the job.  Since we intercept it,
       // errors are handled by on('error'), successful completion resolves.
-      const result = handler(...args, domain.intercept(resolve));
+      const result = handler(...args, function(error) {
+        domain.exit();
+        if (error)
+          reject(error);
+        else
+          resolve();
+      });
 
       // Job may have returned a promise or a generator
       if (result && typeof(result.next) === 'function' && typeof(result.throw) === 'function') {
         console.log('Non-generator functions that return generators are no longer supported');
         // Handler did not identify as generator function, but returned a generator (Traceur)
         Bluebird.coroutine(()=> result, { yieldHandler })()
-          .then(resolve)
+          .then(function() {
+            domain.exit();
+            resolve();
+          })
           .catch(function(error) {
             domain.emit('error', error);
+            domain.exit();
           });
       } else if (result && typeof(result.then) === 'function') {
         // A thenable: cast it to a promise we can handle
         Promise.resolve(result)
-          .then(resolve)
+          .then(function() {
+            domain.exit();
+            resolve();
+          })
           .catch(function(error) {
             if (!(error instanceof Error))
               error = new Error(`${error} in ${handler}`);
             domain.emit('error', error);
+            domain.exit();
           });
       }
       // Otherwise it's a callback, wait for it to resolve job
 
     });
 
+  }).then(function() {
+    domain.exit();
   });
-
 };
