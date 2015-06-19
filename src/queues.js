@@ -1,5 +1,6 @@
 const assert            = require('assert');
 const Bluebird          = require('bluebird');
+const { createDomain }  = require('domain');
 const { EventEmitter }  = require('events');
 const Fivebeans         = require('fivebeans');
 const ms                = require('ms');
@@ -506,7 +507,13 @@ class Queue extends EventEmitter {
       try {
         await queue._runAndDestroy(session, jobID, payload);
       } catch (error) {
-        this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
+
+        // Use domain to pass jobID to error handler for logging, etc
+        const domain = createDomain();
+        domain.jobID = jobID;
+        domain.run(()=> {
+          this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
+        });
         await Bluebird.delay(backoff);
       }
 

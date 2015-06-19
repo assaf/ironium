@@ -1,3 +1,8 @@
+# 2.3.7
+
+FIXED pass jobID to error handler via domain.
+
+
 # 2.3.6
 
 FIXED should exit domain after running job handler.
