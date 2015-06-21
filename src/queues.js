@@ -46,6 +46,19 @@ function msToSec(ms) {
 }
 
 
+// Error talking to queue server, typically transient
+class QueueError extends Error {
+
+  constructor(error) {
+    super();
+    this.message = error.message || error;
+    this.name    = error.name    || this.constructor.name;
+    Error.captureStackTrace(this, this.constructor);
+  }
+
+}
+
+
 // Represents a Beanstalkd session.  Since GET requests block, need separate
 // sessions for pushing and processing, and each is also setup differently.
 //
@@ -79,6 +92,7 @@ class Session {
     this._connectPromise = null;
   }
 
+
   // Make a request to the server.
   //
   // command  - The command (e.g. put, get, destroy)
@@ -93,7 +107,7 @@ class Session {
     // Ask for connection, we get a promise that resolves into a client.
     // We return a new promise that resolves to the output of the request.
     const client  = await this.connect();
-    const promise = new Promise((resolve, reject)=> {
+    return await new Promise((resolve, reject)=> {
       // Processing (continuously or not) know to ignore the TIMED_OUT
       // and CLOSED errors.
 
@@ -101,7 +115,7 @@ class Session {
       // connection close/error, so we need to catch these events ourselves
       // and reject the promise.
       const onConnectionEnded = (error)=> {
-        reject(error || new Error('CLOSED'));
+        reject(new QueueError(error || 'CLOSED'));
         this._notify.debug('%s: %s => %s', this.id, command, error || 'CLOSED');
       }
 
@@ -116,7 +130,7 @@ class Session {
 
         if (error) {
           this._notify.debug('%s: %s => !%s', this.id, command, error);
-          reject(error);
+          reject(new QueueError(error));
         } else if (results.length > 1) {
           this._notify.debug('%s: %s => %s', this.id, command, results);
           resolve(results);
@@ -127,17 +141,21 @@ class Session {
       });
 
     });
-    const response = await promise;
-    return response;
   }
+
 
   // Called to establish a new connection, or use existing connections.
   // Resolves to a FiveBeans client.
   async connect() {
     // This may be called multiple times, we only want to establish the
     // connection once, so we reuse the same promise
-    if (this._connectPromise)
-      return await this._connectPromise;
+    if (this._connectPromise) {
+      try {
+        return await this._connectPromise;
+      } catch (error) {
+        throw new QueueError(error);
+      }
+    }
 
     const _connectPromise = this._connect(()=> {
       // If client connection closed/end, discard the promise
@@ -152,9 +170,10 @@ class Session {
       // If connection errors, discard the promise
       if (this._connectPromise === _connectPromise)
         this._connectPromise = null;
-      throw error;
+      throw new QueueError(error);
     }
   }
+
 
   async _connect(onClosed) {
     // This is the Fivebeans client is essentially a session.
@@ -179,7 +198,7 @@ class Session {
       client.on('connect', resolve);
       client.on('error', reject);
       client.on('close', function() {
-        reject(new Error('CLOSED'));
+        reject(new QueueError('CLOSED'));
       });
     });
     // Make sure we timeout on slow connections, and try again
@@ -204,6 +223,7 @@ class Session {
     return client;
   }
 
+
   // Close this session
   end() {
     if (this._connectPromise) {
@@ -215,6 +235,8 @@ class Session {
   }
 
 }
+
+
 
 
 // Stream transform: writeable stream that accepts jobs, and readable strem that
@@ -242,6 +264,7 @@ class QueuingTransform extends Stream.Transform {
     // job ID.  We're not done processing until this goes back to zero.
     this._queuing   = 0;
   }
+
 
   _transform(job, encoding, callback) {
     // We throttle stream processing based on our queuing bandwidth.  We can
@@ -282,6 +305,7 @@ class QueuingTransform extends Stream.Transform {
     });
   }
 
+
   _flush(callback) {
     // There are no more jobs coming on the writeable end, but we're not done
     // with the readable end of things until we queued all the jobs,
@@ -290,7 +314,10 @@ class QueuingTransform extends Stream.Transform {
     else
       this.once('drain', callback);
   }
+
 }
+
+
 
 
 // Abstraction for a queue.  Has two sessions, one for pushing messages, one
@@ -367,11 +394,11 @@ class Queue extends EventEmitter {
           this._notify.debug('Queued job %s on queue %s', jobID, this.name, payload);
           return jobID;
         } catch (error) {
-          if (error.message !== 'CLOSED' || tries === 2) {
+          if (error instanceof QueueError && tries < 2)
+            tries++;
+          else
             // This will typically be connection error, not helpful until we include the queue name.
             throw new Error(`Error queuing to ${this.name}: ${error.message}`);
-          }
-          tries++;
         }
       }
     } finally {
@@ -473,10 +500,8 @@ class Queue extends EventEmitter {
       return true;  // At least one job processed, resolve to true
 
     } catch (error) {
-
-      const reason = error.message || error;
-      if (/^(TIMED_OUT|CLOSED|DRAINING)$/.test(reason))
-        return false; // Job not processed
+      if (error instanceof QueueError)
+        return false; // Job not processed, but go on
       else
         throw error;
 
@@ -518,8 +543,7 @@ class Queue extends EventEmitter {
       }
 
     } catch (error) {
-      const reason = error.message || error;
-      if (/^TIMED_OUT/.test(reason))
+      if (/^TIMED_OUT/.test(error.message))
         session.end();
     } finally {
       this._processContinuously(session);
@@ -588,7 +612,7 @@ class Queue extends EventEmitter {
       }
     } catch (error) {
       // Ignore NOT_FOUND, we get that if there is no job in the queue.
-      if (error != 'NOT_FOUND')
+      if (error.message !== 'NOT_FOUND')
         throw error;
     }
 
@@ -600,7 +624,7 @@ class Queue extends EventEmitter {
       }
     } catch (error) {
       // Ignore NOT_FOUND, we get that if there is no job in the queue.
-      if (error != 'NOT_FOUND')
+      if (error.message !== 'NOT_FOUND')
         throw error;
     }
   }
@@ -644,6 +668,8 @@ class Queue extends EventEmitter {
   }
 
 }
+
+
 
 
 // Abstracts the queue server.

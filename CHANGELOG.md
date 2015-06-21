@@ -1,3 +1,9 @@
+# 2.3.9
+
+FIXED do not swallow processing errors that have the same signature as
+beanstalkd errors.
+
+
 # 2.3.8
 
 FIXED round up schedule to next interval.
