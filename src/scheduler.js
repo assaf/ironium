@@ -19,6 +19,7 @@ const runJob  = require('./run_job');
 // A schedule can have recurrence, in which case the job will run every so many
 // seconds, with optional start and end time.
 class Schedule {
+
   constructor(scheduler, name, time, job) {
     this._scheduler = scheduler;
     this._notify    = scheduler._notify;
@@ -48,6 +49,13 @@ class Schedule {
       if (this.startTime)
         assert(this.startTime < this.endTime, 'Schedule must start before it ends');
     }
+
+    // This is where an interval of every 24hr becomes a start time of 00:00.
+    if (!this.startTime) {
+      const fromNow       = Date.now() + this.every;
+      const nextInterval  = fromNow - (fromNow % this.every);
+      this.startTime      = nextInterval;
+    }
   }
 
   // Starts the scheduler for this job.  Sets timer/interval to run the job.
@@ -56,20 +64,15 @@ class Schedule {
     if (this.endTime && now >= this.endTime)
       return;
 
-    if (this.startTime && now < this.startTime) {
-      this._timeout = setTimeout(()=> {
-        this._timeout = null;
-        // Set interval first, _queueNext will clear it, if we're already past
-        // the end time.
-        if (this.every) {
-          this._interval = setInterval(()=> this._queueNext(), this.every);
-        }
-        this._queueNext();
-      }, now - this.startTime);
-    } else if (this.every) {
-      // Interval works the same way, except queueNext will call start again.
-      this._interval = setInterval(()=> this._queueNext(), this.every);
-    }
+    this._timeout = setTimeout(()=> {
+      this._timeout = null;
+      // Set interval first, _queueNext will clear it, if we're already past
+      // the end time.
+      if (this.every) {
+        this._interval = setInterval(()=> this._queueNext(), this.every);
+      }
+      this._queueNext();
+    }, now - this.startTime);
   }
 
   // Stops the scheduler for this job.  Resets timer/interval.
@@ -87,10 +90,9 @@ class Schedule {
   // Run job once.
   runOnce() {
     const now = Date.now();
-    if ((!this.startTime || now >= this.startTime) &&
-        (!this.endTime || now < this.endTime)) {
+    if (!this.endTime || now < this.endTime)
       return this._scheduler.queueJob(this.name);
-    } else
+    else
       return Promise.resolve();
   }
 

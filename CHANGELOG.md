@@ -1,3 +1,8 @@
+# 2.3.8
+
+FIXED round up schedule to next interval.
+
+
 # 2.3.7
 
 FIXED pass jobID to error handler via domain.
