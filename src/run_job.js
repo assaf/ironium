@@ -25,7 +25,7 @@ function yieldHandler(value) {
 // handler  - Called to process the job
 // args     - With the given arguments
 // timeout  - If set, times out job after that many ms
-module.exports = async function runJob(jobID, handler, args, timeout) {
+module.exports = function runJob(jobID, handler, args, timeout) {
   assert(handler, 'Handler is missing');
 
   // Ideally we call the function, function calls the callback, all is well.
@@ -34,7 +34,7 @@ module.exports = async function runJob(jobID, handler, args, timeout) {
   // never halt, so we set a timer to force early completion.
   const domain = createDomain();
 
-  return new Promise(function(resolve, reject) {
+  const promise = new Promise(function(resolve, reject) {
 
     domain.jobID = jobID;
 
@@ -48,7 +48,7 @@ module.exports = async function runJob(jobID, handler, args, timeout) {
       // Timeouts occur if handler never calls its callback, resolves promise,
       // etc.
       const errorOnTimeout = setTimeout(function() {
-        domain.emit('error', new Error('Timeout processing job'));
+        reject(new Error('Timeout processing job'));
       }, timeout);
       errorOnTimeout.unref();
       domain.add(errorOnTimeout);
@@ -63,8 +63,8 @@ module.exports = async function runJob(jobID, handler, args, timeout) {
             resolve();
           })
           .catch(function(error) {
-            domain.emit('error', error);
             domain.exit();
+            reject(error);
           });
         return;
       }
@@ -89,8 +89,8 @@ module.exports = async function runJob(jobID, handler, args, timeout) {
             resolve();
           })
           .catch(function(error) {
-            domain.emit('error', error);
             domain.exit();
+            reject(error);
           });
       } else if (result && typeof(result.then) === 'function') {
         // A thenable: cast it to a promise we can handle
@@ -102,15 +102,14 @@ module.exports = async function runJob(jobID, handler, args, timeout) {
           .catch(function(error) {
             if (!(error instanceof Error))
               error = new Error(`${error} in ${handler}`);
-            domain.emit('error', error);
             domain.exit();
+            reject(error);
           });
       }
       // Otherwise it's a callback, wait for it to resolve job
 
     });
 
-  }).then(function() {
-    domain.exit();
   });
+  return promise;
 };

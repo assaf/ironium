@@ -120,11 +120,10 @@ class Ironium extends EventEmitter {
   // First argument is formatted string, followed by any number of arguments,
   // last argument is always the Error object.
   error(...args) {
-    this.debug(...args);
-    if (this.listeners('error').length) {
-      const error = args.pop();
+    const error = args.pop();
+    this.debug('Error: %s', format(...args), error);
+    if (this.listeners('error').length)
       this.emit('error', error);
-    }
   }
 
 }

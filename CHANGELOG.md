@@ -1,3 +1,8 @@
+# 2.3.10
+
+FIXED sometimes errors during job handling go ignored.
+
+
 # 2.3.9
 
 FIXED do not swallow processing errors that have the same signature as

@@ -490,22 +490,23 @@ class Queue extends EventEmitter {
 
   // Used by once to reserve and process each job recursively.
   async _reserveAndProcess() {
-    try {
+    const session  = await this._reserve(0);
+    const timeout  = 0;
 
-      const timeout           = 0;
-      const session           = await this._reserve(0);
-      const [jobID, payload]  = await session.request('reserve_with_timeout', timeout);
-      await this._runAndDestroy(session, jobID, payload);
-      await this._reserveAndProcess();
-      return true;  // At least one job processed, resolve to true
+    for (let tries = 0 ; tries < 2 ; ++tries) {
+      try {
 
-    } catch (error) {
-      if (error instanceof QueueError)
-        return false; // Job not processed, but go on
-      else
-        throw error;
+        let [jobID, payload]  = await session.request('reserve_with_timeout', timeout);
+        await this._runAndDestroy(session, jobID, payload);
+        await this._reserveAndProcess();
+        return true;  // At least one job processed, resolve to true
 
+      } catch (error) {
+        if (!(error instanceof QueueError))
+          throw error;
+      }
     }
+    return false; // Job not processed, but go on
   }
 
 
@@ -532,13 +533,6 @@ class Queue extends EventEmitter {
       try {
         await queue._runAndDestroy(session, jobID, payload);
       } catch (error) {
-
-        // Use domain to pass jobID to error handler for logging, etc
-        const domain = createDomain();
-        domain.jobID = jobID;
-        domain.run(()=> {
-          this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
-        });
         await Bluebird.delay(backoff);
       }
 
@@ -583,15 +577,27 @@ class Queue extends EventEmitter {
       // in the queue for a while before it becomes available again.
       const priority  = 0;
       const delay     = ifProduction(RELEASE_DELAY);
-      await session.request('release', jobID, priority, msToSec(delay));
+      try {
+        await session.request('release', jobID, priority, msToSec(delay));
+      } catch (releaseError) {
+        this._notify.info('Could not release job %s:%s', this.name, jobID, error);
+      }
+
+      // Use domain to pass jobID to error handler for logging, etc
+      const domain = createDomain();
+      domain.jobID = jobID;
+      domain.run(()=> {
+        this._notify.error('Error processing queued job %s:%s', this.name, jobID, error);
+      });
+
       throw error;
     }
 
     // Remove job from queue: there's nothing we can do about an error here
     try {
       await session.request('destroy', jobID);
-    } catch (error) {
-      this._notify.info('Could not delete job %s:%s', this.name, jobID);
+    } catch (destroyError) {
+      this._notify.info('Could not delete job %s:%s', this.name, jobID, destroyError);
     }
   }
 
