@@ -1,6 +1,7 @@
 require('../helpers');
 const assert     = require('assert');
 const Ironium    = require('../../src');
+const ms         = require('ms');
 const TimeKeeper = require('timekeeper');
 
 
@@ -24,7 +25,7 @@ describe('Scheduled job with intervals', ()=> {
 
     describe('once interval is due', ()=> {
       before(()=> {
-        TimeKeeper.travel(Date.now() + 3600000);
+        TimeKeeper.travel(Date.now() + ms('1h'));
       });
 
       before(Ironium.runOnce);
