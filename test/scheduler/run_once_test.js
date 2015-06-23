@@ -5,32 +5,36 @@ const ms         = require('ms');
 const TimeKeeper = require('timekeeper');
 
 
-describe('Scheduled job with intervals', ()=> {
+describe('Scheduled job with interval', ()=> {
+
+  let count = 0;
+
+  before(()=> {
+    Ironium.scheduleJob('every-1hr', '1h', async function() {
+      count++;
+    });
+  });
 
   describe('runOnce', ()=> {
 
-    let count = 0;
+    describe('before first occurrence', ()=> {
 
-    before(()=> {
-      Ironium.scheduleJob('every-1hr', '1h', async function() {
-        count++;
+      before(Ironium.runOnce);
+
+      it('should not run job', ()=> {
+        assert.equal(count, 0);
       });
+
     });
 
-    before(Ironium.runOnce);
-
-    it('should not run job before interval is due', ()=> {
-      assert.equal(count, 0);
-    });
-
-    describe('once interval is due', ()=> {
+    describe('after first occurrence', ()=> {
       before(()=> {
         TimeKeeper.travel(Date.now() + ms('1h'));
       });
 
       before(Ironium.runOnce);
 
-      it('should run the scheduled job', ()=> {
+      it('should run the job once', ()=> {
         assert.equal(count, 1);
       });
 
