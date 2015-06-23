@@ -1,6 +1,6 @@
-require('../helpers');
+require('./helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../src');
 const Stream  = require('stream');
 
 
@@ -23,7 +23,7 @@ class SourceStream extends Stream.Readable {
 }
 
 
-describe('stream', function() {
+describe('Stream', function() {
 
   const streamQueue = Ironium.queue('stream');
   const source      = new SourceStream(100);
@@ -52,9 +52,9 @@ describe('stream', function() {
   });
 
   it('should queue jobs in order', ()=> {
-    assert.equal(jobs[0], '1');
-    assert.equal(jobs[10], '11');
-    assert.equal(jobs[99], '100');
+    assert.equal(jobs[0],   '1');
+    assert.equal(jobs[10],  '11');
+    assert.equal(jobs[99],  '100');
   });
 
   it('should provide queued job IDs', ()=> {

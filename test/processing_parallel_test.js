@@ -1,9 +1,9 @@
-require('../helpers');
+require('./helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../src');
 
 
-describe('processing', ()=> {
+describe('Processing', ()=> {
 
   const processSerialQueue   = Ironium.queue('process-serial');
   const processParallelQueue = Ironium.queue('process-parallel');

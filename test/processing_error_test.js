@@ -1,10 +1,10 @@
-require('../helpers');
+require('./helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../src');
 const Promise = require('bluebird');
 
 
-describe('processing', ()=> {
+describe('Processing', ()=> {
 
   const errorCallbackQueue   = Ironium.queue('error-callback');
   const errorPromiseQueue    = Ironium.queue('error-promise');

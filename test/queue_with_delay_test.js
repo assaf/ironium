@@ -1,9 +1,9 @@
-require('../helpers');
+require('./helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../src');
 
 
-describe('queue with delay', ()=> {
+describe('Queue with delay', ()=> {
 
   const captureQueue = Ironium.queue('capture');
   // Allow up to 2s of delay when running this test suite.

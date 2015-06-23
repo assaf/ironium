@@ -1,6 +1,6 @@
-require('../helpers');
+require('./helpers');
 const assert     = require('assert');
-const Ironium    = require('../../src');
+const Ironium    = require('../src');
 const ms         = require('ms');
 const TimeKeeper = require('timekeeper');
 

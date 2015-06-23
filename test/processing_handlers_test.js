@@ -1,10 +1,10 @@
-require('../helpers');
+require('./helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../src');
 const Promise = require('bluebird');
 
 
-describe('processing', ()=> {
+describe('Processing jobs', ()=> {
 
   const processMultipleQueue   = Ironium.queue('process-multiple');
   const processPromiseQueue    = Ironium.queue('process-promise');
@@ -32,7 +32,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> processMultipleQueue.pushJob('job'));
+    before(()=> processMultipleQueue.queueJob('job'));
     before(Ironium.runOnce);
 
     it('should run all steps', ()=> {
@@ -56,7 +56,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> processPromiseQueue.pushJob('job'));
+    before(()=> processPromiseQueue.queueJob('job'));
     before(Ironium.runOnce);
 
     it('should run all steps', ()=> {
@@ -84,7 +84,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> processGeneratorQueue.pushJob('job'));
+    before(()=> processGeneratorQueue.queueJob('job'));
     before(Ironium.runOnce);
 
     it('should run all steps', ()=> {
@@ -111,7 +111,7 @@ describe('processing', ()=> {
       });
     });
 
-    before(()=> processGeneratorQueue.pushJob('job'));
+    before(()=> processGeneratorQueue.queueJob('job'));
     before(Ironium.runOnce);
 
     it('should run all steps', ()=> {
@@ -132,17 +132,17 @@ describe('processing', ()=> {
       processOnceAQueue.eachJob(function(job, callback) {
         steps.push('A');
         if (steps.length == 1)
-          processOnceBQueue.pushJob('job', callback);
+          processOnceBQueue.queueJob('job', callback);
         else
           callback();
       });
       processOnceBQueue.eachJob(function(job, callback) {
         steps.push('B');
-        processOnceAQueue.pushJob('job', callback);
+        processOnceAQueue.queueJob('job', callback);
       });
     });
 
-    before(()=> processOnceAQueue.pushJob('job'));
+    before(()=> processOnceAQueue.queueJob('job'));
     before(Ironium.runOnce);
 
     it('should run all jobs to completion', ()=> {
