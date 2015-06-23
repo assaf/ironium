@@ -90,7 +90,7 @@ class Schedule {
   // Run job once.
   runOnce() {
     const now = Date.now();
-    if (!this.endTime || now < this.endTime)
+    if (now > this.startTime && (!this.endTime || now < this.endTime))
       return this._scheduler.queueJob(this.name);
     else
       return Promise.resolve();
