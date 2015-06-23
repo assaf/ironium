@@ -1,3 +1,20 @@
+# 2.4.0
+
+CHANGED when testing, you need to advance the clock to run a scheduled job.
+
+For example:
+
+```
+Ironium.scheduleJob('daily', '24h', function(done) {
+  console.log('Run daily job');
+});
+await Ironium.runOnce();
+TimeKeeper.travel(Date.now() + ms('24h'));
+await Ironium.runOnce();
+=> Run daily job
+```
+
+
 # 2.3.10
 
 FIXED sometimes errors during job handling go ignored.
