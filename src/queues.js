@@ -357,11 +357,6 @@ class Queue extends EventEmitter {
     return this.delayJob(job, 0, callback);
   }
 
-  // Push job to queue.  If called with one argument, returns a promise.
-  pushJob(job, callback) {
-    return this.delayJob(job, 0, callback);
-  }
-
   // Push job to queue with the given delay.  Delay can be millisecond,
   // or a string of the form '5s', '2m', etc.  If called with two arguments,
   // returns a promise.

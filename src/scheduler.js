@@ -182,7 +182,7 @@ module.exports = class Scheduler {
 
   // Schedule calls this to queue the job.
   queueJob(name) {
-    return this.queue.pushJob({ name: name, time: new Date().toISOString()});
+    return this.queue.queueJob({ name: name, time: new Date().toISOString()});
   }
 
   // This is used to pick up job from the queue and run it.
