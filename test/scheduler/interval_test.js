@@ -25,7 +25,7 @@ describe('Scheduled job with intervals', ()=> {
 
     describe('once interval is due', ()=> {
       before(()=> {
-        TimeKeeper.travel(Date.now() + 3700000);
+        TimeKeeper.travel(Date.now() + 3600000);
       });
 
       before(ironium.runOnce);
