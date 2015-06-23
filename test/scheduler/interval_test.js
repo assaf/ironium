@@ -1,7 +1,6 @@
 require('../helpers');
 const assert     = require('assert');
 const Ironium    = require('../../src');
-const net        = require('net');
 const TimeKeeper = require('timekeeper');
 
 
