@@ -25,7 +25,8 @@
     "gulp-replace": "^0.5.2",
     "gulp-sourcemaps": "^1.5.2",
     "husky": "^0.8.1",
-    "mocha": "^2.2.5"
+    "mocha": "^2.2.5",
+    "timekeeper": "0.0.5"
   },
   "homepage": "https://www.npmjs.com/package/ironium",
   "repository": {
