@@ -123,13 +123,13 @@ class Session {
       client.once('error', onConnectionEnded);
 
       this._notify.debug('%s: $ %s', this.id, command, ...args);
-      client[command].call(client, ...args, (error, ...results)=> {
+      client[command](...args, (error, ...results)=> {
         // This may never get called
         client.removeListener('close', onConnectionEnded);
         client.removeListener('error', onConnectionEnded);
 
         if (error) {
-          this._notify.debug('%s: %s => !%s', this.id, command, error);
+          this._notify.debug('%s: %s => !%s', this.id, command, args, error);
           reject(new QueueError(error));
         } else if (results.length > 1) {
           this._notify.debug('%s: %s => %s', this.id, command, results);
