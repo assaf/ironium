@@ -11,9 +11,8 @@ describe('Scheduled job with intervals', ()=> {
     let count = 0;
 
     before(()=> {
-      Ironium.scheduleJob('every-1hr', '1h', function() {
+      Ironium.scheduleJob('every-1hr', '1h', async function() {
         count++;
-        return Promise.resolve();
       });
     });
 
