@@ -1,17 +1,17 @@
 require('../helpers');
 const assert  = require('assert');
-const ironium = require('../../src');
+const Ironium = require('../../src');
 const Promise = require('bluebird');
 
 
 describe('processing', ()=> {
 
-  const errorCallbackQueue   = ironium.queue('error-callback');
-  const errorPromiseQueue    = ironium.queue('error-promise');
-  const errorGeneratorQueue  = ironium.queue('error-generator');
+  const errorCallbackQueue   = Ironium.queue('error-callback');
+  const errorPromiseQueue    = Ironium.queue('error-promise');
+  const errorGeneratorQueue  = Ironium.queue('error-generator');
 
   function untilSuccessful(done) {
-    ironium.runOnce((error)=> {
+    Ironium.runOnce((error)=> {
       if (error)
         setTimeout(()=> untilSuccessful(done));
       else

@@ -1,6 +1,6 @@
 require('../helpers');
 const assert  = require('assert');
-const ironium = require('../../src');
+const Ironium = require('../../src');
 const Stream  = require('stream');
 
 
@@ -25,7 +25,7 @@ class SourceStream extends Stream.Readable {
 
 describe('stream', function() {
 
-  const streamQueue = ironium.queue('stream');
+  const streamQueue = Ironium.queue('stream');
   const source      = new SourceStream(100);
 
   // Capture processed jobs here.
@@ -45,7 +45,7 @@ describe('stream', function() {
       .on('end', done);
   });
 
-  before(ironium.runOnce);
+  before(Ironium.runOnce);
 
   it('should queue all jobs', ()=> {
     assert.equal(jobs.length, 100);

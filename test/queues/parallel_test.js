@@ -1,12 +1,12 @@
 require('../helpers');
 const assert  = require('assert');
-const ironium = require('../../src');
+const Ironium = require('../../src');
 
 
 describe('processing', ()=> {
 
-  const processSerialQueue   = ironium.queue('process-serial');
-  const processParallelQueue = ironium.queue('process-parallel');
+  const processSerialQueue   = Ironium.queue('process-serial');
+  const processParallelQueue = Ironium.queue('process-parallel');
 
   // Count how many steps run
   const chain = [];
@@ -30,14 +30,14 @@ describe('processing', ()=> {
       const jobs = [1, 2].map((job)=> processSerialQueue.queueJob(job));
       return Promise.all(jobs);
     });
-    before(ironium.start);
+    before(Ironium.start);
     before((done)=> setTimeout(done, 50));
 
     it('should run jobs in sequence', ()=> {
       assert.equal(chain.join(''), 'ABAB');
     });
 
-    after(ironium.stop);
+    after(Ironium.stop);
   });
 
 
@@ -51,14 +51,14 @@ describe('processing', ()=> {
       const jobs = [3, 4].map((job)=> processSerialQueue.queueJob(job));
       return Promise.all(jobs);
     });
-    before(ironium.start);
+    before(Ironium.start);
     before((done)=> setTimeout(done, 50));
 
     it('should run jobs in sequence', ()=> {
       assert.equal(chain.join(''), 'AABB');
     });
 
-    after(ironium.stop);
+    after(Ironium.stop);
   });
 
 });

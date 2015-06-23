@@ -49,45 +49,45 @@ if (typeof(describe) != 'undefined') {
 
 } else {
 
-  const ironium = require('../../lib');
+  const Ironium = require('../../lib');
 
-  // Catch ironium.emit('error'), otherwise process fails on failed job
-  ironium.on('error', function() { });
+  // Catch Ironium.emit('error'), otherwise process fails on failed job
+  Ironium.on('error', function() { });
 
 
   // Regular job: queued once, execute once
-  ironium.queue('regular').eachJob(function(job, callback) {
+  Ironium.queue('regular').eachJob(function(job, callback) {
     process.send('regular');
 
-    ironium.queueJob('duplicate', 'job', function() {
-      ironium.queueJob('duplicate', 'job', function() {
-        ironium.queueJob('duplicate', 'job', function() {
-          ironium.queueJob('delayed', 'job', callback);
+    Ironium.queueJob('duplicate', 'job', function() {
+      Ironium.queueJob('duplicate', 'job', function() {
+        Ironium.queueJob('duplicate', 'job', function() {
+          Ironium.queueJob('delayed', 'job', callback);
         });
       });
     });
   });
 
   // Duplicate job: queued and executed three times.
-  ironium.queue('duplicate').eachJob(function(job, callback) {
+  Ironium.queue('duplicate').eachJob(function(job, callback) {
     process.send('duplicate');
     callback();
   });
 
   // Delayed job: this job takes 500ms to complete.
-  ironium.queue('delayed').eachJob(function(job, callback) {
+  Ironium.queue('delayed').eachJob(function(job, callback) {
     setTimeout(function() {
       process.send('delayed');
-      ironium.queueJob('failed', 'job', callback);
+      Ironium.queueJob('failed', 'job', callback);
     }, 500);
   });
 
   var failed = 0;
 
   // Failed job: fails three times, then succeeds.
-  ironium.queue('failed').eachJob(function(job, callback) {
+  Ironium.queue('failed').eachJob(function(job, callback) {
     if (failed == 3) {
-      ironium.queueJob('done', 'job', callback);
+      Ironium.queueJob('done', 'job', callback);
     } else {
       process.send('failed');
       failed++;
@@ -100,9 +100,9 @@ if (typeof(describe) != 'undefined') {
   });
 
   // Last job, exit this process successfully.
-  ironium.queue('done').eachJob(function() {
+  Ironium.queue('done').eachJob(function() {
     process.send('done');
-    ironium.stop();
+    Ironium.stop();
     setImmediate(function() {
       process.exit(0);
     });
@@ -111,9 +111,9 @@ if (typeof(describe) != 'undefined') {
 
   // Delete all jobs from previous run before starting this one.
   // We need to have all the queues before we can call this.
-  ironium.purgeQueues(function() {
-    ironium.queueJob('regular', 'job', function() {});
-    ironium.start();
+  Ironium.purgeQueues(function() {
+    Ironium.queueJob('regular', 'job', function() {});
+    Ironium.start();
   });
 
   // Wait, otherwise process exits without processing any jobs.

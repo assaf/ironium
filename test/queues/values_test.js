@@ -1,11 +1,11 @@
 require('../helpers');
 const assert  = require('assert');
-const ironium = require('../../src');
+const Ironium = require('../../src');
 
 
 describe('queue', function() {
 
-  const captureQueue = ironium.queue('capture');
+  const captureQueue = Ironium.queue('capture');
 
   // Capture processed jobs here.
   before(()=> {
@@ -17,7 +17,7 @@ describe('queue', function() {
 
   describe('an object', ()=> {
     before(()=> captureQueue.queueJob({ id: 5, name: 'job' }));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should process that object', ()=>{
       assert.equal(this.job.id, 5);
@@ -28,7 +28,7 @@ describe('queue', function() {
 
   describe('a string', ()=> {
     before(()=> captureQueue.queueJob('job'));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should process that string', ()=>{
       assert.equal(this.job, 'job');
@@ -38,7 +38,7 @@ describe('queue', function() {
 
   describe('a number', ()=> {
     before(()=> captureQueue.queueJob(3.1));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should process that number', ()=>{
       assert.equal(this.job, 3.1);
@@ -48,7 +48,7 @@ describe('queue', function() {
 
   describe('an array', ()=> {
     before(()=> captureQueue.queueJob([true, '+']));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should process that array', ()=>{
       assert.equal(this.job.length, 2);
@@ -62,7 +62,7 @@ describe('queue', function() {
 
     describe('(JSON)', ()=> {
       before(()=> captureQueue.queueJob(new Buffer('{ "x": 1 }')));
-      before(ironium.runOnce);
+      before(Ironium.runOnce);
 
       it('should process that buffer as object value', ()=>{
         assert.equal(this.job.x, 1);
@@ -72,7 +72,7 @@ describe('queue', function() {
 
     describe('(not JSON)', ()=> {
       before(()=> captureQueue.queueJob(new Buffer('x + 1')));
-      before(ironium.runOnce);
+      before(Ironium.runOnce);
 
       it('should process that buffer as string value', ()=>{
         assert.equal(this.job, 'x + 1');

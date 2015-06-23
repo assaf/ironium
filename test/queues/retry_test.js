@@ -1,6 +1,6 @@
 require('../helpers');
 const assert  = require('assert');
-const ironium = require('../../src');
+const Ironium = require('../../src');
 const net     = require('net');
 
 // This Beanstalk mock will close the connection when receiving
@@ -49,7 +49,7 @@ describe('retries', ()=> {
 
   describe('pushing a job', ()=> {
     before(() => {
-      ironium.configure({
+      Ironium.configure({
         queues: { hostname: '127.0.0.1', port: 11333 }
       });
 
@@ -57,7 +57,7 @@ describe('retries', ()=> {
     });
 
     it('should retry on connection errors', async ()=> {
-      await ironium.queue('foo').pushJob({value: 1});
+      await Ironium.queue('foo').pushJob({value: 1});
     });
 
     it('should throw when no retries left', async ()=> {
@@ -65,7 +65,7 @@ describe('retries', ()=> {
       failUntil = 3;
 
       try {
-        await ironium.queue('foo').pushJob({value: 1});
+        await Ironium.queue('foo').pushJob({value: 1});
         assert(false, 'Expected not to work.');
       } catch (error) {
         assert.equal(error.message, 'Error queuing to foo: CLOSED');
@@ -73,7 +73,7 @@ describe('retries', ()=> {
     });
 
     after(() => {
-      ironium.configure({
+      Ironium.configure({
         queues: { hostname: '127.0.0.1', port: 11300 }
       });
     });

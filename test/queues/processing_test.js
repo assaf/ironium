@@ -1,16 +1,16 @@
 require('../helpers');
 const assert  = require('assert');
-const ironium = require('../../src');
+const Ironium = require('../../src');
 const Promise = require('bluebird');
 
 
 describe('processing', ()=> {
 
-  const processMultipleQueue   = ironium.queue('process-multiple');
-  const processPromiseQueue    = ironium.queue('process-promise');
-  const processGeneratorQueue  = ironium.queue('process-generator');
-  const processOnceAQueue      = ironium.queue('process-once-a');
-  const processOnceBQueue      = ironium.queue('process-once-b');
+  const processMultipleQueue   = Ironium.queue('process-multiple');
+  const processPromiseQueue    = Ironium.queue('process-promise');
+  const processGeneratorQueue  = Ironium.queue('process-generator');
+  const processOnceAQueue      = Ironium.queue('process-once-a');
+  const processOnceBQueue      = Ironium.queue('process-once-b');
 
 
   describe('with multiple handlers', ()=> {
@@ -33,7 +33,7 @@ describe('processing', ()=> {
     });
 
     before(()=> processMultipleQueue.pushJob('job'));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -57,7 +57,7 @@ describe('processing', ()=> {
     });
 
     before(()=> processPromiseQueue.pushJob('job'));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -85,7 +85,7 @@ describe('processing', ()=> {
     });
 
     before(()=> processGeneratorQueue.pushJob('job'));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -112,7 +112,7 @@ describe('processing', ()=> {
     });
 
     before(()=> processGeneratorQueue.pushJob('job'));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should run all steps', ()=> {
       assert.equal(steps.join(''), 'ABC');
@@ -143,7 +143,7 @@ describe('processing', ()=> {
     });
 
     before(()=> processOnceAQueue.pushJob('job'));
-    before(ironium.runOnce);
+    before(Ironium.runOnce);
 
     it('should run all jobs to completion', ()=> {
       assert.equal(steps.join(''), 'ABA');
