@@ -1,6 +1,7 @@
 const assert            = require('assert');
 const Bluebird          = require('bluebird');
 const { createDomain }  = require('domain');
+const { deprecate }     = require('util');
 const { EventEmitter }  = require('events');
 const Fivebeans         = require('fivebeans');
 const ms                = require('ms');
@@ -349,6 +350,11 @@ class Queue extends EventEmitter {
     this.delayJob         = this.delayJob.bind(this);
     this.eachJob          = this.eachJob.bind(this);
     this.stream           = this.stream.bind(this);
+
+    this.pushJob = deprecate(
+      this.queueJob,
+      'queue.pushJob() deprecated, please use queue.queueJob() instead'
+    );
   }
 
 
