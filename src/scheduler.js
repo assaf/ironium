@@ -72,7 +72,7 @@ class Schedule {
         this._interval = setInterval(()=> this._queueNext(), this.every);
       }
       this._queueNext();
-    }, now - this.startTime);
+    }, this.startTime - now);
   }
 
   // Stops the scheduler for this job.  Resets timer/interval.
