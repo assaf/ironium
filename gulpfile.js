@@ -49,7 +49,7 @@ gulp.task('restart', function(done) {
     return;
   }
 
-  console.log('Restaring beanstalkd ...');
+  console.log('Restarting beanstalkd ...');
   exec('launchctl stop homebrew.mxcl.beanstalk', function(error, stdout, stderr) {
     process.stdout.write(stdout);
     exec('launchctl start homebrew.mxcl.beanstalk', function(error, stdout, stderr) {
