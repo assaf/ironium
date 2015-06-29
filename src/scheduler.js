@@ -52,9 +52,7 @@ class Schedule {
 
     // This is where an interval of every 24hr becomes a start time of 00:00.
     if (!this.startTime) {
-      const fromNow       = Date.now() + this.every;
-      const nextInterval  = fromNow - (fromNow % this.every);
-      this.startTime      = nextInterval;
+      this.startTime = this._getNextStartTime();
     }
   }
 
@@ -90,8 +88,11 @@ class Schedule {
   // Run job once.
   runOnce() {
     const now = Date.now();
-    if (now >= this.startTime && (!this.endTime || now < this.endTime))
+    if (now >= this.startTime && (!this.endTime || now < this.endTime)) {
+      if (this.every)
+        this.startTime = this._getNextStartTime();
       return this._scheduler.queueJob(this.name);
+    }
     else
       return Promise.resolve();
   }
@@ -120,6 +121,12 @@ class Schedule {
     } catch (error) {
       this._notify.error('Error %s, scheduled for %s', this.name, time.toString(), error);
     }
+  }
+
+  _getNextStartTime() {
+    const fromNow = Date.now() + this.every;
+    const next    = fromNow - (fromNow % this.every);
+    return next;
   }
 
 }
