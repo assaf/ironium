@@ -1,3 +1,8 @@
+# 2.4.2
+
+FIXED `runOnce` should continue to honor intervals after first run.
+
+
 # 2.4.1
 
 FIXED start time scheduling.
