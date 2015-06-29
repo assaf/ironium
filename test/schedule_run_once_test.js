@@ -65,7 +65,25 @@ describe('Scheduled job with interval', ()=> {
             assert.equal(count, 2);
           });
 
-          after(TimeKeeper.reset);
+          describe('after rewinding clock resetting schedule', ()=> {
+
+            before(()=> {
+              TimeKeeper.travel('2015-06-29T20:00:00Z');
+            });
+            before(Ironium.resetSchedule);
+
+            before(()=> {
+              TimeKeeper.travel(Date.now() + ms('1h'));
+            });
+            before(Ironium.runOnce);
+
+            it('should run the job again', ()=> {
+              assert.equal(count, 3);
+            });
+
+            after(TimeKeeper.reset);
+          });
+
         });
 
       });

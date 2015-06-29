@@ -15,13 +15,14 @@ class Ironium extends EventEmitter {
     this.debug        = debug;
 
     // Bind methods so before(Ironium.once) works.
-    this.queue        = this.queue.bind(this);
-    this.queueJob     = this.queueJob.bind(this);
-    this.scheduleJob  = this.scheduleJob.bind(this);
-    this.start        = this.start.bind(this);
-    this.stop         = this.stop.bind(this);
-    this.runOnce      = this.runOnce.bind(this);
-    this.purgeQueues  = this.purgeQueues.bind(this);
+    this.queue          = this.queue.bind(this);
+    this.queueJob       = this.queueJob.bind(this);
+    this.scheduleJob    = this.scheduleJob.bind(this);
+    this.start          = this.start.bind(this);
+    this.stop           = this.stop.bind(this);
+    this.runOnce        = this.runOnce.bind(this);
+    this.purgeQueues    = this.purgeQueues.bind(this);
+    this.resetSchedule  = this.resetSchedule.bind(this);
   }
 
   // Returns the named queue.  Returned objects has the methods `queueJob` and
@@ -89,7 +90,8 @@ class Ironium extends EventEmitter {
     // Must run all scheduled jobs first, only then can be run any (resulting)
     // queued jobs to completion.
     const promise =
-      this._scheduler.runOnce()
+      Promise.resolve()
+      .then(()=> this._scheduler.runOnce() )
       .then(()=> this._queues.runOnce() )
       .then(()=> this.debug('Completed all jobs') );
     if (callback)
@@ -107,6 +109,12 @@ class Ironium extends EventEmitter {
     else
       return promise;
   }
+
+  // Reset the next run time for all scheduled jobs based on the current system clock.
+  resetSchedule() {
+    this._scheduler.resetSchedule();
+  }
+
 
   // Used for logging info messages.
   info(...args) {

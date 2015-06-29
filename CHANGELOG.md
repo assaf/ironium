@@ -1,3 +1,8 @@
+# 2.5.0
+
+ADDED `resetSchedule` to help test scheduled jobs.
+
+
 # 2.4.2
 
 FIXED `runOnce` should continue to honor intervals after first run.

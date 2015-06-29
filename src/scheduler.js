@@ -51,9 +51,8 @@ class Schedule {
     }
 
     // This is where an interval of every 24hr becomes a start time of 00:00.
-    if (!this.startTime) {
+    if (!this.startTime)
       this.startTime = this._getNextStartTime();
-    }
   }
 
   // Starts the scheduler for this job.  Sets timer/interval to run the job.
@@ -66,9 +65,8 @@ class Schedule {
       this._timeout = null;
       // Set interval first, _queueNext will clear it, if we're already past
       // the end time.
-      if (this.every) {
+      if (this.every)
         this._interval = setInterval(()=> this._queueNext(), this.every);
-      }
       this._queueNext();
     }, this.startTime - now);
   }
@@ -87,14 +85,21 @@ class Schedule {
 
   // Run job once.
   runOnce() {
-    const now = Date.now();
-    if (now >= this.startTime && (!this.endTime || now < this.endTime)) {
-      if (this.every)
-        this.startTime = this._getNextStartTime();
+    const now           = Date.now();
+    // scheduleJob('24h'), advance system clock to '00:00', call runOnce, runs job
+    const runOnSchedule = (now >= this.startTime && (!this.endTime || now < this.endTime));
+    // Set schedule to next interval, but also deal with case where clock
+    // rewinds (e.g. between different scenarios)
+    this.resetSchedule();
+    if (runOnSchedule)
       return this._scheduler.queueJob(this.name);
-    }
     else
       return Promise.resolve();
+  }
+
+  // Reset next time job runs
+  resetSchedule() {
+    this.startTime = this._getNextStartTime();
   }
 
   // Queue the job to run one more time.  Cancels interval if past end time.
@@ -124,9 +129,11 @@ class Schedule {
   }
 
   _getNextStartTime() {
-    const fromNow = Date.now() + this.every;
-    const next    = fromNow - (fromNow % this.every);
-    return next;
+    if (this.every) {
+      const fromNow = Date.now() + this.every;
+      const next    = fromNow - (fromNow % this.every);
+      return next;
+    }
   }
 
 }
@@ -185,6 +192,13 @@ module.exports = class Scheduler {
   get schedules() {
     return Object.keys(this._schedules).map((name)=> this._schedules[name]);
   }
+
+  // Resets all schedules, used during testing
+  resetSchedule() {
+    for (let schedule of this.schedules)
+      schedule.resetSchedule();
+  }
+
 
 
   // Schedule calls this to queue the job.

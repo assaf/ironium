@@ -46,6 +46,7 @@ retries, etc.
   * [configure(object)](#configureobject)
   * [start()](#start)
   * [stop()](#stop)
+  * [resetSchedule()](#resetschedule)
   * [runOnce(callback)](#runoncecallback)
   * [purgeQueues(callback)](#purgequeuescallback)
 * **[Using Promises](#using-promises)**
@@ -316,10 +317,39 @@ but only enable processing on select servers.  For testing, have a look at
 You can call this method to stop the workers.
 
 
+### resetschedule()
+
+Reset the next run time for all scheduled jobs.  Used during testing when
+changing the system clock to test scheduled jobs, in particular, rewinding the
+clock.
+
+```
+Ironium.scheduleJob('every-night', '24h', runEveryNight);
+
+TimeKeeper.travel('2015-06-30T15:00:00Z');
+Ironium.resetSchedule();
+// Job now scheduled for 7/1 00:00 because it will run every 24 hours,
+// starting at 00:00 on the next day
+
+Ironium.runOnce(); // Nothing happens
+
+TimeKeeper.travel('2015-07-01T00:00:00Z');
+Ironium.runOnce();
+// Job runs once, now scheduled for 7/2 00:00
+
+TimeKeeper.travel('2015-06-30T15:00:00Z');
+Ironium.runOnce();
+// Nothing happens because next run is 7/2
+
+Ironium.resetSchedule();
+// Job now scheduled for 7/1 00:00 again
+```
+
+
 ### runOnce(callback)
 
-Use this method when testing.  It will run all schedules jobs exactly once, and
-then process all queued jobs until the queues are empty.
+Use this method when testing.  It will run all schedules jobs, and then process
+all queued jobs until the queues are empty.
 
 You can either call `runOnce` with a callback, to be notified when all jobs have
 been processed, or with no arguments, it will return a promise.
@@ -327,14 +357,18 @@ been processed, or with no arguments, it will return a promise.
 This method exists since there's no reliable way to use `start` and `stop` for
 running automated tests.
 
+With regards to scheduled jobs, each job has a schedule when it will run next.
+Calling `runOnce` will run that job if its time has come.  It will also adjust
+the next time the job should run.  You may also need to use
+[resetSchedule](#resetschedule).
+
 For example:
 
 ```
-const queue = ironium.queue('echo');
+const queue = Ironium.queue('echo');
 const echo  = [];
 
-// Scheduled worker will queue a job
-ironium.scheduleJob('echo-foo', '* * * *', function(callback) {
+Ironium.scheduleJob('echo-foo', '24h', function(callback) {
   queue.queueJob('foo', callback);
 });
 
@@ -343,11 +377,23 @@ queue.eachJob(function(text, callback) {
   callback();
 });
 
-// Queue another job
-before(()=> queue.queueJob('bar'));
 
-// Running the scheduled job, followed by the two queued jobs
-before(ironium.runOnce);
+before(function() {
+  TimeKeeper.travel('2015-06-31T12:00:00Z');
+  Ironium.resetSchedule();
+  // Job now scheduled for 7/1 at 00:00
+});
+
+// Queue another job
+before(function() {
+  queue.queueJob('bar');
+});
+
+before(function() {
+  // Running the scheduled job, followed by the two queued jobs
+  TimeKeeper.travel(ms('2hr'));
+  Ironium.runOnce();
+});
 
 it("should have run the foo scheduled job", function() {
   assert(echo.indexOf('foo') >= 0);
@@ -355,6 +401,11 @@ it("should have run the foo scheduled job", function() {
 
 it("should have run the bar job", function() {
   assert(echo.indexOf('bar') >= 0);
+});
+
+after(function() {
+  TimeKeeper.reset();
+  Ironium.resetSchedule();
 });
 ```
 
