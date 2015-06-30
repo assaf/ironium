@@ -379,7 +379,7 @@ queue.eachJob(function(text, callback) {
 
 
 before(function() {
-  TimeKeeper.travel('2015-06-31T12:00:00Z');
+  TimeKeeper.travel('2015-06-30T12:00:00Z');
   Ironium.resetSchedule();
   // Job now scheduled for 7/1 at 00:00
 });
