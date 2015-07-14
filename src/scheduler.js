@@ -26,20 +26,20 @@ class Schedule {
 
     assert(name, 'Schedule missing name');
     this.name = name;
-    assert(typeof(job) == 'function', 'Schedule missing job function');
+    assert(typeof job === 'function', 'Schedule missing job function');
     this.job  = job;
 
-    if (time instanceof Date) {
+    if (time instanceof Date)
       this.startTime = time.getTime();
-    } else if (typeof(time) == 'string') {
+    else if (typeof time === 'string')
       this.every = ms(time);
-    } else if (typeof(time) == 'number') {
+    else if (typeof time === 'number')
       this.every = parseInt(time, 0);
-    } else if (typeof(time) == 'object') {
+    else if (typeof time === 'object') {
       const { start, every, end } = time;
       this.startTime = start ? +start : undefined;
       this.endTime   = end   ? +end   : undefined;
-      this.every     = (typeof(every) == 'string' ? ms(every) : parseInt(every, 0));
+      this.every     = (typeof every === 'string' ? ms(every) : parseInt(every, 0));
     } else
       throw new Error('Schedule time must be Date (instance), Number (interval) or object with start/every/end properties');
 
