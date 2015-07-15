@@ -1,3 +1,21 @@
+# 2.6.0
+
+CHANGED tests that schedule with interval now respect start time.
+
+When scheduling a job to run every 24 hours, it will run at 0:00 starting on the
+next day.
+
+When scheduling a job to run every 24 hours from the start time.  Previously
+this was not respected in the test suite.
+
+This allows you to run a job every 24 hours at 5:00 by scheduling with:
+
+{
+  every: '24h',
+  start: new Date(null, null, null, 5)
+}
+
+
 # 2.5.0
 
 ADDED `resetSchedule` to help test scheduled jobs.

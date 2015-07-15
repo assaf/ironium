@@ -50,9 +50,7 @@ class Schedule {
         assert(this.startTime < this.endTime, 'Schedule must start before it ends');
     }
 
-    // This is where an interval of every 24hr becomes a start time of 00:00.
-    if (!this.startTime)
-      this.startTime = this._getNextStartTime();
+    this.resetSchedule();
   }
 
   // Starts the scheduler for this job.  Sets timer/interval to run the job.
@@ -66,9 +64,11 @@ class Schedule {
       // Set interval first, _queueNext will clear it, if we're already past
       // the end time.
       if (this.every)
-        this._interval = setInterval(()=> this._queueNext(), this.every);
+        this._interval = setInterval(()=> {
+          this._queueNext();
+        }, this.every);
       this._queueNext();
-    }, this.startTime - now);
+    }, this._next - now);
   }
 
   // Stops the scheduler for this job.  Resets timer/interval.
@@ -85,9 +85,7 @@ class Schedule {
 
   // Run job once.
   runOnce() {
-    const now           = Date.now();
-    // scheduleJob('24h'), advance system clock to '00:00', call runOnce, runs job
-    const runOnSchedule = (now >= this.startTime && (!this.endTime || now < this.endTime));
+    const runOnSchedule = this._next && (Date.now() >= this._next);
     // Set schedule to next interval, but also deal with case where clock
     // rewinds (e.g. between different scenarios)
     this.resetSchedule();
@@ -99,8 +97,41 @@ class Schedule {
 
   // Reset next time job runs
   resetSchedule() {
-    this.startTime = this._getNextStartTime();
+    this._next = this._getNextSchedule();
   }
+
+
+  _getNextSchedule() {
+    const now       = Date.now();
+    const interval  = this.every;
+
+    if (interval && this.startTime) {
+
+      // This is where every 24h start time 5pm becomes tomorrow 5pm
+      const offsetFromStart = Math.max(now - this.startTime, 0) + interval - 1;
+      const roundToInterval = offsetFromStart - (offsetFromStart % interval);
+      const nextTime        = this.startTime + roundToInterval;
+      const futureTime      = (!this.endTime || this.endTime > nextTime) ? nextTime : null;
+      return futureTime;
+
+    } else if (interval) {
+
+      // This is where every 24h becomes 0:00 tomorrow
+      const inNextInterval  = now + interval;
+      const roundToInterval = inNextInterval - (inNextInterval % interval);
+      const futureTime      = (!this.endTime || this.endTime > roundToInterval) ? roundToInterval : null;
+      return futureTime;
+
+    } else {
+
+      // Only if scheduled for the future; end date makes no sense without
+      // interval
+      const futureTime = (this.startTime >= now) ? this.startTime : null;
+      return futureTime;
+
+    }
+  }
+
 
   // Queue the job to run one more time.  Cancels interval if past end time.
   _queueNext() {
@@ -125,14 +156,6 @@ class Schedule {
       this._notify.info('Completed %s, scheduled for %s', this.name, time.toString());
     } catch (error) {
       this._notify.error('Error %s, scheduled for %s', this.name, time.toString(), error);
-    }
-  }
-
-  _getNextStartTime() {
-    if (this.every) {
-      const fromNow = Date.now() + this.every;
-      const next    = fromNow - (fromNow % this.every);
-      return next;
     }
   }
 
