@@ -61,13 +61,18 @@ class Schedule {
 
     this._timeout = setTimeout(()=> {
       this._timeout = null;
-      // Set interval first, _queueNext will clear it, if we're already past
-      // the end time.
+      this._queueNext();
+
       if (this.every)
         this._interval = setInterval(()=> {
-          this._queueNext();
+
+          if (this.endTime && now >= this.endTime)
+            clearInterval(this._interval);
+          else
+            this._queueNext();
+
         }, this.every);
-      this._queueNext();
+
     }, this._next - now);
   }
 
@@ -98,6 +103,7 @@ class Schedule {
   // Reset next time job runs
   resetSchedule() {
     this._next = this._getNextSchedule();
+    this._notify.debug('Set schedule %s to fire next at %s', this.name, new Date(this._next).toISOString());
   }
 
 
@@ -135,8 +141,6 @@ class Schedule {
 
   // Queue the job to run one more time.  Cancels interval if past end time.
   _queueNext() {
-    if (this._interval && this.endTime && Date.now() >= this.endTime)
-      clearInterval(this._interval);
     this._scheduler.queueJob(this.name)
       .catch(()=> {
         // Error queuing job. For a one time job, try to queue again. For
