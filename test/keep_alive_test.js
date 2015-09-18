@@ -84,10 +84,10 @@ describe('Server with keep-alive needs', ()=> {
 
   before(() => {
     Ironium.configure({
-      queues: { hostname: '127.0.0.1', port: 11333, keepAlive: '1500' }
+      queues: { hostname: '127.0.0.1', port: 11334, keepAlive: '1500' }
     });
 
-    mock.listen(11333);
+    mock.listen(11334);
   });
 
   describe('long-running jobs', ()=> {
