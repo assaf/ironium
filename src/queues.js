@@ -559,6 +559,10 @@ class Queue extends EventEmitter {
     } catch(ex) {
     }
 
+    const keepAliveInterval = setInterval(()=> {
+      session.request('list_tubes_watched').catch(this._notify.debug);
+    }, parseInt(this._config.keepAlive));
+
     try {
 
       this._notify.info('Processing queued job %s:%s', this.name, jobID);
@@ -597,6 +601,8 @@ class Queue extends EventEmitter {
     // Remove job from queue: there's nothing we can do about an error here
     try {
       await session.request('destroy', jobID);
+      // Stop keeping the connection alive once we removed the job.
+      clearInterval(keepAliveInterval);
     } catch (destroyError) {
       this._notify.info('Could not delete job %s:%s', this.name, jobID, destroyError);
     }
