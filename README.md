@@ -17,7 +17,7 @@ run-time intricacies for you.
 
 [Beanstalkd](http://kr.github.io/beanstalkd/) is "a simple, fast work queue".
 It's easy to setup (`brew install beanstalkd` on the Mac), easy to tinker with
-(`telnet localhost 11300`), and persistenly reliable.
+(`telnet localhost 11300`), and persistently reliable.
 
 [Iron.io](http://www.iron.io/) is "the Message Queue for the Cloud".  It's a
 managed queue service with a nice UI, an excellent choice for production
@@ -317,7 +317,7 @@ but only enable processing on select servers.  For testing, have a look at
 You can call this method to stop the workers.
 
 
-### resetschedule()
+### resetSchedule()
 
 Reset the next run time for all scheduled jobs.  Used during testing when
 changing the system clock to test scheduled jobs, in particular, rewinding the

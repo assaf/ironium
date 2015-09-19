@@ -41,7 +41,7 @@ function ifProduction(timeout, limit = 0) {
   return (/^(development|test)$/.test(process.env.NODE_ENV)) ?  Math.min(limit, timeout) : timeout;
 }
 
-// Convert milliseconds (JS time) to seconds (Beanstalked time).
+// Convert milliseconds (JS time) to seconds (Beanstalk time).
 function msToSec(ms) {
   return Math.round(ms / 1000);
 }
@@ -489,7 +489,7 @@ class Queue extends EventEmitter {
   }
 
 
-  // Used by once to reserve and process each job recursively.
+  // Used by runOnce to reserve and process each job recursively.
   async _reserveAndProcess() {
     const session  = await this._reserve(0);
     const timeout  = 0;
@@ -497,7 +497,7 @@ class Queue extends EventEmitter {
     for (let tries = 0 ; tries < 2 ; ++tries) {
       try {
 
-        let [jobID, payload]  = await session.request('reserve_with_timeout', timeout);
+        let [jobID, payload] = await session.request('reserve_with_timeout', timeout);
         await this._runAndDestroy(session, jobID, payload);
         await this._reserveAndProcess();
         return true;  // At least one job processed, resolve to true
@@ -529,7 +529,7 @@ class Queue extends EventEmitter {
       return;
 
     try {
-      const [jobID, payload]  = await session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT));
+      const [jobID, payload] = await session.request('reserve_with_timeout', msToSec(RESERVE_TIMEOUT));
 
       try {
         await queue._runAndDestroy(session, jobID, payload);
@@ -549,7 +549,7 @@ class Queue extends EventEmitter {
   // Called to process a job.  If successful, deletes job, otherwise returns job
   // to queue.  Returns a promise.
   async _runAndDestroy(session, jobID, payload) {
-    // Payload comes in the form of a buffer, need to conver to a string.
+    // Payload comes in the form of a buffer, need to convert to a string.
     payload = payload.toString();
     // Typically we queue JSON objects, but the payload may be just a
     // string, e.g. some services send URL encoded name/value pairs, or MIME
@@ -656,7 +656,7 @@ class Queue extends EventEmitter {
   }
 
 
-  // Session for processing messages, created lazily.  This sessions is
+  // Session for processing messages, created lazily.  These sessions are
   // blocked, so all other operations should happen on the _put session.
   _reserve(index) {
     if (!this._reserveSessions[index]) {
