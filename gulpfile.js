@@ -2,16 +2,15 @@ const del         = require('del');
 const exec        = require('child_process').exec;
 const File        = require('fs');
 const gulp        = require('gulp');
+const gutil       = require('gulp-util');
 const Net         = require('net');
 const notify      = require('gulp-notify');
 const OS          = require('os');
-const Path        = require('path');
 const replace     = require('gulp-replace');
-const sourcemaps  = require("gulp-sourcemaps");
+const sourcemaps  = require('gulp-sourcemaps');
 const spawn       = require('child_process').spawn;
 const version     = require('./package.json').version;
 const babel       = require('gulp-babel');
-
 
 
 // Compile then watch -> compile
@@ -27,17 +26,17 @@ gulp.task('build', ['clean'], function() {
   const compile = gulp.src('src/**/*.js')
     .pipe(sourcemaps.init())
     .pipe(babel())
-    //.pipe(concat("all.js"))
+    //.pipe(concat('all.js'))
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest('lib'));
   // Notifications only available on Mac
   if (OS.type() == 'Darwin')
-    compile.pipe(notify({ message: "Ironium: built!", onLast: true }));
+    return compile.pipe(notify({ message: 'Ironium: built!', onLast: true }));
 });
 
 // Delete anything compiled into lib directory
-gulp.task('clean', function(done) {
-  del('lib/**', done);
+gulp.task('clean', function() {
+  return del('lib/**');
 });
 
 
@@ -49,12 +48,12 @@ gulp.task('restart', function(done) {
     return;
   }
 
-  console.log('Restarting beanstalkd ...');
-  exec('launchctl stop homebrew.mxcl.beanstalk', function(error, stdout, stderr) {
+  gutil.log('Restarting beanstalkd ...');
+  exec('launchctl stop homebrew.mxcl.beanstalk', function(error, stdout) {
     process.stdout.write(stdout);
-    exec('launchctl start homebrew.mxcl.beanstalk', function(error, stdout, stderr) {
+    exec('launchctl start homebrew.mxcl.beanstalk', function(error, stdout) {
       process.stdout.write(stdout);
-      console.log('Waiting for beanstalkd ...');
+      gutil.log('Waiting for beanstalkd ...');
       connect();
     });
   });
@@ -65,7 +64,7 @@ gulp.task('restart', function(done) {
       connection.end();
       done();
     });
-    connection.on('error', function(error) {
+    connection.on('error', function() {
       setTimeout(connect, 100);
     });
   }
@@ -84,9 +83,9 @@ gulp.task('test', ['build', 'restart'], function(done) {
 // Used by gulp release to update element.svg with new version number.
 gulp.task('element', function() {
   return gulp.src('element.svg')
-    .pipe(replace(/<tspan id="version">[\d\.]+<\/tspan>/, '<tspan id="version">' + version + '</tspan>'))
+    .pipe(replace(/<tspan id='version'>[\d\.]+<\/tspan>/, `<tspan id="version">${version}</tspan>`))
     .pipe(gulp.dest('.'));
-          
+
 });
 
 // Used by gulp release to create a changelog summary in change.log.
@@ -104,14 +103,13 @@ gulp.task('changelog', function(callback) {
 
 // Used by npm publish to create a Version N.N commit and tag it.
 gulp.task('tag-release', ['element', 'changelog'], function(callback) {
-  const message = "Release " + version;
-  const script  =  "\
+  const script  =  `\
     git add package.json CHANGELOG.md element.svg   &&\
     git commit --allow-empty -m \"" + message + "\" &&\
     git push origin master                          &&\
     git tag -a " + version + " --file change.log    &&\
     git push origin " + version + "                 &&\
-    git clean -f";
+    git clean -f`;
   exec(script, function(error, stdout) {
     process.stdout.write(stdout);
     callback(error);
