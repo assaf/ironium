@@ -1,3 +1,8 @@
+# 2.7.0
+
+ADDED keep alive necessary to keep IronMQ connection open.
+
+
 # 2.6.0
 
 CHANGED tests that schedule with interval now respect start time.
