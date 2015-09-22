@@ -2,6 +2,8 @@
 
 ADDED keep alive necessary to keep IronMQ connection open.
 
+Officially only supported on Node.js 4.0 or later.
+
 
 # 2.6.0
 
