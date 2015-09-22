@@ -564,9 +564,10 @@ class Queue extends EventEmitter {
     } catch(ex) {
     }
 
+    const keepAlive = ifProduction(KEEP_ALIVE, ms('1s'));
     const keepAliveInterval = setInterval(()=> {
       session.request('list_tubes_watched').catch(this._notify.debug);
-    }, parseInt(this._config.keepAlive));
+    }, keepAlive);
 
     try {
 
