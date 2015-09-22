@@ -34,6 +34,11 @@ const RELEASE_DELAY         = ms('1m');
 // In testing environment, delay() is artifically limited to this duration.
 const MAX_DELAY_FOR_TESTING = ms('10s');
 
+// IronMQ closes connections if there's no activity on then, even when we've
+// reserved a job and are in the middle of processing it.  So we're going to
+// ping it every 30 seconds to force keep the connection open.
+const KEEP_ALIVE            = ms('30s');
+
 
 // Returns actual timeout in production.  If NODE_ENV is development or test,
 // return a timeout no larger than the limit (default to zero).
