@@ -23,6 +23,7 @@ module.exports = class Configuration {
       this.queues.width     = source.queues.width || 1;
       this.queues.hostname  = source.queues.hostname;
       this.queues.port      = source.queues.port;
+      this.queues.keepAlive = source.queues.keepAlive || '30000';
     }
     // Apply defaults.
     if (!this.queues.hasOwnProperty('prefix'))

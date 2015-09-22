@@ -559,6 +559,10 @@ class Queue extends EventEmitter {
     } catch(ex) {
     }
 
+    const keepAliveInterval = setInterval(()=> {
+      session.request('list_tubes_watched').catch(this._notify.debug);
+    }, parseInt(this._config.keepAlive));
+
     try {
 
       this._notify.info('Processing queued job %s:%s', this.name, jobID);
@@ -578,6 +582,7 @@ class Queue extends EventEmitter {
       // in the queue for a while before it becomes available again.
       const priority  = 0;
       const delay     = ifProduction(RELEASE_DELAY);
+      clearInterval(keepAliveInterval);
       try {
         await session.request('release', jobID, priority, msToSec(delay));
       } catch (releaseError) {
@@ -594,6 +599,7 @@ class Queue extends EventEmitter {
       throw error;
     }
 
+    clearInterval(keepAliveInterval);
     // Remove job from queue: there's nothing we can do about an error here
     try {
       await session.request('destroy', jobID);
