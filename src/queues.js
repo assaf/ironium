@@ -206,9 +206,13 @@ class Session {
       client.on('close', function() {
         reject(new QueueError('CLOSED'));
       });
+
+      // Make sure we timeout on slow connections
+      setTimeout(function() {
+        reject(new Error('Timeout waiting for connection'));
+      }, CONNECT_TIMEOUT);
     });
-    // Make sure we timeout on slow connections, and try again
-    await Bluebird.resolve(establishConnection).timeout(CONNECT_TIMEOUT);
+    await establishConnection;
 
     // Watch for end and switch to new session
     client.stream.once('end', ()=> {
@@ -220,7 +224,7 @@ class Session {
     // it can be used.  This is the first setup step, followed by the
     // session-specific setup.
     if (config.authenticate)
-      await Bluebird.promisify(client.put, client)(0, 0, 0, config.authenticate);
+      await Bluebird.promisify(client.put.bind(client))(0, 0, 0, config.authenticate);
 
     // Put/reserve clients have different setup requirements, this are handled by
     // an externally supplied method.
@@ -656,7 +660,7 @@ class Queue extends EventEmitter {
       // Setup: tell Beanstalkd which tube to use (persistent to session).
       const tubeName  = this._prefixedName;
       const session   = new Session(this._server, `${this.name}/put`, async function(client) {
-        await Bluebird.promisify(client.use, client)(tubeName);
+        await Bluebird.promisify(client.use.bind(client))(tubeName);
         // Allows the process to exit when done processing, otherwise, it will
         // stay running while it's waiting to reserve the next job.
         client.stream.unref();
@@ -677,8 +681,8 @@ class Queue extends EventEmitter {
       const tubeName  = this._prefixedName;
       const session   = new Session(this._server, `${this.name}/${index}`, async function(client) {
         // Must watch a new tube before we can ignore default tube
-        await Bluebird.promisify(client.watch, client)(tubeName);
-        await Bluebird.promisify(client.ignore, client)('default');
+        await Bluebird.promisify(client.watch.bind(client))(tubeName);
+        await Bluebird.promisify(client.ignore.bind(client))('default');
       });
 
       this._reserveSessions[index] = session;

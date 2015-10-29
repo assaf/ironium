@@ -1,7 +1,7 @@
-require('./helpers');
+require('../helpers');
 const assert   = require('assert');
 const Bluebird = require('bluebird');
-const Ironium  = require('../src');
+const Ironium  = require('../../src');
 const Net      = require('net');
 
 const reserved = new Map();

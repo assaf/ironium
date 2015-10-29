@@ -49,7 +49,7 @@ if (typeof(describe) != 'undefined') {
 
 } else {
 
-  const Ironium = require('../lib');
+  const Ironium = require('../../lib');
 
   // Catch Ironium.emit('error'), otherwise process fails on failed job
   Ironium.on('error', function() { });

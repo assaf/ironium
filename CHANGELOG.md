@@ -1,3 +1,9 @@
+# 2.8.0
+
+Upgraded to Bluebird 3.x.  This may be a breaking update for some, see
+http://bluebirdjs.com/docs/new-in-bluebird-3.html#3.0.1-update
+
+
 # 2.7.0
 
 ADDED keep alive necessary to keep IronMQ connection open.

@@ -4,18 +4,64 @@ const { createDomain }  = require('domain');
 const Promise           = require('bluebird');
 
 
+// Handler is a generator function (ES6, Babel.js)
+function runGenerator({ generator, args, domain, resolve, reject }) {
+  Bluebird.coroutine(generator, { yieldHandler })(...args)
+    .then(function() {
+      domain.exit();
+      resolve();
+    })
+    .catch(function(error) {
+      domain.exit();
+      reject(error);
+    });
+}
+
+
 // Support for generators and thunks, see
 // https://github.com/petkaantonov/bluebird/blob/master/API.md#promisecoroutineaddyieldhandlerfunction-handler---void
 function yieldHandler(value) {
   if (typeof(value) === 'function') {
-    const def = Promise.defer();
-    try {
-      value(def.callback);
-    } catch(error) {
-      def.reject(error);
-    }
-    return def.promise;
+    const asPromise = new Promise(function(resolve, reject) {
+      try {
+        value(function(error, value) {
+          if (error)
+            reject(error);
+          else
+            resolve(value);
+        });
+      } catch(error) {
+        reject(error);
+      }
+    });
+    return asPromise;
   }
+}
+
+// Handler returns a promise.
+function runThenable({ thenable, domain, resolve, reject }) {
+  // A thenable: cast it to a promise we can handle
+  Promise.resolve(thenable)
+    .then(function() {
+      domain.exit();
+      resolve();
+    })
+    .catch(function(error) {
+      domain.exit();
+      reject(error);
+    });
+}
+
+
+// Handler can use this callback if it wants to
+function asCallback({ domain, resolve, reject }) {
+  return function callback(error) {
+    domain.exit();
+    if (error)
+      reject(error);
+    else
+      resolve();
+  };
 }
 
 
@@ -56,60 +102,23 @@ module.exports = function runJob(jobID, handler, args, timeout) {
 
     domain.run(function() {
       // Handler is a generator function (ES6, Babel.js)
-      if (handler.constructor.name === 'GeneratorFunction') {
-        Bluebird.coroutine(handler, { yieldHandler })(...args)
-          .then(function() {
-            domain.exit();
-            resolve();
-          })
-          .catch(function(error) {
-            domain.exit();
-            reject(error);
-          });
-        return;
+      if (handler.constructor.name === 'GeneratorFunction')
+        runGenerator({ generator: handler, args, domain, resolve, reject });
+      else {
+        // Good old callback resolves the job.  Since we intercept it,
+        // errors are handled by on('error'), successful completion resolves.
+        const result = handler(...args, asCallback({ domain, resolve, reject }));
+
+        // Job may have returned a promise or a generator
+        if (result && typeof(result.then) === 'function')
+          runThenable({ thenable: result, domain, resolve, reject });
+        // Otherwise it's a callback, wait for it to resolve job
       }
-
-      // Good old callback resolves the job.  Since we intercept it,
-      // errors are handled by on('error'), successful completion resolves.
-      const result = handler(...args, function(error) {
-        domain.exit();
-        if (error)
-          reject(error);
-        else
-          resolve();
-      });
-
-      // Job may have returned a promise or a generator
-      if (result && typeof(result.next) === 'function' && typeof(result.throw) === 'function') {
-        console.log('Non-generator functions that return generators are no longer supported');
-        // Handler did not identify as generator function, but returned a generator (Traceur)
-        Bluebird.coroutine(()=> result, { yieldHandler })()
-          .then(function() {
-            domain.exit();
-            resolve();
-          })
-          .catch(function(error) {
-            domain.exit();
-            reject(error);
-          });
-      } else if (result && typeof(result.then) === 'function') {
-        // A thenable: cast it to a promise we can handle
-        Promise.resolve(result)
-          .then(function() {
-            domain.exit();
-            resolve();
-          })
-          .catch(function(error) {
-            if (!(error instanceof Error))
-              error = new Error(`${error} in ${handler}`);
-            domain.exit();
-            reject(error);
-          });
-      }
-      // Otherwise it's a callback, wait for it to resolve job
-
     });
 
   });
   return promise;
+
 };
+
+

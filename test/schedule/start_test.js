@@ -1,17 +1,45 @@
-require('./helpers');
+require('../helpers');
 const assert     = require('assert');
-const Ironium    = require('../src');
+const Ironium    = require('../../src');
 const ms         = require('ms');
 const TimeKeeper = require('timekeeper');
 
 
-describe('Scheduled job with interval', ()=> {
+describe('Scheduled job', ()=> {
+
+  let delta;
+
+  before((done)=> {
+    const t1 = Date.now();
+
+    Ironium.scheduleJob('in-2s', new Date(Date.now() + ms('2s')), async function() {
+      delta = Date.now() - t1;
+      Ironium.stop();
+      done();
+    });
+
+    Ironium.start();
+  });
+
+  it('should not be run job before scheduled time', function() {
+    assert(delta > 2000);
+  });
+
+});
+
+
+describe('Scheduled job with start time and interval', ()=> {
 
   let count = 0;
 
   before(()=> {
     TimeKeeper.travel('2015-06-29T20:16:00Z');
-    Ironium.scheduleJob('every-1hr', '1h', async function() {
+    const options = {
+      // Run every hour, at 13 minutes, 15 seconds on the hour
+      start:  new Date(null, null, null, null, 13, 15),
+      every:  '1h'
+    };
+    Ironium.scheduleJob('start-and-interval', options, async function() {
       count++;
     });
   });
@@ -20,6 +48,10 @@ describe('Scheduled job with interval', ()=> {
 
     describe('before first occurrence', ()=> {
 
+      before(()=> {
+        TimeKeeper.travel( new Date('2015-06-30T20:13:14Z') );
+        Ironium.resetSchedule();
+      });
       before(Ironium.runOnce);
 
       it('should not run job', ()=> {
@@ -30,9 +62,8 @@ describe('Scheduled job with interval', ()=> {
 
     describe('after first occurrence', ()=> {
       before(()=> {
-        TimeKeeper.travel(Date.now() + ms('1h'));
+        TimeKeeper.travel( new Date('2015-06-30T20:13:16Z') );
       });
-
       before(Ironium.runOnce);
 
       it('should run the job once', ()=> {
@@ -65,10 +96,11 @@ describe('Scheduled job with interval', ()=> {
             assert.equal(count, 2);
           });
 
+
           describe('after rewinding clock resetting schedule', ()=> {
 
             before(()=> {
-              TimeKeeper.travel('2015-06-29T20:00:00Z');
+              TimeKeeper.travel( new Date('2015-06-30T20:13:16Z') );
             });
             before(Ironium.resetSchedule);
 
@@ -83,6 +115,7 @@ describe('Scheduled job with interval', ()=> {
 
             after(TimeKeeper.reset);
           });
+
 
         });
 
