@@ -8,7 +8,7 @@ describe('Queue with delay', ()=> {
 
   const captureQueue = Ironium.queue('capture');
   // Allow up to 2s of delay when running this test suite.
-  Ironium.config.queues.maxDelay = 2000;
+  Ironium.config.maxDelay = 2000;
 
   // Capture processed jobs here.
   const processed = [];

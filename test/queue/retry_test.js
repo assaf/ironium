@@ -61,7 +61,8 @@ describe('Server with errors', ()=> {
 
   before(() => {
     Ironium.configure({
-      queues: { hostname: '127.0.0.1', port: 11333 }
+      host: '127.0.0.1',
+      port: 11333
     });
 
     mock.listen(11333);
@@ -95,7 +96,8 @@ describe('Server with errors', ()=> {
 
   after(() => {
     Ironium.configure({
-      queues: { hostname: '127.0.0.1', port: 11300 }
+      host: '127.0.0.1',
+			port: 11300
     });
   });
 

@@ -2,6 +2,12 @@
 
 Ironium 3.x requires Node 4.x or later.
 
+Configuration has changed, so check the README again.  You can now use
+`iron.json` as the configuration object, e.g:
+
+  const config = require('iron.json');
+  ironium.configure(config);
+
 
 # 2.8.0
 

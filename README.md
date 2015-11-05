@@ -532,10 +532,8 @@ const ironium = require('ironium');
 
 if (process.env.NODE_ENV == 'production')
   ironium.configure({
-    queues: {
-      hostname: 'my.beanstalkd.server',
-      width:    4
-    }
+    host: 'my.beanstalkd.server',
+    width:    4
   });
 ```
 
@@ -543,7 +541,7 @@ Or load it form a JSON configuration file:
 
 ```
 const ironium = require('ironium');
-const config  = require('./ironium.json');
+const config  = require('./iron.json');
 
 if (process.env.NODE_ENV == 'production')
   ironium.configure(config);
@@ -553,19 +551,11 @@ The configuration options are:
 
 ```
 {
-  "queues": {
-    "prefix":      <Prefix all queue names>,
-    "width":       <Number of workers processing each queue, default to 1>,
-    "hostname":    <Beanstalkd server hostname, default to localhost>,
-    "port":        <Beanstalkd port number, default to 11300>
-  },
-  "scheduler": {
-  },
-  "ironio": {
-    "hostname":    <Iron.io hostname, optional>,
-    "projectID":   <project ID from credentials settings>,
-    "token":       <access token for this project>
-  }
+  "host":         <hostname, optional>,
+  "project_id":   <project ID from credentials settings>,
+  "token":        <access token for this project>,
+  "prefix":       <Prefix all queue names>,
+  "width":        <Number of workers processing each queue, default to 1>
 }
 ```
 
@@ -580,10 +570,7 @@ If you're running in production against a Beanstalkd, you will likely need to
 set `queues.hostname` and `queues.port`.
 
 If you're running in production against an [Iron.io](https://hud.iron.io/), you
-need to set `ironio.projectID` and `ironio.token` based on your project
-credentials.  You may set `ironio.hostname`, or just rely on the default.
-
-When using Iron.io, the `queues.hostname` and `queues.port` are ignored.
+need to set `host`, `project_id` and `token` based on your project credentials.
 
 
 ## Testing Your Code
