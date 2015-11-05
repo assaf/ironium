@@ -1,6 +1,6 @@
 # 3.0.0
 
-Requires Node 4.x or later.
+Ironium 3.x requires Node 4.x or later.
 
 
 # 2.8.0
