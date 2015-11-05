@@ -1,8 +1,17 @@
+'use strict';
 const assert = require('assert');
 const fork   = require('child_process').fork;
 
 
-if (typeof(describe) != 'undefined') {
+const isMocha = !!global.describe;
+
+if (isMocha)
+	runTestSuite();
+else
+	runChildProcess();
+
+
+function runTestSuite() {
 
   describe('Child process', function() {
 
@@ -14,8 +23,6 @@ if (typeof(describe) != 'undefined') {
 
       child.on('message', function(step) {
         steps.push(step);
-        if (process.env.DEBUG)
-          console.log('Captured', step);
       });
 
       child.on('exit', function(code) {
@@ -46,10 +53,12 @@ if (typeof(describe) != 'undefined') {
     });
 
   });
+}
 
-} else {
 
-  const Ironium = require('../../lib');
+function runChildProcess() {
+
+  const Ironium = require('../..');
 
   // Catch Ironium.emit('error'), otherwise process fails on failed job
   Ironium.on('error', function() { });
@@ -86,9 +95,9 @@ if (typeof(describe) != 'undefined') {
 
   // Failed job: fails three times, then succeeds.
   Ironium.queue('failed').eachJob(function(job, callback) {
-    if (failed == 3) {
+    if (failed == 3)
       Ironium.queueJob('done', 'job', callback);
-    } else {
+    else {
       process.send('failed');
       failed++;
       // Yes, we do have a callback, but by throwing an error we're testing that

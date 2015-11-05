@@ -1,6 +1,7 @@
+'use strict';
 require('../helpers');
 const assert     = require('assert');
-const Ironium    = require('../../src');
+const Ironium    = require('../..');
 const ms         = require('ms');
 const TimeKeeper = require('timekeeper');
 
@@ -11,8 +12,9 @@ describe('Scheduled job with interval', ()=> {
 
   before(()=> {
     TimeKeeper.travel('2015-06-29T20:16:00Z');
-    Ironium.scheduleJob('every-1hr', '1h', async function() {
+    Ironium.scheduleJob('every-1hr', '1h', function() {
       count++;
+			return Promise.resolve();
     });
   });
 

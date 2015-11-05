@@ -1,6 +1,7 @@
+'use strict';
 require('../helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../..');
 const Stream  = require('stream');
 
 
@@ -12,10 +13,10 @@ class SourceStream extends Stream.Readable {
     this._stopAt  = stopAt;
   }
 
-  _read(bytes) {
-    if (this._count >= this._stopAt) {
+  _read() {
+    if (this._count >= this._stopAt)
       this.push(null);
-    } else {
+    else {
       this._count++;
       this.push(this._count);
     }

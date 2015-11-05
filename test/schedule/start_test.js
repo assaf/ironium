@@ -1,6 +1,7 @@
+'use strict';
 require('../helpers');
 const assert     = require('assert');
-const Ironium    = require('../../src');
+const Ironium    = require('../..');
 const ms         = require('ms');
 const TimeKeeper = require('timekeeper');
 
@@ -12,10 +13,11 @@ describe('Scheduled job', ()=> {
   before((done)=> {
     const t1 = Date.now();
 
-    Ironium.scheduleJob('in-2s', new Date(Date.now() + ms('2s')), async function() {
+    Ironium.scheduleJob('in-2s', new Date(Date.now() + ms('2s')), function(job, callback) {
       delta = Date.now() - t1;
       Ironium.stop();
       done();
+			callback();
     });
 
     Ironium.start();
@@ -39,8 +41,9 @@ describe('Scheduled job with start time and interval', ()=> {
       start:  new Date(null, null, null, null, 13, 15),
       every:  '1h'
     };
-    Ironium.scheduleJob('start-and-interval', options, async function() {
+    Ironium.scheduleJob('start-and-interval', options, function(job, callback) {
       count++;
+			callback();
     });
   });
 

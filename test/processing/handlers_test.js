@@ -1,6 +1,7 @@
+'use strict';
 require('../helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../..');
 const Promise = require('bluebird');
 
 
@@ -92,34 +93,6 @@ describe('Processing jobs', ()=> {
     });
 
   });
-
-
-  describe('with async/await', ()=> {
-
-    // Count how many steps run
-    const steps = [];
-    before(()=> {
-      processGeneratorQueue.eachJob(async function() {
-        const one = await Promise.resolve('A');
-        steps.push(one);
-        const two = await Promise.resolve('B');
-        steps.push(two);
-        const three = await function() {
-          return Promise.resolve('C');
-        }();
-        steps.push(three);
-      });
-    });
-
-    before(()=> processGeneratorQueue.queueJob('job'));
-    before(Ironium.runOnce);
-
-    it('should run all steps', ()=> {
-      assert.equal(steps.join(''), 'ABC');
-    });
-
-  });
-
 
 
   describe('once', ()=> {

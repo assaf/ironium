@@ -1,6 +1,7 @@
+'use strict';
 require('../helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../..');
 
 
 describe('Queue with delay', ()=> {
@@ -13,7 +14,7 @@ describe('Queue with delay', ()=> {
   const processed = [];
 
   before(function() {
-    captureQueue.eachJob((job, callback)=> {
+    captureQueue.eachJob(function(job, callback) {
       processed.push(job);
       callback();
     });

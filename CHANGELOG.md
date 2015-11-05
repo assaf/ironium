@@ -1,3 +1,8 @@
+# 3.0.0
+
+Requires Node 4.x or later.
+
+
 # 2.8.0
 
 Upgraded to Bluebird 3.x.  This may be a breaking update for some, see

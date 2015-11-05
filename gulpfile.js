@@ -1,43 +1,11 @@
-const del         = require('del');
 const exec        = require('child_process').exec;
 const File        = require('fs');
 const gulp        = require('gulp');
 const gutil       = require('gulp-util');
 const Net         = require('net');
-const notify      = require('gulp-notify');
-const OS          = require('os');
 const replace     = require('gulp-replace');
-const sourcemaps  = require('gulp-sourcemaps');
 const spawn       = require('child_process').spawn;
 const version     = require('./package.json').version;
-const babel       = require('gulp-babel');
-
-
-// Compile then watch -> compile
-gulp.task('default', ['build'], function() {
-  gulp.watch('src/**/*.js', function() {
-    gulp.run('build');
-  });
-});
-
-
-// Compile ES6 in src to ES5 in lib
-gulp.task('build', ['clean'], function() {
-  const compile = gulp.src('src/**/*.js')
-    .pipe(sourcemaps.init())
-    .pipe(babel())
-    //.pipe(concat('all.js'))
-    .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest('lib'));
-  // Notifications only available on Mac
-  if (OS.type() == 'Darwin')
-    return compile.pipe(notify({ message: 'Ironium: built!', onLast: true }));
-});
-
-// Delete anything compiled into lib directory
-gulp.task('clean', function() {
-  return del('lib/**');
-});
 
 
 // Restart beanstalkd (OS X only)
@@ -71,13 +39,6 @@ gulp.task('restart', function(done) {
 });
 
 
-// Runs the test suite
-//
-// Rebuild ES5 source files in lib directory, one of the test suites runs in ES5
-// Restart Beanstalkd, make sure we're running from a clean slate
-gulp.task('test', ['build', 'restart'], function(done) {
-  spawn('mocha', [], { stdio: 'inherit' }, done);
-});
 
 
 // Used by gulp release to update element.svg with new version number.

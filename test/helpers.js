@@ -1,7 +1,6 @@
 const Bluebird  = require('bluebird');
 const debug     = require('debug');
-const exec      = require('child_process').exec;
-const Ironium   = require('../src');
+const Ironium   = require('..');
 
 
 // Test mode: no delay when failed jobs returned to queue.
@@ -14,3 +13,9 @@ if (process.env.DEBUG)
 
 before(Ironium.purgeQueues);
 after(Ironium.purgeQueues);
+
+Bluebird.config({
+  warnings: false,
+  longStackTraces: true
+});
+

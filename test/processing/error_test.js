@@ -1,6 +1,7 @@
+'use strict';
 require('../helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../..');
 const Promise = require('bluebird');
 
 

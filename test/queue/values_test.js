@@ -1,6 +1,7 @@
+'use strict';
 require('../helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../..');
 
 
 describe('Queue', function() {
@@ -9,8 +10,9 @@ describe('Queue', function() {
 
   // Capture processed jobs here.
   before(()=> {
-    captureQueue.eachJob(async (job, callback)=> {
+    captureQueue.eachJob((job, callback)=> {
       this.job = job;
+			callback();
     });
   });
 
@@ -94,3 +96,4 @@ describe('Queue', function() {
   });
 
 });
+

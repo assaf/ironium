@@ -1,6 +1,7 @@
+'use strict';
 require('../helpers');
 const assert  = require('assert');
-const Ironium = require('../../src');
+const Ironium = require('../..');
 const Net     = require('net');
 
 
@@ -11,39 +12,48 @@ let jobs = 0;
 let failUntil = 1;
 
 const mock = Net.createServer(function(socket) {
-  socket.on('data', function(data) {
-    const parts = data.toString().replace(/\r\n$/, '').split(' ');
-    const cmd = parts[0];
-
-    let reply;
-
-    switch (cmd) {
-      case 'use':
-        reply = `USING ${parts[1]}`;
-        break;
-      case 'peek-ready':
-      case 'peek-delayed':
-        reply = 'NOT_FOUND';
-        break;
-      case 'put':
-        jobs++;
-
-        if (jobs < failUntil)
-          socket.end();
-        else
-          reply = `INSERTED ${jobs}`;
-
-        break;
-
-      default:
-        throw new Error(`Unknown mock command "${cmd}".`);
-    }
-
-    if (reply)
-      socket.write(`${reply}\r\n`);
-  });
-
+  socket.on('data', dumbProtocol);
   socket.unref();
+
+	function dumbProtocol(data) {
+		const lines = data.toString().trim().split(/\r\n/);
+		nextLine(lines, socket);
+	}
+
+	function nextLine(lines, socket) {
+		const line = lines[0];
+		if (line) {
+			const parts = line.split(' ');
+			const cmd 	= parts[0];
+
+			switch (cmd) {
+				case 'peek-ready':
+				case 'peek-delayed':
+					socket.write(`NOT_FOUND\r\n`);
+					nextLine(lines.slice(1), socket);
+					break;
+
+				case 'put':
+					jobs++;
+
+					if (jobs < failUntil)
+						socket.end();
+					else
+						socket.write(`INSERTED ${jobs}\r\n`);
+					nextLine(lines.slice(2), socket);
+					break;
+
+				case 'use':
+					socket.write(`USING ${parts[1]}\r\n`);
+					nextLine(lines.slice(1), socket);
+					break;
+
+				default:
+					throw new Error(`Unknown mock command "${cmd}".`);
+			}
+		}
+	}
+
 });
 
 
@@ -59,8 +69,8 @@ describe('Server with errors', ()=> {
 
   describe('fail then recover', ()=> {
 
-    it('should not error when queuing', async ()=> {
-      await Ironium.queue('foo').queueJob({ value: 1 });
+    it('should not error when queuing', function() {
+      return Ironium.queue('foo').queueJob({ value: 1 });
     });
 
   });
@@ -71,13 +81,14 @@ describe('Server with errors', ()=> {
       failUntil = 3;
     });
 
-    it('should throw error when queueing', async ()=> {
-      try {
-        await Ironium.queue('foo').queueJob({ value: 1 });
-        assert(false, 'Expected to throw an error');
-      } catch (error) {
-        assert.equal(error.message, 'Error queuing to foo: CLOSED');
-      }
+    it('should throw error when queueing', function() {
+			return Ironium.queue('foo').queueJob({ value: 1 })
+				.then(function() {
+					assert(false, 'Expected to throw an error');
+				})
+				.catch(function(error) {
+					assert.equal(error.message, 'Error queuing to foo: CLOSED');
+				});
     });
 
   });
