@@ -502,10 +502,12 @@ to the console by setting the `DEBUG` environment variable to `ironium` or
 For example:
 
 ```bash
-# See all processing errors
+# See processing errors
 DEBUG=ironium npm start
 # See queues and scheduling activity
 DEBUG=ironium:queues,ironium:schedules npm start
+# Everything
+DEBUG=ironium:* npm start
 ```
 
 In addition, you can register a callback to be notified of job processing

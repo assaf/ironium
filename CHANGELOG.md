@@ -11,6 +11,11 @@ Configuration has changed, so check the README again.  You can now use
   const config = require('iron.json');
   ironium.configure(config);
 
+Debug messages have been split.  Use DEBUG=ironium to see processing
+instructions, and DEBUG=ironium:* to see everything else reported.
+
+To listen to processing errors, use ironium.onerror(callback).
+
 
 # 2.8.0
 
