@@ -110,11 +110,11 @@ function runChildProcess() {
 
   // Last job, exit this process successfully.
   Ironium.queue('done').eachJob(function() {
+		process.send('done');
+		Ironium.stop();
 		setTimeout(function() {
-			process.send('done');
-			Ironium.stop();
 			process.exit(0);
-		}, 1000);
+		}, 100);
   });
 
 

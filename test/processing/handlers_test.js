@@ -2,7 +2,6 @@
 require('../helpers');
 const assert  = require('assert');
 const Ironium = require('../..');
-const Promise = require('bluebird');
 
 
 describe('Processing jobs', ()=> {

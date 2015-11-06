@@ -297,7 +297,7 @@ ironium.scheduleJob('everyTwoForADay', schedule, async function() {
 ```
 
 
-### configure(object)
+### configure(object | promise)
 
 Configure the workers, see [Configuring](#configuring).
 
@@ -532,8 +532,7 @@ const ironium = require('ironium');
 
 if (process.env.NODE_ENV == 'production')
   ironium.configure({
-    host: 'my.beanstalkd.server',
-    width:    4
+    host: 'my.beanstalkd.server'
   });
 ```
 
@@ -547,6 +546,9 @@ if (process.env.NODE_ENV == 'production')
   ironium.configure(config);
 ```
 
+You can also use a promise that resolves to an object with all configuration
+properties.
+
 The configuration options are:
 
 ```
@@ -554,8 +556,7 @@ The configuration options are:
   "host":         <hostname, optional>,
   "project_id":   <project ID from credentials settings>,
   "token":        <access token for this project>,
-  "prefix":       <Prefix all queue names>,
-  "width":        <Number of workers processing each queue, default to 1>
+  "prefix":       <Prefix all queue names>
 }
 ```
 
@@ -567,10 +568,11 @@ The default configuration when running in test environment (`NODE_ENV ==
 'test'`) uses the prefix `test-` for all queues.
 
 If you're running in production against a Beanstalkd, you will likely need to
-set `queues.hostname` and `queues.port`.
+set `queues.host` and `queues.port`.
 
 If you're running in production against an [Iron.io](https://hud.iron.io/), you
 need to set `host`, `project_id` and `token` based on your project credentials.
+This is the same format as `iron.json`.
 
 
 ## Testing Your Code

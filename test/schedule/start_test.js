@@ -16,7 +16,7 @@ describe('Scheduled job', ()=> {
     Ironium.scheduleJob('in-2s', new Date(Date.now() + ms('2s')), function(job, callback) {
       delta = Date.now() - t1;
       Ironium.stop();
-      done();
+      setTimeout(done, 100);
 			callback();
     });
 
