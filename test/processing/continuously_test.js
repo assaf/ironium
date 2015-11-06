@@ -60,9 +60,6 @@ function runChildProcess() {
 
   const Ironium = require('../..');
 
-  // Catch Ironium.emit('error'), otherwise process fails on failed job
-  Ironium.on('error', function() { });
-
 
   // Regular job: queued once, execute once
   Ironium.queue('regular').eachJob(function(job, callback) {
