@@ -14,6 +14,7 @@
     "bluebird": "^3.0",
     "debug": "^2.2",
     "fivebeans": "^1.3.1",
+    "iron_mq": "git://github.com/iron-io/iron_mq_node.git#v3",
     "ms": "^0.7",
     "pretty-hrtime": "^1.0"
   },

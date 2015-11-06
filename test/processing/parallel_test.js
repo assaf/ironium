@@ -32,7 +32,7 @@ describe('Processing', ()=> {
       return Promise.all(jobs);
     });
     before(Ironium.start);
-    before((done)=> setTimeout(done, 50));
+    before((done)=> setTimeout(done, 100));
 
     it('should run jobs in sequence', ()=> {
       assert.equal(chain.join(''), 'ABAB');

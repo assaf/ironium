@@ -10,6 +10,14 @@ process.env.NODE_ENV = 'test';
 if (process.env.DEBUG)
   Ironium.on('info', debug('ironium'));
 
+/*
+Ironium.configure({
+	project_id: "563b895873d0cd0005000058",
+	token:      "uCJUkl8X8XuHKLTB5VwVVf_0-Ng",
+	host:       "mq-aws-eu-west-1-1.iron.io"
+});
+*/
+
 
 before(Ironium.purgeQueues);
 after(Ironium.purgeQueues);
