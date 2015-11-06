@@ -1,5 +1,8 @@
 # 3.0.0
 
+Ironium 3.x works with IronMQ v3 and can still run in development mode against
+Beanstalkd (no authentication).
+
 Ironium 3.x requires Node 4.x or later.
 
 Configuration has changed, so check the README again.  You can now use
