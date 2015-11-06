@@ -35,20 +35,20 @@ retries, etc.
 
 * **[API](#api)**
   * [queue(name)](#queuename)
-  * [queueJob(name, job, callback)](#queuejobname-job-callback)
-  * [queue.queueJob(job, callback)](#queuejobname-job-callback)
-  * [queue.delayJob(job, duration, callback)](#queuedelayjobjob-duration-callback)
+  * [queueJob(name, job)](#queuejobname-job)
+  * [queue.queueJob(job)](#queuejobname-job)
+  * [queue.delayJob(job, duration)](#queuedelayjobjob-duration)
   * [queue.eachJob(handler)](#queueeachjobhandler)
   * [queue.stream()](#queuestream)
   * [queue.name](#queuename)
   * [queue.webhookURL](#queuewebhookurl)
-  * [scheduleJob(name, time, job)](#schedulejobname-time-job)
+  * [scheduleJob(jobName, when, handler)](#schedulejobjobname-when-handler)
   * [configure(object)](#configureobject)
   * [start()](#start)
   * [stop()](#stop)
   * [resetSchedule()](#resetschedule)
-  * [runOnce(callback)](#runoncecallback)
-  * [purgeQueues(callback)](#purgequeuescallback)
+  * [runOnce()](#runonce)
+  * [purgeQueues()](#purgequeues)
 * **[Using Promises](#using-promises)**
 * **[Async/Await](#asyncawait)**
 * **[Logging](#logging)**
@@ -68,7 +68,7 @@ There are a few more methods to help you with managing workers, running tests,
 and working with Webhooks.
 
 
-### queue(name)
+### queue(queueName)
 
 Returns the named queue.  Calling this method with the same name will always
 return the same queue.  Queues are created on-the-fly, you don't need to setup
@@ -80,7 +80,7 @@ Node.js servers, but only process jobs from specific nodes.
 
 For example, your code may have:
 
-```
+```javascript
 const ironium          = require('ironium');
 const sendWelcomeEmail = ironium.queue('send-welcome-email');
 
@@ -103,21 +103,20 @@ As you can see from this example, each queue has three interesting methods,
 `queueJob`, `delayJob` and `eachJob`.
 
 
-### queueJob(name, job, callback)
-### queue.queueJob(job, callback)
+### queueJob(queueName, job)
+### queue.queueJob(job)
 
 Pushes a new job into the queue.  The job is serialized as JSON, so objects,
 arrays and strings all work as expected.
 
-If the last argument is a callback, it is called after the job has been queued.
-Otherwise, returns a promise.
+Returns a promise that resolves to the job ID.
 
 Calling `Ironium.queueJob(name, job)` is the same as
 `Ironium.queue(name).queueJob(job)`.
 
 For example:
 
-```
+```javascript
 const echoQueue = ironium.queue('queue');
 
 const job = {
@@ -132,20 +131,20 @@ echoQueue.queueJob(job, function(error) {
 
 Because this function returns a promise, you can also do this in your test suite:
 
-```
+```javascript
 before(()=> echoQueue.queueJob(job));
 ```
 
 And this, if you're using ES7:
 
-```
+```javascript
 await echoQueue.queueJob(job);
 ```
 
 
-### queue.delayJob(job, duration, callback)
+### queue.delayJob(job, duration)
 
-Similar to [`queueJob`](#queuequeuejobjob-callback) but delays processing of the
+Similar to [`queueJob`](#queuequeuejobjob) but delays processing of the
 job by the set duration.
 
 Duration is either a number or a string.  The default unit is milliseconds, but
@@ -156,39 +155,37 @@ can write each unit as plural ("1 hours"), singular ("1 hour") or first letter
 only ("1h").
 
 
+### eachJob(queueName, handler)
 ### queue.eachJob(handler)
 
 Processes jobs from the queue. In addition to calling this method, you need to
 either start the workers (see `start` method), or run all queued jobs once (see
-[`runOnce`](#runoncecallback)).
+[`runOnce`](#runonce)).
 
-The first argument is the job handler, a function that takes either one or two
-arguments.  The second argument is the number of workers you want processing the
-queue, you can set this for each queue, or for all queues in the configuration
-file.
+The job handler is a function that takes either one or two arguments.  The first
+argument to the job handler is the job itself, a JavaScript object or primitive.
 
-The first argument is the job, a JavaScript object or primitive.  The second
-argument is a callback that you must call when the job completes, to discard the
-job.  If you call with an error, the error is logged and the job returns to the
-queue, from where it will be picked up after a short delay.
+The job handler can return a promise that resolves when the job
+completes, or a generator function.  Alternatively, it can inform a callback.
+The second argument to the job handler is that callback.
 
 For example:
 
-```
-ironium.queue('echo').eachJob(function(job, callback) {
-  console.log('Echo', job.message);
-  callback();
-});
-```
-
-Alternatively, the function can return a promise or a generator.  For example:
-
-```
+```javascript
 ironium.queue('echo').eachJob(async function(job) {
   console.log('Echo', job.message);
   await fnReturningPromise();
   await anotherAsyncFunction();
   return;
+});
+```
+
+Or using callbacks:
+
+```javascript
+ironium.queue('echo').eachJob(function(job, callback) {
+  console.log('Echo', job.message);
+  callback();
 });
 ```
 
@@ -211,7 +208,7 @@ When processing Webhooks, some services send valid JSON object, other services
 send text strings, so be ready to process those as well.  For example, some
 services send form encoded pairs, so you may need to handle them like this:
 
-```
+```javascript
 const QS = require('querystring');
 
 ironium.queue('webhook').eachJob(function(job, callback) {
@@ -247,7 +244,7 @@ Iron.io.  You can pass this URL to a service, and any messages it will post to
 this URL will be queued.
 
 
-### scheduleJob(name, time, job)
+### scheduleJob(jobName, when, handler)
 
 Schedules the named job to run at the specified time.
 
@@ -268,20 +265,20 @@ If the property `start` is specified, the job will run once at the specified
 time, and if `every` is also specified, repeatedly afterwards.  If the property
 `end` is specified, the job will stop running after that time.
 
-Just like a queued job, the scheduled job is called with a callback and must use
-it to report completion.  However, it may also return a promise, or be a
-generator function.
+Just like a queued job, the scheduled job is expected to return a promise that
+resolves on completion, or a generator function, or inform a callback.
 
 For example:
 
-```
-ironium.scheduleJob('everyHour', '1h', function(callback) {
-  console.log("I run every hour");
-});
-
+```javascript
 ironium.scheduleJob('inAnHour', new Date() + ms('1h'), function() {
   console.log("I run once, after an hour");
   return Promise.resolve();
+});
+
+ironium.scheduleJob('everyHour', '1h', function(callback) {
+  console.log("I run every hour");
+  callback();
 });
 
 const schedule = {
@@ -323,7 +320,7 @@ Reset the next run time for all scheduled jobs.  Used during testing when
 changing the system clock to test scheduled jobs, in particular, rewinding the
 clock.
 
-```
+```javascript
 Ironium.scheduleJob('every-night', '24h', runEveryNight);
 
 TimeKeeper.travel('2015-06-30T15:00:00Z');
@@ -346,13 +343,12 @@ Ironium.resetSchedule();
 ```
 
 
-### runOnce(callback)
+### runOnce()
 
 Use this method when testing.  It will run all schedules jobs, and then process
 all queued jobs until the queues are empty.
 
-You can either call `runOnce` with a callback, to be notified when all jobs have
-been processed, or with no arguments, it will return a promise.
+Returns a promise that resolves when all jobs have been processed.
 
 This method exists since there's no reliable way to use `start` and `stop` for
 running automated tests.
@@ -364,16 +360,16 @@ the next time the job should run.  You may also need to use
 
 For example:
 
-```
+```javascript
 const queue = Ironium.queue('echo');
 const echo  = [];
 
-Ironium.scheduleJob('echo-foo', '24h', function(callback) {
-  queue.queueJob('foo', callback);
+Ironium.scheduleJob('echo-foo', '24h', function() {
+  return queue.queueJob('foo');
 });
 
 queue.eachJob(function(text, callback) {
-  echo.queueJob(text);
+  echo.push(text);
   callback();
 });
 
@@ -386,13 +382,14 @@ before(function() {
 
 // Queue another job
 before(function() {
-  queue.queueJob('bar');
+  return queue.queueJob('bar');
 });
 
 before(function() {
   // Running the scheduled job, followed by the two queued jobs
   TimeKeeper.travel(ms('2hr'));
-  Ironium.runOnce();
+  // Returns a promise, Mocha will wait for it to resolve
+  return Ironium.runOnce();
 });
 
 it("should have run the foo scheduled job", function() {
@@ -409,24 +406,23 @@ after(function() {
 });
 ```
 
-### purgeQueues(callback)
+### purgeQueues()
 
 Use this method when testing.  It will delete all queued jobs.
 
-You can either call `purgeQueues` with a callback, to be notified when all jobs
-have been deleted, or with no arguments, returns a promise.
+Returns a promise that resolves when all jobs have been deleted.
 
 For example:
 
-```
+```javascript
 before(ironium.purgeQueues);
 ```
 
 Is equivalent to:
 
-```
-before(function(done) {
-  ironium.purgeQueues(done);
+```javascript
+before(function() {
+  return ironium.purgeQueues();
 });
 ```
 
@@ -446,26 +442,22 @@ return to the queue and processed again.
 
 For example:
 
-```
+```javascript
 ironium.queue('delayed-echo').eachJob(function(job) {
-  const promise = new Promise(function(resolve, reject) {
-
-    console.log('Echo', job.message);
-    resolve();
-
-  });
-  return promise;
+  return Bluebird.delay(500)
+    .then(function() {
+      console.log('Echo', job.message);
+    });
 });
 ```
 
 
 ## Async/Await
 
-This option is available when using
-[Traceur](https://github.com/google/traceur-compiler), and allows you to write
-code like this:
+This option is available when using [Babel JS](https://babeljs.io/), and allows
+you to write code like this:
 
-```
+```javascript
 ironium.queue('update-name').eachJob(async function(job) {
   const customer = await Customer.findById(job.customerID).exec();
 
@@ -513,7 +505,7 @@ DEBUG=ironium:* npm start
 In addition, you can register a callback to be notified of job processing
 errors:
 
-```js
+```javascript
 ironium.onerror(function(error, subject) {
   console.error('Error reported by', subject);
   console.error(error.stack);
@@ -531,7 +523,7 @@ For development and testing you can typically get by with the default
 configuration.  For production, you may want to set the server in use, as simple
 as passing a configuration object to `ironium.configure`:
 
-```
+```javascript
 const ironium = require('ironium');
 
 if (process.env.NODE_ENV == 'production')
@@ -598,15 +590,3 @@ You can run the entire test suite with `npm test`
 ([Travis](https://travis-ci.org/assaf/ironium) runs this), or specific
 files/tests with [Mocha](http://visionmedia.github.io/mocha/).
 
-The ES6 source lives in the `src` directory, compiled into ES5 in the `lib`
-directory.  We use [Gulp.js](http://gulpjs.com/) for the convenience plugins of
-compiling, watching and notifying.
-
-Specifically:
-
-```
-gulp          # Run this in development, continuously compiles on every change
-gulp build    # Compile source files from src/ into lib/
-gulp clean    # Clean compiled files
-gulp release  # Publish new release
-```

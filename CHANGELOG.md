@@ -5,6 +5,9 @@ Beanstalkd (no authentication).
 
 Ironium 3.x requires Node 4.x or later.
 
+Methods like queueJob, runOnce, etc that previously took a callback no longer
+accept a callback.  Everything returns a promise.
+
 Configuration has changed, so check the README again.  You can now use
 `iron.json` as the configuration object, e.g:
 
@@ -15,6 +18,8 @@ Debug messages have been split.  Use DEBUG=ironium to see processing
 instructions, and DEBUG=ironium:* to see everything else reported.
 
 To listen to processing errors, use ironium.onerror(callback).
+
+The width argument to eachJob is gone (for now).
 
 
 # 2.8.0

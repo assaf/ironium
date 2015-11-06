@@ -58,20 +58,24 @@ function runTestSuite() {
 
 function runChildProcess() {
 
-  const Ironium = require('../..');
+  const Bluebird  = require('bluebird');
+  const Ironium   = require('../..');
 
 
   // Regular job: queued once, execute once
-  Ironium.queue('regular').eachJob(function(job, callback) {
+  Ironium.eachJob('regular', function() {
     process.send('regular');
 
-    Ironium.queueJob('duplicate', 'job', function() {
-      Ironium.queueJob('duplicate', 'job', function() {
-        Ironium.queueJob('duplicate', 'job', function() {
-          Ironium.queueJob('delayed', 'job', callback);
-        });
+    return Ironium.queueJob('duplicate', 'job')
+      .then(function() {
+        return Ironium.queueJob('duplicate', 'job');
+      })
+      .then(function() {
+        return Ironium.queueJob('duplicate', 'job');
+      })
+      .then(function() {
+        return Ironium.queueJob('delayed', 'job');
       });
-    });
   });
 
   // Duplicate job: queued and executed three times.
@@ -81,19 +85,20 @@ function runChildProcess() {
   });
 
   // Delayed job: this job takes 500ms to complete.
-  Ironium.queue('delayed').eachJob(function(job, callback) {
-    setTimeout(function() {
-      process.send('delayed');
-      Ironium.queueJob('failed', 'job', callback);
-    }, 500);
+  Ironium.queue('delayed').eachJob(function() {
+    return Bluebird.delay(500)
+      .then(function() {
+        process.send('delayed');
+        return Ironium.queueJob('failed', 'job');
+      });
   });
 
   var failed = 0;
 
   // Failed job: fails three times, then succeeds.
-  Ironium.queue('failed').eachJob(function(job, callback) {
+  Ironium.queue('failed').eachJob(function() {
     if (failed === 3)
-      Ironium.queueJob('done', 'job', callback);
+      return Ironium.queueJob('done', 'job');
     else {
       process.send('failed');
       failed++;
@@ -117,10 +122,11 @@ function runChildProcess() {
 
   // Delete all jobs from previous run before starting this one.
   // We need to have all the queues before we can call this.
-  Ironium.purgeQueues(function() {
-    Ironium.queueJob('regular', 'job', function() {});
-    Ironium.start();
-  });
+  Ironium.purgeQueues()
+    .then(Ironium.start)
+    .then(function() {
+      return Ironium.queueJob('regular', 'job');
+    });
 
   // Wait, otherwise process exits without processing any jobs.
   setTimeout(function() {}, 10000);

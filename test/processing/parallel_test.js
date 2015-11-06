@@ -45,7 +45,7 @@ describe('Processing', ()=> {
   });
 
 
-  describe('with two workers', ()=> {
+  describe.skip('with two workers', ()=> {
 
     before(()=> {
       chain.length = 0;

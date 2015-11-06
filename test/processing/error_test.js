@@ -10,13 +10,11 @@ describe('Processing', ()=> {
   const errorPromiseQueue    = Ironium.queue('error-promise');
   const errorGeneratorQueue  = Ironium.queue('error-generator');
 
-  function untilSuccessful(done) {
-    Ironium.runOnce((error)=> {
-      if (error)
-        setTimeout(()=> untilSuccessful(done));
-      else
-        done();
-    });
+  function untilSuccessful() {
+    return Ironium.runOnce()
+      .catch(function() {
+        return untilSuccessful();
+      });
   }
 
   describe('with callback error', ()=> {

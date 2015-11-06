@@ -71,7 +71,7 @@ describe('Server with errors', ()=> {
   describe('fail then recover', ()=> {
 
     it('should not error when queuing', function() {
-      return Ironium.queue('foo').queueJob({ value: 1 });
+      return Ironium.queueJob('foo', { value: 1 });
     });
 
   });
@@ -83,7 +83,7 @@ describe('Server with errors', ()=> {
     });
 
     it('should throw error when queueing', function() {
-      return Ironium.queue('foo').queueJob({ value: 1 })
+      return Ironium.queueJob('foo', { value: 1 })
         .then(function() {
           assert(false, 'Expected to throw an error');
         })
