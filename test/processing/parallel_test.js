@@ -39,9 +39,9 @@ describe('Processing', ()=> {
     });
 
     after(Ironium.stop);
-		after(function(done) {
-			setTimeout(done, 100);
-		});
+    after(function(done) {
+      setTimeout(done, 100);
+    });
   });
 
 
@@ -63,9 +63,9 @@ describe('Processing', ()=> {
     });
 
     after(Ironium.stop);
-		after(function(done) {
-			setTimeout(done, 100);
-		});
+    after(function(done) {
+      setTimeout(done, 100);
+    });
   });
 
 });

@@ -12,7 +12,7 @@ describe('Queue', function() {
   before(()=> {
     captureQueue.eachJob((job, callback)=> {
       this.job = job;
-			callback();
+      callback();
     });
   });
 

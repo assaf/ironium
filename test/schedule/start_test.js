@@ -17,7 +17,7 @@ describe('Scheduled job', ()=> {
       delta = Date.now() - t1;
       Ironium.stop();
       setTimeout(done, 100);
-			callback();
+      callback();
     });
 
     Ironium.start();
@@ -43,7 +43,7 @@ describe('Scheduled job with start time and interval', ()=> {
     };
     Ironium.scheduleJob('start-and-interval', options, function(callback) {
       count++;
-			callback();
+      callback();
     });
   });
 

@@ -15,44 +15,44 @@ const mock = Net.createServer(function(socket) {
   socket.on('data', dumbProtocol);
   socket.unref();
 
-	function dumbProtocol(data) {
-		const lines = data.toString().trim().split(/\r\n/);
-		nextLine(lines, socket);
-	}
+  function dumbProtocol(data) {
+    const lines = data.toString().trim().split(/\r\n/);
+    nextLine(lines, socket);
+  }
 
-	function nextLine(lines, socket) {
-		const line = lines[0];
-		if (line) {
-			const parts = line.split(' ');
-			const cmd 	= parts[0];
+  function nextLine(lines, socket) {
+    const line = lines[0];
+    if (line) {
+      const parts = line.split(' ');
+      const cmd   = parts[0];
 
-			switch (cmd) {
-				case 'peek-ready':
-				case 'peek-delayed':
-					socket.write(`NOT_FOUND\r\n`);
-					nextLine(lines.slice(1), socket);
-					break;
+      switch (cmd) {
+        case 'peek-ready':
+        case 'peek-delayed':
+          socket.write(`NOT_FOUND\r\n`);
+          nextLine(lines.slice(1), socket);
+          break;
 
-				case 'put':
-					jobs++;
+        case 'put':
+          jobs++;
 
-					if (jobs < failUntil)
-						socket.end();
-					else
-						socket.write(`INSERTED ${jobs}\r\n`);
-					nextLine(lines.slice(2), socket);
-					break;
+          if (jobs < failUntil)
+            socket.end();
+          else
+            socket.write(`INSERTED ${jobs}\r\n`);
+          nextLine(lines.slice(2), socket);
+          break;
 
-				case 'use':
-					socket.write(`USING ${parts[1]}\r\n`);
-					nextLine(lines.slice(1), socket);
-					break;
+        case 'use':
+          socket.write(`USING ${parts[1]}\r\n`);
+          nextLine(lines.slice(1), socket);
+          break;
 
-				default:
-					throw new Error(`Unknown mock command "${cmd}".`);
-			}
-		}
-	}
+        default:
+          throw new Error(`Unknown mock command "${cmd}".`);
+      }
+    }
+  }
 
 });
 
@@ -83,13 +83,13 @@ describe('Server with errors', ()=> {
     });
 
     it('should throw error when queueing', function() {
-			return Ironium.queue('foo').queueJob({ value: 1 })
-				.then(function() {
-					assert(false, 'Expected to throw an error');
-				})
-				.catch(function(error) {
-					assert.equal(error.message, 'Error queuing to foo: CLOSED');
-				});
+      return Ironium.queue('foo').queueJob({ value: 1 })
+        .then(function() {
+          assert(false, 'Expected to throw an error');
+        })
+        .catch(function(error) {
+          assert.equal(error.message, 'Error queuing to foo: CLOSED');
+        });
     });
 
   });
@@ -97,7 +97,7 @@ describe('Server with errors', ()=> {
   after(() => {
     Ironium.configure({
       host: '127.0.0.1',
-			port: 11300
+      port: 11300
     });
   });
 

@@ -6,9 +6,9 @@ const fork   = require('child_process').fork;
 const isMocha = !!global.describe;
 
 if (isMocha)
-	runTestSuite();
+  runTestSuite();
 else
-	runChildProcess();
+  runChildProcess();
 
 
 function runTestSuite() {
@@ -110,11 +110,11 @@ function runChildProcess() {
 
   // Last job, exit this process successfully.
   Ironium.queue('done').eachJob(function() {
-		process.send('done');
-		Ironium.stop();
-		setTimeout(function() {
-			process.exit(0);
-		}, 100);
+    process.send('done');
+    Ironium.stop();
+    setTimeout(function() {
+      process.exit(0);
+    }, 100);
   });
 
 
