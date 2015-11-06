@@ -45,7 +45,7 @@ function runTestSuite() {
 
     it('should run three failed jobs', function() {
       const failed = steps.filter(function(step) { return step == 'failed'; });
-      assert(failed.length == 3);
+      assert.equal(failed.length, 3);
     });
 
     after(function() {
@@ -95,7 +95,7 @@ function runChildProcess() {
 
   // Failed job: fails three times, then succeeds.
   Ironium.queue('failed').eachJob(function(job, callback) {
-    if (failed == 3)
+    if (failed === 3)
       Ironium.queueJob('done', 'job', callback);
     else {
       process.send('failed');
@@ -110,11 +110,11 @@ function runChildProcess() {
 
   // Last job, exit this process successfully.
   Ironium.queue('done').eachJob(function() {
-    process.send('done');
-    Ironium.stop();
-    setImmediate(function() {
-      process.exit(0);
-    });
+		setTimeout(function() {
+			process.send('done');
+			Ironium.stop();
+			process.exit(0);
+		}, 1000);
   });
 
 

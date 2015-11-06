@@ -42,20 +42,20 @@ describe('Processing', ()=> {
   });
 
 
-  describe.skip('with two workers', ()=> {
+  describe('with two workers', ()=> {
 
     before(()=> {
       chain.length = 0;
       processParallelQueue.eachJob(worker, 2);
     });
     before(function() {
-      const jobs = [3, 4].map((job)=> processSerialQueue.queueJob(job));
+      const jobs = [3, 4].map((job)=> processParallelQueue.queueJob(job));
       return Promise.all(jobs);
     });
     before(Ironium.start);
-    before((done)=> setTimeout(done, 50));
+    before((done)=> setTimeout(done, 100));
 
-    it('should run jobs in sequence', ()=> {
+    it('should run jobs in parallel', ()=> {
       assert.equal(chain.join(''), 'AABB');
     });
 
