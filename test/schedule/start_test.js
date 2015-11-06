@@ -13,7 +13,7 @@ describe('Scheduled job', ()=> {
   before((done)=> {
     const t1 = Date.now();
 
-    Ironium.scheduleJob('in-2s', new Date(Date.now() + ms('2s')), function(job, callback) {
+    Ironium.scheduleJob('in-2s', new Date(Date.now() + ms('2s')), function(callback) {
       delta = Date.now() - t1;
       Ironium.stop();
       setTimeout(done, 100);
@@ -41,7 +41,7 @@ describe('Scheduled job with start time and interval', ()=> {
       start:  new Date(null, null, null, null, 13, 15),
       every:  '1h'
     };
-    Ironium.scheduleJob('start-and-interval', options, function(job, callback) {
+    Ironium.scheduleJob('start-and-interval', options, function(callback) {
       count++;
 			callback();
     });
