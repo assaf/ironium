@@ -19,6 +19,9 @@ instructions, and DEBUG=ironium:* to see everything else reported.
 
 To listen to processing errors, use ironium.onerror(callback).
 
+To get the webhook URL of a queue, use ironium.webhookURL(queueName).  This
+method returns a promise that resolves to the webhook URL.
+
 The width argument to eachJob is gone (for now).
 
 

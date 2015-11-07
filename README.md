@@ -1,6 +1,6 @@
 # [Ironium](https://www.npmjs.com/package/ironium)
 
-Job queues and scheduled jobs for Node.js, Beanstalkd and Iron.io.
+Job queues and scheduled jobs for Node.js, Beanstalkd and IronMQ.
 
 ![](https://rawgithub.com/assaf/ironium/master/element.svg)
 
@@ -12,26 +12,24 @@ Job queues and scheduled jobs for Node.js, Beanstalkd and Iron.io.
 
 You've got a workload that runs outside the Web app's request/response cycle.
 Some jobs are queued, some are scheduled.  You decided to use Beanstalkd and/or
-Iron.io.  Now you need a simple API to code against, that will handle all the
+IronMQ.  Now you need a simple API to code against, that will handle all the
 run-time intricacies for you.
 
 [Beanstalkd](http://kr.github.io/beanstalkd/) is "a simple, fast work queue".
 It's easy to setup (`brew install beanstalkd` on the Mac), easy to tinker with
 (`telnet localhost 11300`), and persistently reliable.
 
-[Iron.io](http://www.iron.io/) is "the Message Queue for the Cloud".  It's a
+[IronMQ](http://www.iron.io/) is "the Message Queue for the Cloud".  It's a
 managed queue service with a nice UI, an excellent choice for production
 systems.  And can handle much of the [Webhooks](http://www.webhooks.org/)
 workload for you.
 
 The thing is, standalone Beanstalkd is great for development and testing, I just
-don't want to manage a production server.  Iron.io is a wonderful service, but
-you can't use it for development/testing.  Fortunately, they both speak the
-Beanstalkd protocol.
+don't want to manage a production server.  IronMQ is a wonderful service, but
+painful to use for development/testing.
 
-**Ironium** lets you use both services, while taking care of all the pesky
-details, like connection management and restart, timing out failed jobs,
-retries, etc.
+Ironium allows you to use either/both in the same project.
+
 
 * **[API](#api)**
   * [queue(name)](#queuename)
@@ -41,7 +39,7 @@ retries, etc.
   * [queue.eachJob(handler)](#queueeachjobhandler)
   * [queue.stream()](#queuestream)
   * [queue.name](#queuename)
-  * [queue.webhookURL](#queuewebhookurl)
+  * [webhookURL](#webhookurl)
   * [scheduleJob(jobName, when, handler)](#schedulejobjobname-when-handler)
   * [configure(object)](#configureobject)
   * [start()](#start)
@@ -237,11 +235,16 @@ This property returns the queue name.
 
 This name does not include the prefix.
 
-### queue.webhookURL
+### webhookURL(queueName)
 
-This method / property returns the Webhook URL.  Only available when using
-Iron.io.  You can pass this URL to a service, and any messages it will post to
-this URL will be queued.
+This method resolves to the Webhook URL of the named queue.
+
+Since configuration can load asynchronously, this method returns a promise, not
+the actual URL.  The webhook URL only makes sense when using IronMQ, beanstalkd
+does not support this feature.
+
+NOTE: The webhook URL includes your project ID and access token, so be careful
+where you share it.
 
 
 ### scheduleJob(jobName, when, handler)
