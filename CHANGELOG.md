@@ -1,3 +1,6 @@
+# 3.0.1
+
+
 # 3.0.0
 
 Ironium 3.x works with IronMQ v3 and can still run in development mode against
