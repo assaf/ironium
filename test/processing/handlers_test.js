@@ -101,16 +101,16 @@ describe('Processing jobs', ()=> {
       // Process A, queue job for B
       // Process B, queue job for A
       // Process A, nothing more
-      processOnceAQueue.eachJob(function(job, callback) {
+      processOnceAQueue.eachJob(function() {
         steps.push('A');
         if (steps.length == 1)
-          processOnceBQueue.queueJob('job', callback);
+          return processOnceBQueue.queueJob('job');
         else
-          callback();
+          return Promise.resolve();
       });
-      processOnceBQueue.eachJob(function(job, callback) {
+      processOnceBQueue.eachJob(function() {
         steps.push('B');
-        processOnceAQueue.queueJob('job', callback);
+        return processOnceAQueue.queueJob('job');
       });
     });
 
