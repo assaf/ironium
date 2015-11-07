@@ -1,5 +1,7 @@
 # 3.0.1
 
+Minor bug fix when running test suite, purgeQueues would fail to work correctly.
+
 
 # 3.0.0
 
