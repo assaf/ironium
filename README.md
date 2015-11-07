@@ -4,9 +4,6 @@ Job queues and scheduled jobs for Node.js, Beanstalkd and IronMQ.
 
 ![](https://rawgithub.com/assaf/ironium/master/element.svg)
 
-![](http://b.adge.me/npm/v/ironium.svg)
-![](http://b.adge.me/:license-MIT-green.svg)
-
 
 ## The Why
 
