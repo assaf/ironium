@@ -96,3 +96,42 @@ describe('Scheduled job with interval', ()=> {
 
 });
 
+
+describe('Scheduled job with errors', ()=> {
+
+  let fail = false;
+
+  before(()=> {
+    TimeKeeper.travel('2015-06-29T20:16:00Z');
+    Ironium.scheduleJob('fail-every-1hr', '1h', function() {
+      if (fail)
+        return Promise.reject(new Error('Failing'));
+      else
+        return Promise.resolve();
+    });
+  });
+
+  describe('runOnce', ()=> {
+    before(()=> {
+      fail = true;
+      TimeKeeper.travel(Date.now() + ms('1h'));
+    });
+
+    it('should throw', (done)=> {
+      Ironium.runOnce()
+        .then(() => {
+          done(new Error('Did not throw'));
+        })
+        .catch((err)=> {
+          assert.equal(err.message, 'Failing');
+          done();
+        });
+    });
+
+    after(()=> {
+      // Let other tests pass.
+      fail = false;
+    });
+  });
+
+});
