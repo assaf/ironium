@@ -1,3 +1,8 @@
+# 3.1.1
+
+Stop Bluebird from complaining about empty promises.
+
+
 # 3.1.0
 
 Scheduled jobs should throw, especially for runOnce.
