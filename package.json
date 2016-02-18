@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "scripts": {
     "test": "mocha",
     "postpublish": "gulp tag-release",
