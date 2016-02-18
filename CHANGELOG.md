@@ -1,3 +1,8 @@
+# 3.1.3
+
+Fixed back-off timeout, should be 10 minutes, not 1 minute.
+
+
 # 3.1.2
 
 Don't reserve and run a job after queue stopped; release with no delay.
