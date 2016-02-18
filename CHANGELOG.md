@@ -1,3 +1,8 @@
+# 3.1.2
+
+Don't reserve and run a job after queue stopped; release with no delay.
+
+
 # 3.1.1
 
 Stop Bluebird from complaining about empty promises.

@@ -10,6 +10,8 @@ describe('Scheduled job with interval', ()=> {
 
   let count = 0;
 
+  before(Ironium.purgeQueues);
+
   before(()=> {
     TimeKeeper.travel('2015-06-29T20:16:00Z');
     Ironium.scheduleJob('every-1hr', '1h', function() {
