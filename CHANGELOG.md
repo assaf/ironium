@@ -1,3 +1,8 @@
+# 3.2.0
+
+Synchronize multiple workers, so they only schedule each job once.
+
+
 # 3.1.4
 
 Fixed reservation timeout, should be 10 minutes, not 1 second.
