@@ -1,3 +1,8 @@
+# 3.1.4
+
+Fixed reservation timeout, should be 10 minutes, not 1 second.
+
+
 # 3.1.3
 
 Fixed back-off timeout, should be 10 minutes, not 1 minute.
