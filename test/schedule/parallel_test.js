@@ -30,8 +30,8 @@ function runTestSuite() {
         const promises  = [1, 2, 3].map(forkChildProcess());
         return Promise.all(promises)
           .then(function(scheduled) {
-            const count = scheduled.filter(i => i).length;
-            assert.equal(count, 3);
+            const total = scheduled.reduce(sum);
+            assert.equal(total, 3);
           });
       });
 
@@ -50,8 +50,8 @@ function runTestSuite() {
         const promises  = [1, 2, 3].map(forkChildProcess('redis'));
         return Promise.all(promises)
           .then(function(scheduled) {
-            const count = scheduled.filter(i => i).length;
-            assert.equal(count, 1);
+            const total = scheduled.reduce(sum);
+            assert.equal(total, 1);
           });
       });
 
@@ -66,8 +66,8 @@ function runTestSuite() {
         const promises  = [1, 2, 3].map(forkChildProcess('cache'));
         return Promise.all(promises)
           .then(function(scheduled) {
-            const count = scheduled.filter(i => i).length;
-            assert.equal(count, 1);
+            const total = scheduled.reduce(sum);
+            assert.equal(total, 1);
           });
       });
 
@@ -78,6 +78,22 @@ function runTestSuite() {
 }
 
 
+function sum(a, b) {
+  return a + b;
+}
+
+
+// fn(mutex) -> fn(index) -> promise(count)
+//
+// Will fork one child process using the named mutex, will wait for it to run
+// for a few seconds, and count how many times it executed the scheduled job.
+//
+// With coordination, only one child process will be able to schedule a job, and
+// one child process (not necessarily same one) will execute it.
+//
+// Without coordination, all child processes will schedule one job each, and
+// they will all attempt to execute as many jobs as they can (not necessarily
+// 1:1).
 function forkChildProcess(mutex) {
   return function(index) {
     return new Promise(function(resolve, reject) {
@@ -89,14 +105,17 @@ function forkChildProcess(mutex) {
         leader
       };
       const child = fork(module.filename, { env, stdio: 'inherit' });
-      child.on('message', resolve);
-      child.on('exit', function(code) {
-        reject(new Error('Exited with code ' + code));
+
+      let count = 0;
+      child.on('message', function() {
+        ++count;
       });
-      setTimeout(function() {
-        resolve(false);
-        child.kill();
-      }, ms('10s'));
+      child.on('exit', function(code) {
+        if (code)
+          reject(new Error('Exited with code ' + code));
+        else
+          resolve(count);
+      });
     });
   };
 }
@@ -106,17 +125,19 @@ function runChildProcess(coordinator, leader) {
 
   useCoordinator(coordinator, leader);
 
-  const in1Second  = new Date(Date.now() + ms('1s'));
-  Ironium.scheduleJob('parallel', in1Second, function(done) {
-    process.send('executed');
-    Ironium.stop();
-    done();
-  });
+  const soon    = new Date(Date.now() + ms('100ms'));
+  const timeout = ms('2s');
 
   Ironium.start();
 
-  // Wait, otherwise process exits without processing any jobs.
-  setTimeout(function() {}, ms('10s'));
+  Ironium.scheduleJob('parallel', soon, function(done) {
+    process.send('executed');
+    done();
+  });
+
+  setTimeout(function() {
+    process.exit(0);
+  }, timeout);
 }
 
 

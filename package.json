@@ -4,8 +4,8 @@
   "scripts": {
     "lint": "eslint .",
     "test": "mocha",
-    "postpublish": "gulp tag-release",
-    "reset": "launchctl stop homebrew.mxcl.beanstalk && launchctl start homebrew.mxcl.beanstalk"
+    "postpublish": "git push",
+    "reset": "pkill -f beanstalkl ; (echo flushdb | redis-cli -n 9)"
   },
   "engines": {
     "node": "^4.0.0"
