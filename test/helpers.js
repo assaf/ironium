@@ -6,7 +6,7 @@ const Ironium   = require('..');
 
 
 Bluebird.config({
-  warnings: false,
+  warnings:        false,
   longStackTraces: true
 });
 
