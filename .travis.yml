@@ -1,10 +1,11 @@
 language: node_js
 node_js:
   - 4.2.0
+services:
+  - redis-server
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq beanstalkd
-  - sudo apt-get install -qq redis
   - echo "START=yes" | sudo tee -a /etc/default/beanstalkd > /dev/null
   - sudo service beanstalkd restart
 notifications:
