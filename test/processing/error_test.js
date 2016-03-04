@@ -4,7 +4,7 @@ const assert  = require('assert');
 const Ironium = require('../..');
 
 
-describe('Processing', ()=> {
+describe('Running a job', function() {
 
   const errorCallbackQueue   = Ironium.queue('error-callback');
   const errorPromiseQueue    = Ironium.queue('error-promise');
@@ -17,77 +17,90 @@ describe('Processing', ()=> {
       });
   }
 
-  describe('with callback error', ()=> {
+  describe('with callback error (twice)', function() {
 
     // First two runs should fail, runs ends at 3
     let runs = 0;
-    before(()=> {
-      errorCallbackQueue.eachJob((job, callback)=> {
-        runs++;
-        if (runs > 2)
-          callback();
-        else
-          callback(new Error('fail'));
-      });
-    });
 
-    before(()=> errorCallbackQueue.queueJob('job'));
+    function countAndFailJob(job, callback) {
+      runs++;
+      if (runs > 2)
+        callback();
+      else
+        callback(new Error('fail'));
+    }
+
+
+    before(Ironium.purgeQueues);
+    before(function() {
+      errorCallbackQueue.eachJob(countAndFailJob);
+      return errorCallbackQueue.queueJob('job');
+    });
     before(untilSuccessful);
 
-    it('should repeat until processed', ()=> {
+    it('should run three times until successful', function() {
       assert.equal(runs, 3);
     });
 
   });
 
 
-  describe('with rejected promise', ()=> {
+  describe('with rejected promise (twice)', function() {
 
     // First two runs should fail, runs ends at 3
     let runs = 0;
-    before(()=> {
-      errorPromiseQueue.eachJob(()=> {
-        runs++;
-        if (runs > 2)
-          return Promise.resolve();
-        else
-          return Promise.reject(new Error('fail'));
-      });
-    });
 
-    before(()=> errorPromiseQueue.queueJob('job'));
+    function countAndFailJob() {
+      runs++;
+      if (runs > 2)
+        return Promise.resolve();
+      else
+        return Promise.reject(new Error('fail'));
+    }
+
+    before(Ironium.purgeQueues);
+    before(function() {
+      errorCallbackQueue.eachJob(countAndFailJob);
+      return errorCallbackQueue.queueJob('job');
+    });
     before(untilSuccessful);
 
-    it('should repeat until processed', ()=> {
+    it('should run three times until successful', function() {
       assert.equal(runs, 3);
     });
 
   });
 
 
-  describe('with generator error', ()=> {
+  describe('with generator error (twice)', function() {
 
     // First two runs should fail, runs ends at 3
     let runs = 0;
-    before(()=> {
-      errorGeneratorQueue.eachJob(function*() {
-        runs++;
-        switch (runs) {
-          case 1: {
-              throw new Error('fail');
-            }
-          case 2: {
-              yield Promise.reject(Error('fail'));
-              break;
-            }
+
+    function* countAndFailJob() {
+      runs++;
+      switch (runs) {
+        case 1: {
+          throw new Error('fail');
         }
-      });
-    });
+        case 2: {
+          yield Promise.reject(Error('fail'));
+          break;
+        }
+        default: {
+          break;
+        }
+      }
+    }
 
-    before(()=> errorGeneratorQueue.queueJob('job'));
+    before(Ironium.purgeQueues);
+    before(function() {
+      errorCallbackQueue.eachJob(countAndFailJob);
+      return errorCallbackQueue.queueJob('job');
+    });
     before(untilSuccessful);
 
-    it('should repeat until processed', ()=> {
+    it('should run three times until successful', function() {
       assert.equal(runs, 3);
     });
 
