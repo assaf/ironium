@@ -4,122 +4,73 @@ const assert  = require('assert');
 const Ironium = require('../..');
 
 
-describe('Processing jobs', ()=> {
+describe('Processing jobs', function() {
 
-  const processMultipleQueue   = Ironium.queue('process-multiple');
-  const processPromiseQueue    = Ironium.queue('process-promise');
-  const processGeneratorQueue  = Ironium.queue('process-generator');
-  const processOnceAQueue      = Ironium.queue('process-once-a');
-  const processOnceBQueue      = Ironium.queue('process-once-b');
+  const runOnceQueue       = Ironium.queue('run-once');
+  const runMultipleQueue   = Ironium.queue('run-multiple');
+  const runGeneratorQueue  = Ironium.queue('run-generator');
 
 
-  describe('with multiple handlers', ()=> {
+  describe('with three handlers', function() {
 
     // Count how many steps run
-    const steps = [];
-    before(()=> {
-      processMultipleQueue.eachJob((job, callback)=> {
-        steps.push('A');
-        callback();
-      });
-      processMultipleQueue.eachJob((job, callback)=> {
-        steps.push('B');
-        callback();
-      });
-      processMultipleQueue.eachJob((job, callback)=> {
-        steps.push('C');
-        callback();
-      });
-    });
+    const steps = new Set();
 
-    before(()=> processMultipleQueue.queueJob('job'));
+    function recordTheStep(step) {
+      return function(job, callback) {
+        steps.add(step);
+        callback();
+      };
+    }
+
+    before(function() {
+      runMultipleQueue.eachJob(recordTheStep('A'));
+      runMultipleQueue.eachJob(recordTheStep('B'));
+      runMultipleQueue.eachJob(recordTheStep('C'));
+      return runMultipleQueue.queueJob('job');
+    });
     before(Ironium.runOnce);
 
-    it('should run all steps', ()=> {
-      assert.equal(steps.join(''), 'ABC');
+    it('should run all three steps', function() {
+      assert.equal(steps.size, 3);
     });
 
   });
 
 
-  describe('with promises', ()=> {
+  describe('with generator', function() {
 
     // Count how many steps run
-    const steps = [];
-    before(()=> {
-      processPromiseQueue.eachJob(()=> {
-        const promise = new Promise(setImmediate);
-        return promise
-          .then(()=> steps.push('A'))
-          .then(()=> steps.push('B'))
-          .then(()=> steps.push('C'));
-      });
-    });
+    const steps = new Set();
 
-    before(()=> processPromiseQueue.queueJob('job'));
+    function *recordAllSteps() {
+      const one = yield Promise.resolve('A');
+      steps.add(one);
+      const two = yield thunkB;
+      steps.add(two);
+      const three = yield* yieldC();
+      steps.add(three);
+    }
+
+    function thunkB(done) {
+      done(null, 'B');
+    }
+
+    function *yieldC() {
+      yield setImmediate;
+      return 'C';
+    }
+
+    before(function() {
+      runGeneratorQueue.eachJob(recordAllSteps);
+      return runGeneratorQueue.queueJob('job');
+    });
     before(Ironium.runOnce);
 
-    it('should run all steps', ()=> {
-      assert.equal(steps.join(''), 'ABC');
+    it('should run all three steps', function() {
+      assert.equal(steps.size, 3);
     });
 
-  });
-
-
-  describe('with generator', ()=> {
-
-    // Count how many steps run
-    const steps = [];
-    before(()=> {
-      processGeneratorQueue.eachJob(function*() {
-        const one = yield Promise.resolve('A');
-        steps.push(one);
-        const two = yield (done)=> done(null, 'B');
-        steps.push(two);
-        const three = yield* (function*() {
-          yield setImmediate;
-          return 'C';
-        })();
-        steps.push(three);
-      });
-    });
-
-    before(()=> processGeneratorQueue.queueJob('job'));
-    before(Ironium.runOnce);
-
-    it('should run all steps', ()=> {
-      assert.equal(steps.join(''), 'ABC');
-    });
-
-  });
-
-
-  describe('once', ()=> {
-    // Count how many steps run
-    const steps = [];
-    before(()=> {
-      // Process A, queue job for B
-      // Process B, queue job for A
-      // Process A, nothing more
-      processOnceAQueue.eachJob(function() {
-        steps.push('A');
-        if (steps.length == 1)
-          return processOnceBQueue.queueJob('job');
-        else
-          return Promise.resolve();
-      });
-      processOnceBQueue.eachJob(function() {
-        steps.push('B');
-        return processOnceAQueue.queueJob('job');
-      });
-    });
-
-    before(()=> processOnceAQueue.queueJob('job'));
-    before(Ironium.runOnce);
-
-    it('should run all jobs to completion', ()=> {
-      assert.equal(steps.join(''), 'ABA');
-    });
   });
 
 });
