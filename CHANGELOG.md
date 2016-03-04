@@ -1,3 +1,8 @@
+# 3.2.1
+
+Solved the mysterious case of the undeleted job.
+
+
 # 3.2.0
 
 Synchronize multiple workers, so they only schedule each job once.
