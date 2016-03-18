@@ -1,3 +1,8 @@
+# 3.2.2
+
+Fixed bug in error handling when queuing scheduled job.
+
+
 # 3.2.1
 
 Solved the mysterious case of the undeleted job.
