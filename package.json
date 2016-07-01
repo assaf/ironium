@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "husky": "^0.10.1",
-    "ioredis": "^1.15.1",
+    "ioredis": "^2.0.1",
     "mocha": "^2.2.5",
     "nock": "^8.0.0",
     "timekeeper": "0.0.5"
