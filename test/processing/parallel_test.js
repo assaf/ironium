@@ -2,42 +2,86 @@
 require('../helpers');
 const assert   = require('assert');
 const Bluebird = require('bluebird');
+const File     = require('fs');
 const Ironium  = require('../..');
 
 
-describe('Processing', ()=> {
+describe('Processing', () => {
+  let ironMQConfig;
 
-  const processSerialQueue   = Ironium.queue('process-serial');
-  const processParallelQueue = Ironium.queue('process-parallel');
 
   function createHandler(chain) {
     return function(job) {
-      chain.push('A');
+      chain.push(job);
       return Bluebird.delay(10)
         .then(() => {
-          chain.push('B');
+          chain.push(job);
         });
     };
   }
 
+  before(function() {
+    ironMQConfig = JSON.parse(File.readFileSync('iron.json'));
+  });
 
-  describe('serially', ()=> {
+
+  describe('serially', () => {
+    let processSerialQueue;
     const chain = [];
 
-    before(()=> {
-      Ironium.configure({ concurrency: 1 });
+    before(() => {
+      const withoutConcurrency = Object.assign({}, ironMQConfig, { concurrency: 1 });
+      Ironium.configure(withoutConcurrency);
+      processSerialQueue = Ironium.queue('process-serial');
+    });
+
+    before(Ironium.purgeQueues);
+
+    before(() => {
       processSerialQueue.eachJob(createHandler(chain));
     });
 
     before(function() {
-      const jobs = [1, 2].map((job)=> processSerialQueue.queueJob(job));
-      return Promise.all(jobs);
+      return Bluebird.each(['A', 'B'], job => processSerialQueue.queueJob(job));
     });
 
     before(Ironium.start);
-    before((done)=> setTimeout(done, 100));
+    before((done) => setTimeout(done, 2000));
 
-    it('should run jobs in sequence', ()=> {
+    it('should run jobs in sequence', () => {
+      assert.equal(chain.join(''), 'AABB');
+    });
+
+    after(Ironium.stop);
+    after(function(done) {
+      setTimeout(done, 100);
+    });
+  });
+
+
+  describe('with concurrency - simple', () => {
+    let processParallelQueue;
+    const chain = [];
+
+    before(() => {
+      Ironium.configure(ironMQConfig);
+      processParallelQueue = Ironium.queue('process-parallel');
+    });
+
+    before(Ironium.purgeQueues);
+
+    before(() => {
+      processParallelQueue.eachJob(createHandler(chain));
+    });
+
+    before(function() {
+      return Bluebird.each(['A', 'B'], job => processParallelQueue.queueJob(job));
+    });
+
+    before(Ironium.start);
+    before(done => setTimeout(done, 2000));
+
+    it('should run jobs in parallel', () => {
       assert.equal(chain.join(''), 'ABAB');
     });
 
@@ -48,29 +92,41 @@ describe('Processing', ()=> {
   });
 
 
-  describe('with default concurrency', ()=> {
+  describe('with concurrency - throttled', () => {
+    let processParallelQueue;
     const chain = [];
 
+    before(() => {
+      const withLimitedConcurrency = Object.assign({}, ironMQConfig, { concurrency: 2 });
+      Ironium.configure(withLimitedConcurrency);
+      processParallelQueue = Ironium.queue('process-parallel');
+    });
+
     before(Ironium.purgeQueues);
-    before(()=> {
-      Ironium.configure({});
+
+    before(() => {
       processParallelQueue.eachJob(createHandler(chain));
     });
-    before(function() {
-      const jobs = [3, 4].map((job)=> processParallelQueue.queueJob(job));
-      return Promise.all(jobs);
-    });
-    before(Ironium.start);
-    before((done)=> setTimeout(done, 100));
 
-    it('should run jobs in parallel', ()=> {
-      assert.equal(chain.join(''), 'AABB');
+    before(function() {
+      const jobs = [1, 2, 3, 4, 5, 6];
+      return Bluebird.each(jobs, job => processParallelQueue.queueJob(job));
+    });
+
+    before(Ironium.start);
+    before(done => setTimeout(done, 4000));
+
+    it('should run jobs in parallel', () => {
+      assert.equal(chain.join(''), '121234345656');
     });
 
     after(Ironium.stop);
-    after(function(done) {
-      setTimeout(done, 100);
-    });
+    after(done => setTimeout(done, 100));
+  });
+
+
+  after(function() {
+    Ironium.configure({});
   });
 
 });
