@@ -8,7 +8,7 @@ describe('Webhook URL', function() {
 
   const config = {
     host:       'mq-aws-us-east-1-1.iron.io',
-    project_id: '5687',
+    project_id: '5687', // eslint-disable-line camelcase
     token:      'abcdef'
   };
   const instance = new (Ironium.constructor)(config);

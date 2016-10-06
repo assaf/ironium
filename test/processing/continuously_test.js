@@ -16,7 +16,7 @@ function runTestSuite() {
 
   describe('Child process', function() {
 
-    var child   = null;
+    let child;
     const steps = [];
 
     before(function() {
@@ -31,7 +31,7 @@ function runTestSuite() {
       });
 
       child.on('exit', function(code) {
-        done(code ? new Error('Exited with code ' + code) : null);
+        done(code ? new Error(`Exited with code ${code}`) : null);
       });
     });
 
@@ -40,7 +40,7 @@ function runTestSuite() {
     });
 
     it('should run three duplicate jobs', function() {
-      const duplicates = steps.filter(function(step) { return step === 'duplicate'; });
+      const duplicates = steps.filter(step => step === 'duplicate');
       assert.equal(duplicates.length, 3);
     });
 
@@ -49,7 +49,7 @@ function runTestSuite() {
     });
 
     it('should run three failed jobs', function() {
-      const failed = steps.filter(function(step) { return step == 'failed'; });
+      const failed = steps.filter(step => step === 'failed');
       assert.equal(failed.length, 3);
     });
 
@@ -63,8 +63,7 @@ function runTestSuite() {
 
 function runChildProcess() {
 
-  const Bluebird  = require('bluebird');
-  const Ironium   = require('../..');
+  const Bluebird  = require('bluebird'); // eslint-disable-line global-require
 
 
   // Regular job: queued once, execute once
@@ -84,7 +83,7 @@ function runChildProcess() {
   });
 
   // Duplicate job: queued and executed three times.
-  Ironium.queue('duplicate').eachJob(function(job) {
+  Ironium.queue('duplicate').eachJob(function() {
     process.send('duplicate');
     return Promise.resolve();
   });
@@ -98,7 +97,7 @@ function runChildProcess() {
       });
   });
 
-  var failed = 0;
+  let failed = 0;
 
   // Failed job: fails three times, then succeeds.
   Ironium.queue('failed').eachJob(function() {
@@ -113,6 +112,7 @@ function runChildProcess() {
       setImmediate(function() {
         throw new Error('Failing on purpose');
       });
+      return new Promise(function() { });
     }
   });
 
@@ -121,7 +121,7 @@ function runChildProcess() {
     process.send('done');
     Ironium.stop();
     setTimeout(function() {
-      process.exit(0);
+      process.exit(0); // eslint-disable-line no-process-exit
     }, 100);
   });
 

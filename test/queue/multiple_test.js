@@ -10,81 +10,93 @@ describe('Queue multiple jobs', function() {
   const processed    = [];
 
   // Capture processed jobs here.
-  before(() => {
-    captureQueue.eachJob(job => {
+  before(function() {
+    captureQueue.eachJob(function(job) {
       processed.push(job);
       return Promise.resolve();
     });
   });
 
 
-  describe('objects', () => {
-    before(() => processed.splice(0));
-    before(() => captureQueue.queueJobs([{ id: 5 }, { id: 6 }]));
+  describe('objects', function() {
+    before(function() {
+      processed.splice(0);
+    });
+    before(function() {
+      return captureQueue.queueJobs([{ id: 5 }, { id: 6 }]);
+    });
     before(Ironium.runOnce);
 
-    it('should process the first object', () => {
+    it('should process the first object', function() {
       assert.equal(processed[0].id, 5);
     });
 
-    it('should process the second object', () => {
+    it('should process the second object', function() {
       assert.equal(processed[1].id, 6);
     });
   });
 
 
-  describe('an array', () => {
-    before(() => processed.splice(0));
-    before(() => captureQueue.queueJobs([[true, '+'], [false, '-']]));
+  describe('an array', function() {
+    before(function() {
+      processed.splice(0);
+    });
+    before(function() {
+      return captureQueue.queueJobs([[true, '+'], [false, '-']]);
+    });
     before(Ironium.runOnce);
 
-    it('should process the first array', () => {
+    it('should process the first array', function() {
       assert.equal(processed[0][0], true);
       assert.equal(processed[0][1], '+');
     });
 
-    it('should process the second array', () => {
+    it('should process the second array', function() {
       assert.equal(processed[1][0], false);
       assert.equal(processed[1][1], '-');
     });
   });
 
 
-  describe('buffers', () => {
+  describe('buffers', function() {
 
-    describe('(JSON)', () => {
-      before(() => processed.splice(0));
-      before(() => {
+    describe('(JSON)', function() {
+      before(function() {
+        processed.splice(0);
+      });
+      before(function() {
         const b1 = new Buffer('{ "x": 1 }');
         const b2 = new Buffer('{ "y": 2 }');
         return captureQueue.queueJobs([ b1, b2 ]);
       });
       before(Ironium.runOnce);
 
-      it('should process the first buffer as object value', () => {
+      it('should process the first buffer as object value', function() {
         assert.equal(processed[0].x, 1);
       });
 
-      it('should process the second buffer as object value', () => {
+      it('should process the second buffer as object value', function() {
         assert.equal(processed[1].y, 2);
       });
     });
 
 
-    describe('(not JSON)', () => {
-      before(() => processed.splice(0));
-      before(() => {
+    describe('(not JSON)', function() {
+      before(function() {
+        processed.splice(0);
+      });
+      before(function() {
         const b1 = new Buffer('x + 1');
         const b2 = new Buffer('y + 2');
         return captureQueue.queueJobs([ b1, b2 ]);
       });
       before(Ironium.runOnce);
 
-      it('should process the first buffer as string value', () => {
+      it('should process the first buffer as string value', function() {
         assert.equal(processed[0], 'x + 1');
       });
 
-      it('should process the second buffer as string value', () => {
+      it('should process the second buffer as string value', function() {
         assert.equal(processed[1], 'y + 2');
       });
     });
@@ -92,12 +104,14 @@ describe('Queue multiple jobs', function() {
   });
 
 
-  describe('a null', () => {
-    before(() => processed.splice(0));
+  describe('a null', function() {
+    before(function() {
+      processed.splice(0);
+    });
 
-    it('should error', done => {
-      assert.throws(() => {
-        captureQueue.queueJobs([ null ], done);
+    it('should error', function(done) {
+      assert.throws(function() {
+        captureQueue.queueJobs([ null ]).catch(done);
       });
       assert.equal(processed.length, 0);
       done();

@@ -112,7 +112,7 @@ function forkChildProcess(mutex) {
       });
       child.on('exit', function(code) {
         if (code)
-          reject(new Error('Exited with code ' + code));
+          reject(new Error(`Exited with code ${code}`));
         else
           resolve(count);
       });
@@ -136,7 +136,7 @@ function runChildProcess(coordinator, leader) {
   });
 
   setTimeout(function() {
-    process.exit(0);
+    process.exit(0); // eslint-disable-line no-process-exit
   }, timeout);
 }
 
@@ -149,6 +149,9 @@ function useCoordinator(coordinator, leader) {
     }
     case 'cache': {
       useIronCacheToCoordinate(leader);
+      break;
+    }
+    default: {
       break;
     }
   }

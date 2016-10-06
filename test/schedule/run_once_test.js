@@ -6,13 +6,13 @@ const ms         = require('ms');
 const TimeKeeper = require('timekeeper');
 
 
-describe('Scheduled job with interval', ()=> {
+describe('Scheduled job with interval', function() {
 
   let count = 0;
 
   before(Ironium.purgeQueues);
 
-  before(()=> {
+  before(function() {
     TimeKeeper.travel('2015-06-29T20:16:00Z');
     Ironium.scheduleJob('every-1hr', '1h', function() {
       count++;
@@ -20,68 +20,68 @@ describe('Scheduled job with interval', ()=> {
     });
   });
 
-  describe('runOnce', ()=> {
+  describe('runOnce', function() {
 
-    describe('before first occurrence', ()=> {
+    describe('before first occurrence', function() {
 
       before(Ironium.runOnce);
 
-      it('should not run job', ()=> {
+      it('should not run job', function() {
         assert.equal(count, 0);
       });
 
     });
 
-    describe('after first occurrence', ()=> {
-      before(()=> {
+    describe('after first occurrence', function() {
+      before(function() {
         TimeKeeper.travel(Date.now() + ms('1h'));
       });
 
       before(Ironium.runOnce);
 
-      it('should run the job once', ()=> {
+      it('should run the job once', function() {
         assert.equal(count, 1);
       });
 
 
-      describe('wait a little', ()=> {
+      describe('wait a little', function() {
 
-        before(()=> {
+        before(function() {
           TimeKeeper.travel(Date.now() + ms('30m'));
         });
 
         before(Ironium.runOnce);
 
-        it('should not run job again', ()=> {
+        it('should not run job again', function() {
           assert.equal(count, 1);
         });
 
 
-        describe('after second occurence', ()=> {
+        describe('after second occurence', function() {
 
-          before(()=> {
+          before(function() {
             TimeKeeper.travel(Date.now() + ms('31m'));
           });
 
           before(Ironium.runOnce);
 
-          it('should run the job again', ()=> {
+          it('should run the job again', function() {
             assert.equal(count, 2);
           });
 
-          describe('after rewinding clock resetting schedule', ()=> {
+          describe('after rewinding clock resetting schedule', function() {
 
-            before(()=> {
+            before(function() {
               TimeKeeper.travel('2015-06-29T20:00:00Z');
             });
             before(Ironium.resetSchedule);
 
-            before(()=> {
+            before(function() {
               TimeKeeper.travel(Date.now() + ms('1h'));
             });
             before(Ironium.runOnce);
 
-            it('should run the job again', ()=> {
+            it('should run the job again', function() {
               assert.equal(count, 3);
             });
 
@@ -99,11 +99,11 @@ describe('Scheduled job with interval', ()=> {
 });
 
 
-describe('Scheduled job with errors', ()=> {
+describe('Scheduled job with errors', function() {
 
   let fail = false;
 
-  before(()=> {
+  before(function() {
     TimeKeeper.travel('2015-06-29T20:16:00Z');
     Ironium.scheduleJob('fail-every-1hr', '1h', function() {
       if (fail)
@@ -113,24 +113,24 @@ describe('Scheduled job with errors', ()=> {
     });
   });
 
-  describe('runOnce', ()=> {
-    before(()=> {
+  describe('runOnce', function() {
+    before(function() {
       fail = true;
       TimeKeeper.travel(Date.now() + ms('1h'));
     });
 
-    it('should throw', (done)=> {
+    it('should throw', function(done) {
       Ironium.runOnce()
-        .then(() => {
+        .then(function() {
           done(new Error('Did not throw'));
         })
-        .catch((err)=> {
+        .catch(function(err) {
           assert.equal(err.message, 'Failing');
           done();
         });
     });
 
-    after(()=> {
+    after(function() {
       // Let other tests pass.
       fail = false;
     });
