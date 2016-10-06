@@ -112,7 +112,7 @@ function forkChildProcess(mutex) {
       });
       child.on('exit', function(code) {
         if (code)
-          reject(new Error('Exited with code ' + code));
+          reject(new Error(`Exited with code ${code}`));
         else
           resolve(count);
       });

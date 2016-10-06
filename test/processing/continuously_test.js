@@ -31,7 +31,7 @@ function runTestSuite() {
       });
 
       child.on('exit', function(code) {
-        done(code ? new Error('Exited with code ' + code) : null);
+        done(code ? new Error(`Exited with code ${code}`) : null);
       });
     });
 
