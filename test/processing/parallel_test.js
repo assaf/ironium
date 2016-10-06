@@ -32,7 +32,7 @@ describe('Processing', () => {
     before(() => {
       const withoutConcurrency = Object.assign({}, ironMQConfig, { concurrency: 1 });
       Ironium.configure(withoutConcurrency);
-      processSerialQueue = Ironium.queue('process-serial');
+      processSerialQueue = Ironium.queue(`process-serial-${Date.now()}`);
     });
 
     before(Ironium.purgeQueues);
@@ -66,7 +66,7 @@ describe('Processing', () => {
 
     before(() => {
       Ironium.configure(ironMQConfig);
-      processParallelQueue = Ironium.queue('process-parallel');
+      processParallelQueue = Ironium.queue(`process-parallel-${Date.now()}`);
     });
 
     before(Ironium.purgeQueues);
@@ -101,7 +101,7 @@ describe('Processing', () => {
     before(() => {
       const withLimitedConcurrency = Object.assign({}, ironMQConfig, { concurrency: 2 });
       Ironium.configure(withLimitedConcurrency);
-      processParallelQueue = Ironium.queue('process-parallel');
+      processParallelQueue = Ironium.queue(`process-parallel-${Date.now()}`);
     });
 
     before(Ironium.purgeQueues);
