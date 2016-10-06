@@ -16,7 +16,7 @@ function runTestSuite() {
 
   describe('Child process', function() {
 
-    var child   = null;
+    let child;
     const steps = [];
 
     before(function() {
@@ -98,7 +98,7 @@ function runChildProcess() {
       });
   });
 
-  var failed = 0;
+  let failed = 0;
 
   // Failed job: fails three times, then succeeds.
   Ironium.queue('failed').eachJob(function() {
