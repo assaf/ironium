@@ -16,9 +16,9 @@ run-time intricacies for you.
 It's easy to setup (`brew install beanstalkd` on the Mac), easy to tinker with
 (`telnet localhost 11300`), and persistently reliable.
 
-[IronMQ](http://www.iron.io/) is "the Message Queue for the Cloud".  It's a
+[IronMQ](https://www.iron.io/) is "the Message Queue for the Cloud".  It's a
 managed queue service with a nice UI, an excellent choice for production
-systems.  And can handle much of the [Webhooks](http://www.webhooks.org/)
+systems.  And can handle much of the [webhooks](http://www.webhooks.org/)
 workload for you.
 
 The thing is, standalone Beanstalkd is great for development and testing, I just
@@ -36,7 +36,7 @@ Ironium allows you to use either/both in the same project.
   * [queue.eachJob(handler)](#queueeachjobhandler)
   * [queue.stream()](#queuestream)
   * [queue.name](#queuename)
-  * [webhookURL](#webhookurl)
+  * [webhookURL(queueName)](#webhookurlqueuename)
   * [scheduleJob(jobName, when, handler)](#schedulejobjobname-when-handler)
   * [configure(object)](#configureobject)
   * [start()](#start)
@@ -60,7 +60,7 @@ Ironium has a simple API with three primary methods:
 - `scheduleJob` to run a job on a given schedule
 
 There are a few more methods to help you with managing workers, running tests,
-and working with Webhooks.
+and working with webhooks.
 
 
 ### queue(queueName)
@@ -76,8 +76,8 @@ Node.js servers, but only process jobs from specific nodes.
 For example, your code may have:
 
 ```javascript
-const ironium          = require('ironium');
-const sendWelcomeEmail = ironium.queue('send-welcome-email');
+const Ironium          = require('ironium');
+const sendWelcomeEmail = Ironium.queue('send-welcome-email');
 
 // If this is a new customer, queue sending welcome email.
 customer.on('save', function(next) {
@@ -91,7 +91,6 @@ sendWelcomeEmail.eachJob(function(id, callback) {
   // Do something to render and send email
   callback();
 });
-
 ```
 
 As you can see from this example, each queue has three interesting methods,
@@ -112,7 +111,7 @@ Calling `Ironium.queueJob(name, job)` is the same as
 For example:
 
 ```javascript
-const echoQueue = ironium.queue('queue');
+const echoQueue = Ironium.queue('echo');
 
 const job = {
   message: 'wow, such workers, much concurrency'
@@ -167,18 +166,17 @@ The second argument to the job handler is that callback.
 For example:
 
 ```javascript
-ironium.queue('echo').eachJob(async function(job) {
+Ironium.queue('echo').eachJob(async function(job) {
   console.log('Echo', job.message);
   await fnReturningPromise();
   await anotherAsyncFunction();
-  return;
 });
 ```
 
 Or using callbacks:
 
 ```javascript
-ironium.queue('echo').eachJob(function(job, callback) {
+Ironium.queue('echo').eachJob(function(job, callback) {
   console.log('Echo', job.message);
   callback();
 });
@@ -199,14 +197,14 @@ You can attach multiple handlers to the same queue, and each job will go to all
 the handlers.  If any handler fails to process the job, it will return to the
 queue.
 
-When processing Webhooks, some services send valid JSON object, other services
+When processing webhooks, some services send valid JSON object, other services
 send text strings, so be ready to process those as well.  For example, some
 services send form encoded pairs, so you may need to handle them like this:
 
 ```javascript
 const QS = require('querystring');
 
-ironium.queue('webhook').eachJob(function(job, callback) {
+Ironium.queue('webhook').eachJob(function(job, callback) {
   const params = QS.parse(job);
   console.log(params.message);
   callback();
@@ -234,10 +232,10 @@ This name does not include the prefix.
 
 ### webhookURL(queueName)
 
-This method resolves to the Webhook URL of the named queue.
+This method resolves to the webhook URL of the named queue.
 
 Since configuration can load asynchronously, this method returns a promise, not
-the actual URL.  The webhook URL only makes sense when using IronMQ, beanstalkd
+the actual URL.  The webhook URL only makes sense when using IronMQ, Beanstalkd
 does not support this feature.
 
 NOTE: The webhook URL includes your project ID and access token, so be careful
@@ -271,12 +269,12 @@ resolves on completion, or a generator function, or inform a callback.
 For example:
 
 ```javascript
-ironium.scheduleJob('inAnHour', new Date() + ms('1h'), function() {
+Ironium.scheduleJob('inAnHour', new Date() + ms('1h'), function() {
   console.log("I run once, after an hour");
   return Promise.resolve();
 });
 
-ironium.scheduleJob('everyHour', '1h', function(callback) {
+Ironium.scheduleJob('everyHour', '1h', function(callback) {
   console.log("I run every hour");
   callback();
 });
@@ -285,7 +283,7 @@ const schedule = {
   every: ms('2h'),               // Every two hours
   end:   new Date() + ms('24h'), // End in 24 hours
 };
-ironium.scheduleJob('everyTwoForADay', schedule, async function() {
+Ironium.scheduleJob('everyTwoForADay', schedule, async function() {
   console.log("I run every 2 hours for 24 hours");
   const customers = await Customer.findAll();
   for (var customer of customers)
@@ -415,14 +413,14 @@ Returns a promise that resolves when all jobs have been deleted.
 For example:
 
 ```javascript
-before(ironium.purgeQueues);
+before(Ironium.purgeQueues);
 ```
 
 Is equivalent to:
 
 ```javascript
 before(function() {
-  return ironium.purgeQueues();
+  return Ironium.purgeQueues();
 });
 ```
 
@@ -443,7 +441,7 @@ return to the queue and processed again.
 For example:
 
 ```javascript
-ironium.queue('delayed-echo').eachJob(function(job) {
+Ironium.queue('delayed-echo').eachJob(function(job) {
   return Bluebird.delay(500)
     .then(function() {
       console.log('Echo', job.message);
@@ -458,15 +456,15 @@ This option is available when using [Babel JS](https://babeljs.io/), and allows
 you to write code like this:
 
 ```javascript
-ironium.queue('update-name').eachJob(async function(job) {
-  const customer = await Customer.findById(job.customerID).exec();
+Ironium.queue('update-name').eachJob(async function(job) {
+  const customer = await Customer.findById(job.customerID);
 
   // At this point customer is set
   customer.firstName = job.firstName;
   customer.lastName  = job.lastName;
   assert(customer.isModified());
 
-  await customer.savePromise();
+  await customer.save();
 
   // Customer has been saved in the database
   assert(!customer.isModified());
@@ -480,7 +478,7 @@ before marking the job as complete, and will retry the job if the promise fails.
 
 
 An `await` expression waits for a promise to resolve.  In this example,
-`findById(job.customerID).exec()` returns a promise that resolves to a customer
+`findById(job.customerID)` returns a promise that resolves to a customer
 record (this is an actual [Mongoose API](http://mongoosejs.com/docs/api.html)).
 
 
@@ -506,14 +504,14 @@ In addition, you can register a callback to be notified of job processing
 errors:
 
 ```javascript
-ironium.onerror(function(error, subject) {
+Ironium.onerror(function(error, subject) {
   console.error('Error reported by', subject);
   console.error(error.stack);
 });
 ```
 
 Because Ironium expects some jobs will fail, and will retry them until
-successful, you do not have to listen to its `error` event.  It's error event
+successful, you do not have to listen to its `error` event.  This event
 will not cause the program to exit.
 
 
@@ -521,25 +519,25 @@ will not cause the program to exit.
 
 For development and testing you can typically get by with the default
 configuration.  For production, you may want to set the server in use, as simple
-as passing a configuration object to `ironium.configure`:
+as passing a configuration object to `Ironium.configure`:
 
 ```javascript
-const ironium = require('ironium');
+const Ironium = require('ironium');
 
-if (process.env.NODE_ENV == 'production')
-  ironium.configure({
+if (process.env.NODE_ENV === 'production')
+  Ironium.configure({
     host: 'my.beanstalkd.server'
   });
 ```
 
 Or load it form a JSON configuration file:
 
-```
-const ironium = require('ironium');
+```javascript
+const Ironium = require('ironium');
 const config  = require('./iron.json');
 
-if (process.env.NODE_ENV == 'production')
-  ironium.configure(config);
+if (process.env.NODE_ENV === 'production')
+  Ironium.configure(config);
 ```
 
 You can also use a promise that resolves to an object with all configuration
@@ -560,7 +558,7 @@ If you're running in development or test environment with a local Beanstalkd
 server, you can just use the default configuration, which points to `localhost`,
 port 11300.
 
-The default configuration when running in test environment (`NODE_ENV ==
+The default configuration when running in test environment (`NODE_ENV ===
 'test'`) uses the prefix `test-` for all queues.
 
 If you're running in production against a Beanstalkd, you will likely need to
@@ -573,7 +571,7 @@ This is the same format as `iron.json`.
 
 ## Testing Your Code
 
-The default test configuration (`NODE_ENV == 'test'`) connects to Beanstalkd on
+The default test configuration (`NODE_ENV === 'test'`) connects to Beanstalkd on
 localhost, and prefixes all queue names with `test-`, so they don't conflict
 with any queues used during development.
 
