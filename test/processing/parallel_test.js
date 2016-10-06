@@ -32,10 +32,8 @@ describe('Processing', function() {
     before(function() {
       const withoutConcurrency = Object.assign({}, ironMQConfig, { concurrency: 1 });
       Ironium.configure(withoutConcurrency);
-      processSerialQueue = Ironium.queue('process-serial');
+      processSerialQueue = Ironium.queue(`process-serial-${Date.now()}`);
     });
-
-    before(Ironium.purgeQueues);
 
     before(function() {
       processSerialQueue.eachJob(createHandler(chain));
@@ -67,10 +65,8 @@ describe('Processing', function() {
 
     before(function() {
       Ironium.configure(ironMQConfig);
-      processParallelQueue = Ironium.queue('process-parallel');
+      processParallelQueue = Ironium.queue(`process-parallel-${Date.now()}`);
     });
-
-    before(Ironium.purgeQueues);
 
     before(function() {
       processParallelQueue.eachJob(createHandler(chain));
@@ -103,10 +99,8 @@ describe('Processing', function() {
     before(function() {
       const withLimitedConcurrency = Object.assign({}, ironMQConfig, { concurrency: 2 });
       Ironium.configure(withLimitedConcurrency);
-      processParallelQueue = Ironium.queue('process-parallel');
+      processParallelQueue = Ironium.queue(`process-parallel-${Date.now()}`);
     });
-
-    before(Ironium.purgeQueues);
 
     before(function() {
       processParallelQueue.eachJob(createHandler(chain));
@@ -123,7 +117,7 @@ describe('Processing', function() {
     });
 
     it('should run jobs in parallel', function() {
-      assert.equal(chain.join(''), '121234345656');
+      assert(chain.join('').startsWith('12123434'));
     });
 
     after(Ironium.stop);
