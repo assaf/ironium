@@ -35,9 +35,6 @@ describe('Processing', () => {
       processSerialQueue = Ironium.queue(`process-serial-${Date.now()}`);
     });
 
-    before(Ironium.purgeQueues);
-    before(done => setTimeout(done, 2000));
-
     before(() => {
       processSerialQueue.eachJob(createHandler(chain));
     });
@@ -68,9 +65,6 @@ describe('Processing', () => {
       Ironium.configure(ironMQConfig);
       processParallelQueue = Ironium.queue(`process-parallel-${Date.now()}`);
     });
-
-    before(Ironium.purgeQueues);
-    before(done => setTimeout(done, 2000));
 
     before(() => {
       processParallelQueue.eachJob(createHandler(chain));
@@ -103,9 +97,6 @@ describe('Processing', () => {
       Ironium.configure(withLimitedConcurrency);
       processParallelQueue = Ironium.queue(`process-parallel-${Date.now()}`);
     });
-
-    before(Ironium.purgeQueues);
-    before(done => setTimeout(done, 2000));
 
     before(() => {
       processParallelQueue.eachJob(createHandler(chain));
