@@ -76,7 +76,7 @@ describe('Server with errors', function() {
 
   });
 
-  describe('continously fail', function() {
+  describe('continuously fail', function() {
     before(function() {
       jobs = 0;
       failUntil = 3;
