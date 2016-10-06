@@ -1,6 +1,7 @@
 language: node_js
 node_js:
-  - 4.2.0
+  - lts/argon
+  - stable
 services:
   - redis-server
 before_install:
