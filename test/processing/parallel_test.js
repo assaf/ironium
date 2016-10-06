@@ -6,7 +6,7 @@ const File     = require('fs');
 const Ironium  = require('../..');
 
 
-describe('Processing', () => {
+describe('Processing', function() {
   let ironMQConfig;
 
 
@@ -14,7 +14,7 @@ describe('Processing', () => {
     return function(job) {
       chain.push(job);
       return Bluebird.delay(10)
-        .then(() => {
+        .then(function() {
           chain.push(job);
         });
     };
@@ -25,11 +25,11 @@ describe('Processing', () => {
   });
 
 
-  describe('serially', () => {
+  describe('serially', function() {
     let processSerialQueue;
     const chain = [];
 
-    before(() => {
+    before(function() {
       const withoutConcurrency = Object.assign({}, ironMQConfig, { concurrency: 1 });
       Ironium.configure(withoutConcurrency);
       processSerialQueue = Ironium.queue('process-serial');
@@ -37,7 +37,7 @@ describe('Processing', () => {
 
     before(Ironium.purgeQueues);
 
-    before(() => {
+    before(function() {
       processSerialQueue.eachJob(createHandler(chain));
     });
 
@@ -48,7 +48,7 @@ describe('Processing', () => {
     before(Ironium.start);
     before((done) => setTimeout(done, 2000));
 
-    it('should run jobs in sequence', () => {
+    it('should run jobs in sequence', function() {
       assert.equal(chain.join(''), 'AABB');
     });
 
@@ -59,18 +59,18 @@ describe('Processing', () => {
   });
 
 
-  describe('with concurrency - simple', () => {
+  describe('with concurrency - simple', function() {
     let processParallelQueue;
     const chain = [];
 
-    before(() => {
+    before(function() {
       Ironium.configure(ironMQConfig);
       processParallelQueue = Ironium.queue('process-parallel');
     });
 
     before(Ironium.purgeQueues);
 
-    before(() => {
+    before(function() {
       processParallelQueue.eachJob(createHandler(chain));
     });
 
@@ -81,7 +81,7 @@ describe('Processing', () => {
     before(Ironium.start);
     before(done => setTimeout(done, 2000));
 
-    it('should run jobs in parallel', () => {
+    it('should run jobs in parallel', function() {
       assert.equal(chain.join(''), 'ABAB');
     });
 
@@ -92,11 +92,11 @@ describe('Processing', () => {
   });
 
 
-  describe('with concurrency - throttled', () => {
+  describe('with concurrency - throttled', function() {
     let processParallelQueue;
     const chain = [];
 
-    before(() => {
+    before(function() {
       const withLimitedConcurrency = Object.assign({}, ironMQConfig, { concurrency: 2 });
       Ironium.configure(withLimitedConcurrency);
       processParallelQueue = Ironium.queue('process-parallel');
@@ -104,7 +104,7 @@ describe('Processing', () => {
 
     before(Ironium.purgeQueues);
 
-    before(() => {
+    before(function() {
       processParallelQueue.eachJob(createHandler(chain));
     });
 
@@ -116,7 +116,7 @@ describe('Processing', () => {
     before(Ironium.start);
     before(done => setTimeout(done, 4000));
 
-    it('should run jobs in parallel', () => {
+    it('should run jobs in parallel', function() {
       assert.equal(chain.join(''), '121234345656');
     });
 

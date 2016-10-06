@@ -4,7 +4,7 @@ const assert  = require('assert');
 const Ironium = require('../..');
 
 
-describe('Queue with delay', ()=> {
+describe('Queue with delay', function() {
 
   const captureQueue = Ironium.queue('capture');
 
@@ -21,7 +21,7 @@ describe('Queue with delay', ()=> {
   before(()=> captureQueue.delayJob('delayed', '2s'));
   before(Ironium.runOnce);
 
-  it('should not process immediately', ()=>{
+  it('should not process immediately', function() {
     assert.equal(processed.length, 0);
   });
 
@@ -31,7 +31,7 @@ describe('Queue with delay', ()=> {
     });
     before(Ironium.runOnce);
 
-    it('should not process job', ()=>{
+    it('should not process job', function() {
       assert.equal(processed.length, 0);
     });
   });
@@ -42,7 +42,7 @@ describe('Queue with delay', ()=> {
     });
     before(Ironium.runOnce);
 
-    it('should process job', ()=>{
+    it('should process job', function() {
       assert.equal(processed.length, 1);
       assert.equal(processed[0], 'delayed');
     });

@@ -31,7 +31,7 @@ describe('Stream', function() {
 
   // Capture processed jobs here.
   const jobs = [];
-  before(()=> {
+  before(function() {
     streamQueue.eachJob(job => {
       jobs.push(job);
       return Promise.resolve();
@@ -40,7 +40,7 @@ describe('Stream', function() {
 
   // Capture job IDs
   const jobIDs = [];
-  before((done)=> {
+  before(function(done) {
     source.pipe(streamQueue.stream())
       .on('data', (id)=> jobIDs.push(id))
       .on('end', done);
@@ -48,17 +48,17 @@ describe('Stream', function() {
 
   before(Ironium.runOnce);
 
-  it('should queue all jobs', ()=> {
+  it('should queue all jobs', function() {
     assert.equal(jobs.length, 100);
   });
 
-  it('should queue jobs in order', ()=> {
+  it('should queue jobs in order', function() {
     assert.equal(jobs[0],   '1');
     assert.equal(jobs[10],  '11');
     assert.equal(jobs[99],  '100');
   });
 
-  it('should provide queued job IDs', ()=> {
+  it('should provide queued job IDs', function() {
     assert.equal(jobIDs.length, 100);
     for (let id of jobIDs)
       assert(/^\d+$/.test(id));

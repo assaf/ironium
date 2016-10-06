@@ -5,92 +5,107 @@ const Ironium = require('../..');
 
 
 describe('Queue', function() {
-
+  let lastJob;
   const captureQueue = Ironium.queue('capture');
 
   // Capture processed jobs here.
-  before(()=> {
+  before(function() {
     captureQueue.eachJob(job => {
-      this.job = job;
+      lastJob = job;
       return Promise.resolve();
     });
   });
 
 
-  describe('an object', ()=> {
-    before(()=> captureQueue.queueJob({ id: 5, name: 'job' }));
+  describe('an object', function() {
+    before(function() {
+      return captureQueue.queueJob({ id: 5, name: 'job' });
+    });
     before(Ironium.runOnce);
 
-    it('should process that object', ()=>{
-      assert.equal(this.job.id, 5);
-      assert.equal(this.job.name, 'job');
+    it('should process that object', function() {
+      assert.equal(lastJob.id, 5);
+      assert.equal(lastJob.name, 'job');
     });
   });
 
 
-  describe('a string', ()=> {
-    before(()=> captureQueue.queueJob('job'));
+  describe('a string', function() {
+    before(function() {
+      return captureQueue.queueJob('job');
+    });
     before(Ironium.runOnce);
 
-    it('should process that string', ()=>{
-      assert.equal(this.job, 'job');
+    it('should process that string', function() {
+      assert.equal(lastJob, 'job');
     });
   });
 
 
-  describe('a number', ()=> {
-    before(()=> captureQueue.queueJob(3.1));
+  describe('a number', function() {
+    before(function() {
+      return captureQueue.queueJob(3.1);
+    });
     before(Ironium.runOnce);
 
-    it('should process that number', ()=>{
-      assert.equal(this.job, 3.1);
+    it('should process that number', function() {
+      assert.equal(lastJob, 3.1);
     });
   });
 
 
-  describe('an array', ()=> {
-    before(()=> captureQueue.queueJob([true, '+']));
+  describe('an array', function() {
+    before(function() {
+      return captureQueue.queueJob([true, '+']);
+    });
     before(Ironium.runOnce);
 
-    it('should process that array', ()=>{
-      assert.equal(this.job.length, 2);
-      assert.equal(this.job[0], true);
-      assert.equal(this.job[1], '+');
+    it('should process that array', function() {
+      assert.equal(lastJob.length, 2);
+      assert.equal(lastJob[0], true);
+      assert.equal(lastJob[1], '+');
     });
   });
 
 
-  describe('a buffer', ()=> {
+  describe('a buffer', function() {
 
-    describe('(JSON)', ()=> {
-      before(()=> captureQueue.queueJob(new Buffer('{ "x": 1 }')));
+    describe('(JSON)', function() {
+      before(function() {
+        return captureQueue.queueJob(new Buffer('{ "x": 1 }'));
+      });
       before(Ironium.runOnce);
 
-      it('should process that buffer as object value', ()=>{
-        assert.equal(this.job.x, 1);
+      it('should process that buffer as object value', function() {
+        assert.equal(lastJob.x, 1);
       });
     });
 
 
-    describe('(not JSON)', ()=> {
-      before(()=> captureQueue.queueJob(new Buffer('x + 1')));
+    describe('(not JSON)', function() {
+      before(function() {
+        return captureQueue.queueJob(new Buffer('x + 1'));
+      });
       before(Ironium.runOnce);
 
-      it('should process that buffer as string value', ()=>{
-        assert.equal(this.job, 'x + 1');
+      it('should process that buffer as string value', function() {
+        assert.equal(lastJob, 'x + 1');
       });
     });
 
   });
 
 
-  describe('a null', ()=> {
-    it('should error', (done)=> {
-      this.job = null;
-      assert.throws(()=> {
-        captureQueue.queueJob(null, done);
+  describe('a null', function() {
+    before(function() {
+      lastJob = null;
+    });
+
+    it('should error', function(done) {
+      assert.throws(function() {
+        captureQueue.queueJob(null).catch(done);
       });
-      assert(!this.job);
+      assert(!lastJob);
       done();
     });
   });

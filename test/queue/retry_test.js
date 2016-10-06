@@ -57,9 +57,9 @@ const mock = Net.createServer(function(socket) {
 });
 
 
-describe('Server with errors', ()=> {
+describe('Server with errors', function() {
 
-  before(() => {
+  before(function() {
     Ironium.configure({
       host: '127.0.0.1',
       port: 11333
@@ -68,7 +68,7 @@ describe('Server with errors', ()=> {
     mock.listen(11333);
   });
 
-  describe('fail then recover', ()=> {
+  describe('fail then recover', function() {
 
     it('should not error when queuing', function() {
       return Ironium.queueJob('foo', { value: 1 });
@@ -76,8 +76,8 @@ describe('Server with errors', ()=> {
 
   });
 
-  describe('continously fail', ()=> {
-    before(()=> {
+  describe('continously fail', function() {
+    before(function() {
       jobs = 0;
       failUntil = 3;
     });
@@ -94,7 +94,7 @@ describe('Server with errors', ()=> {
 
   });
 
-  after(() => {
+  after(function() {
     Ironium.configure({
       host: '127.0.0.1',
       port: 11300
