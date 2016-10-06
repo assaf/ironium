@@ -49,7 +49,7 @@ function runTestSuite() {
     });
 
     it('should run three failed jobs', function() {
-      const failed = steps.filter(step => step == 'failed');
+      const failed = steps.filter(step => step === 'failed');
       assert.equal(failed.length, 3);
     });
 
