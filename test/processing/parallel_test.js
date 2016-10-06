@@ -1,7 +1,8 @@
 'use strict';
 require('../helpers');
-const assert  = require('assert');
-const Ironium = require('../..');
+const assert   = require('assert');
+const Bluebird = require('bluebird');
+const Ironium  = require('../..');
 
 
 describe('Processing', ()=> {
@@ -12,12 +13,10 @@ describe('Processing', ()=> {
   // Count how many steps run
   const chain = [];
 
-  function worker(job, callback) {
+  function worker(job) {
     chain.push('A');
-    setTimeout(()=> {
-      chain.push('B');
-      callback();
-    }, 10);
+    return Bluebird.delay(10)
+      .then(() => chain.push('B'));
   }
 
 

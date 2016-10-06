@@ -130,9 +130,9 @@ function runChildProcess(coordinator, leader) {
 
   Ironium.start();
 
-  Ironium.scheduleJob('parallel', soon, function(done) {
+  Ironium.scheduleJob('parallel', soon, function() {
     process.send('executed');
-    done();
+    return Promise.resolve();
   });
 
   setTimeout(function() {

@@ -79,9 +79,9 @@ function runChildProcess() {
   });
 
   // Duplicate job: queued and executed three times.
-  Ironium.queue('duplicate').eachJob(function(job, callback) {
+  Ironium.queue('duplicate').eachJob(function(job) {
     process.send('duplicate');
-    callback();
+    return Promise.resolve();
   });
 
   // Delayed job: this job takes 500ms to complete.
@@ -102,8 +102,9 @@ function runChildProcess() {
     else {
       process.send('failed');
       failed++;
-      // Yes, we do have a callback, but by throwing an error we're testing that
-      // domains work correctly.
+      // By throwing an error (as opposed to rejecting
+      // the promise) we're testing that domains work
+      // correctly.
       setImmediate(function() {
         throw new Error('Failing on purpose');
       });

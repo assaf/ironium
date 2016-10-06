@@ -12,9 +12,9 @@ describe('Queue with delay', ()=> {
   const processed = [];
 
   before(function() {
-    captureQueue.eachJob(function(job, callback) {
+    captureQueue.eachJob(function(job) {
       processed.push(job);
-      callback();
+      return Promise.resolve();
     });
   });
 
