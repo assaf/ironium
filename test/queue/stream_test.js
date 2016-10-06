@@ -42,7 +42,7 @@ describe('Stream', function() {
   const jobIDs = [];
   before(function(done) {
     source.pipe(streamQueue.stream())
-      .on('data', (id)=> jobIDs.push(id))
+      .on('data', id => jobIDs.push(id))
       .on('end', done);
   });
 
@@ -60,7 +60,7 @@ describe('Stream', function() {
 
   it('should provide queued job IDs', function() {
     assert.equal(jobIDs.length, 100);
-    for (let id of jobIDs)
+    for (const id of jobIDs)
       assert(/^\d+$/.test(id));
   });
 
