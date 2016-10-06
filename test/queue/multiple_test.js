@@ -11,9 +11,9 @@ describe('Queue multiple jobs', function() {
 
   // Capture processed jobs here.
   before(() => {
-    captureQueue.eachJob((job, callback) => {
+    captureQueue.eachJob(job => {
       processed.push(job);
-      callback();
+      return Promise.resolve();
     });
   });
 
