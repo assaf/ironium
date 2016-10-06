@@ -63,8 +63,7 @@ function runTestSuite() {
 
 function runChildProcess() {
 
-  const Bluebird  = require('bluebird');
-  const Ironium   = require('../..');
+  const Bluebird  = require('bluebird'); // eslint-disable-line global-require
 
 
   // Regular job: queued once, execute once
@@ -84,7 +83,7 @@ function runChildProcess() {
   });
 
   // Duplicate job: queued and executed three times.
-  Ironium.queue('duplicate').eachJob(function(job) {
+  Ironium.queue('duplicate').eachJob(function() {
     process.send('duplicate');
     return Promise.resolve();
   });
@@ -113,6 +112,7 @@ function runChildProcess() {
       setImmediate(function() {
         throw new Error('Failing on purpose');
       });
+      return new Promise(function() { });
     }
   });
 
@@ -121,7 +121,7 @@ function runChildProcess() {
     process.send('done');
     Ironium.stop();
     setTimeout(function() {
-      process.exit(0);
+      process.exit(0); // eslint-disable-line no-process-exit
     }, 100);
   });
 
