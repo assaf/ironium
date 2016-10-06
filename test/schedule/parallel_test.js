@@ -136,7 +136,7 @@ function runChildProcess(coordinator, leader) {
   });
 
   setTimeout(function() {
-    process.exit(0);
+    process.exit(0); // eslint-disable-line no-process-exit
   }, timeout);
 }
 
@@ -151,6 +151,8 @@ function useCoordinator(coordinator, leader) {
       useIronCacheToCoordinate(leader);
       break;
     }
+    default:
+      throw new Error(`Unknown coordinator ${coordinator}`);
   }
 }
 
