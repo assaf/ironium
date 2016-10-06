@@ -151,8 +151,9 @@ function useCoordinator(coordinator, leader) {
       useIronCacheToCoordinate(leader);
       break;
     }
-    default:
-      throw new Error(`Unknown coordinator ${coordinator}`);
+    default: {
+      break;
+    }
   }
 }
 
