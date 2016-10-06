@@ -1,6 +1,7 @@
 'use strict';
-const assert = require('assert');
-const fork   = require('child_process').fork;
+const assert  = require('assert');
+const fork    = require('child_process').fork;
+const Ironium = require('../..');
 
 
 const isMocha = !!global.describe;
@@ -17,6 +18,10 @@ function runTestSuite() {
 
     var child   = null;
     const steps = [];
+
+    before(function() {
+      Ironium.configure({ concurrency: 1 });
+    });
 
     before(function(done) {
       child = fork(module.filename, { env: { NODE_ENV: 'test', DEBUG: process.env.DEBUG } });
