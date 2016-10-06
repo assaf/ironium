@@ -36,7 +36,7 @@ describe('Processing', () => {
     });
 
     before(Ironium.purgeQueues);
-    before(done => setTimeout(done, 1000));
+    before(done => setTimeout(done, 2000));
 
     before(() => {
       processSerialQueue.eachJob(createHandler(chain));
@@ -70,7 +70,7 @@ describe('Processing', () => {
     });
 
     before(Ironium.purgeQueues);
-    before(done => setTimeout(done, 1000));
+    before(done => setTimeout(done, 2000));
 
     before(() => {
       processParallelQueue.eachJob(createHandler(chain));
@@ -105,7 +105,7 @@ describe('Processing', () => {
     });
 
     before(Ironium.purgeQueues);
-    before(done => setTimeout(done, 1000));
+    before(done => setTimeout(done, 2000));
 
     before(() => {
       processParallelQueue.eachJob(createHandler(chain));
