@@ -17,10 +17,10 @@ const mock = Net.createServer(function(socket) {
 
   function dumbProtocol(data) {
     const lines = data.toString().trim().split(/\r\n/);
-    nextLine(lines, socket);
+    nextLine(lines);
   }
 
-  function nextLine(lines, socket) {
+  function nextLine(lines) {
     const line = lines[0];
     if (line) {
       const parts = line.split(' ');
