@@ -40,7 +40,7 @@ function runTestSuite() {
     });
 
     it('should run three duplicate jobs', function() {
-      const duplicates = steps.filter(function(step) { return step === 'duplicate'; });
+      const duplicates = steps.filter(step => step === 'duplicate');
       assert.equal(duplicates.length, 3);
     });
 
@@ -49,7 +49,7 @@ function runTestSuite() {
     });
 
     it('should run three failed jobs', function() {
-      const failed = steps.filter(function(step) { return step == 'failed'; });
+      const failed = steps.filter(step => step == 'failed');
       assert.equal(failed.length, 3);
     });
 
