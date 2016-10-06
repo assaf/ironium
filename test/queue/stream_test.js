@@ -32,7 +32,7 @@ describe('Stream', function() {
   // Capture processed jobs here.
   const jobs = [];
   before(function() {
-    streamQueue.eachJob(job => {
+    streamQueue.eachJob(function(job) {
       jobs.push(job);
       return Promise.resolve();
     });

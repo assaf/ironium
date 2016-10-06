@@ -18,7 +18,9 @@ describe('Queue with delay', function() {
     });
   });
 
-  before(()=> captureQueue.delayJob('delayed', '2s'));
+  before(function() {
+    return captureQueue.delayJob('delayed', '2s');
+  });
   before(Ironium.runOnce);
 
   it('should not process immediately', function() {

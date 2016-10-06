@@ -11,7 +11,7 @@ describe('Queue multiple jobs', function() {
 
   // Capture processed jobs here.
   before(function() {
-    captureQueue.eachJob(job => {
+    captureQueue.eachJob(function(job) {
       processed.push(job);
       return Promise.resolve();
     });
@@ -19,8 +19,12 @@ describe('Queue multiple jobs', function() {
 
 
   describe('objects', function() {
-    before(() => processed.splice(0));
-    before(() => captureQueue.queueJobs([{ id: 5 }, { id: 6 }]));
+    before(function() {
+      processed.splice(0);
+    });
+    before(function() {
+      return captureQueue.queueJobs([{ id: 5 }, { id: 6 }]);
+    });
     before(Ironium.runOnce);
 
     it('should process the first object', function() {
@@ -34,8 +38,12 @@ describe('Queue multiple jobs', function() {
 
 
   describe('an array', function() {
-    before(() => processed.splice(0));
-    before(() => captureQueue.queueJobs([[true, '+'], [false, '-']]));
+    before(function() {
+      processed.splice(0);
+    });
+    before(function() {
+      return captureQueue.queueJobs([[true, '+'], [false, '-']]);
+    });
     before(Ironium.runOnce);
 
     it('should process the first array', function() {
@@ -53,7 +61,9 @@ describe('Queue multiple jobs', function() {
   describe('buffers', function() {
 
     describe('(JSON)', function() {
-      before(() => processed.splice(0));
+      before(function() {
+        processed.splice(0);
+      });
       before(function() {
         const b1 = new Buffer('{ "x": 1 }');
         const b2 = new Buffer('{ "y": 2 }');
@@ -72,7 +82,9 @@ describe('Queue multiple jobs', function() {
 
 
     describe('(not JSON)', function() {
-      before(() => processed.splice(0));
+      before(function() {
+        processed.splice(0);
+      });
       before(function() {
         const b1 = new Buffer('x + 1');
         const b2 = new Buffer('y + 2');
@@ -93,11 +105,13 @@ describe('Queue multiple jobs', function() {
 
 
   describe('a null', function() {
-    before(() => processed.splice(0));
+    before(function() {
+      processed.splice(0);
+    });
 
-    it('should error', done => {
+    it('should error', function(done) {
       assert.throws(function() {
-        captureQueue.queueJobs([ null ], done);
+        captureQueue.queueJobs([ null ]).catch(done);
       });
       assert.equal(processed.length, 0);
       done();

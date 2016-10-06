@@ -10,7 +10,7 @@ describe('Queue', function() {
 
   // Capture processed jobs here.
   before(function() {
-    captureQueue.eachJob(job => {
+    captureQueue.eachJob(function(job) {
       lastJob = job;
       return Promise.resolve();
     });

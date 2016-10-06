@@ -46,7 +46,9 @@ describe('Processing', function() {
     });
 
     before(Ironium.start);
-    before((done) => setTimeout(done, 2000));
+    before(function(done) {
+      setTimeout(done, 2000);
+    });
 
     it('should run jobs in sequence', function() {
       assert.equal(chain.join(''), 'AABB');
@@ -79,7 +81,9 @@ describe('Processing', function() {
     });
 
     before(Ironium.start);
-    before(done => setTimeout(done, 2000));
+    before(function(done) {
+      setTimeout(done, 2000);
+    });
 
     it('should run jobs in parallel', function() {
       assert.equal(chain.join(''), 'ABAB');
@@ -114,14 +118,18 @@ describe('Processing', function() {
     });
 
     before(Ironium.start);
-    before(done => setTimeout(done, 4000));
+    before(function(done) {
+      setTimeout(done, 4000);
+    });
 
     it('should run jobs in parallel', function() {
       assert.equal(chain.join(''), '121234345656');
     });
 
     after(Ironium.stop);
-    after(done => setTimeout(done, 100));
+    after(function(done) {
+      setTimeout(done, 100);
+    });
   });
 
 
