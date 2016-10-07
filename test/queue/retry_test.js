@@ -82,7 +82,7 @@ describe('Server with errors', function() {
       failUntil = 3;
     });
 
-    it('should throw error when queueing', function() {
+    it('should throw error when queuing', function() {
       return Ironium.queueJob('foo', { value: 1 })
         .then(function() {
           assert(false, 'Expected to throw an error');

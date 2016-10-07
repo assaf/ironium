@@ -117,7 +117,7 @@ describe('Processing', function() {
     });
 
     it('should run jobs in parallel', function() {
-      assert(chain.join('').startsWith('12123434'));
+      assert(chain.join('').startsWith('12123434'), chain.join(''));
     });
 
     after(Ironium.stop);

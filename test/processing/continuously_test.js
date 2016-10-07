@@ -123,8 +123,15 @@ function runChildProcess() {
     setTimeout(function() {
       process.exit(0); // eslint-disable-line no-process-exit
     }, 100);
+    return Promise.resolve();
   });
 
+  Ironium.onerror(function(error) {
+    if (error.message !== 'Failing on purpose') {
+      console.log(error.stack); // eslint-disable-line no-console
+      process.exit(1); // eslint-disable-line no-process-exit
+    }
+  });
 
   // Delete all jobs from previous run before starting this one.
   // We need to have all the queues before we can call this.
