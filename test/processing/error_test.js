@@ -51,6 +51,7 @@ describe('Running a job with errors', function() {
   });
 
   describe('once', function() {
+
     before(function() {
       runs = 0;
     });
@@ -68,6 +69,9 @@ describe('Running a job with errors', function() {
           assert.equal(error.message, 'fail');
         });
     });
+
+    after(Ironium.purgeQueues);
+
   });
 
 });
