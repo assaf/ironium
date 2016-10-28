@@ -1,6 +1,7 @@
 language: node_js
 node_js:
   - lts/argon
+  - lts/borbon
   - stable
 services:
   - redis-server
