@@ -133,6 +133,8 @@ function runChildProcess() {
     }
   });
 
+  Ironium.configure({ concurrency: 1 });
+
   // Delete all jobs from previous run before starting this one.
   // We need to have all the queues before we can call this.
   Ironium.purgeQueues()

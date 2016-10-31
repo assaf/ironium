@@ -4,41 +4,73 @@ const assert  = require('assert');
 const Ironium = require('../..');
 
 
-describe('Running a job', function() {
+describe('Running a job with errors', function() {
 
-  const errorPromiseQueue    = Ironium.queue('error-promise');
+  const errorQueue = Ironium.queue('error');
 
-  function untilSuccessful() {
-    return Ironium.runOnce()
-      .catch(function() {
-        return untilSuccessful();
-      });
+  // First two runs should fail, runs ends at 3
+  let runs;
+
+  function countAndFailJob() {
+    runs++;
+    if (runs > 2)
+      return Promise.resolve();
+    else
+      return Promise.reject(new Error('fail'));
   }
 
+  before(function() {
+    errorQueue.eachJob(countAndFailJob);
+  });
 
-  describe('with rejected promise (twice)', function() {
+  describe('continuously', function() {
 
-    // First two runs should fail, runs ends at 3
-    let runs = 0;
+    before(function() {
+      runs = 0;
+    });
 
-    function countAndFailJob() {
-      runs++;
-      if (runs > 2)
-        return Promise.resolve();
-      else
-        return Promise.reject(new Error('fail'));
-    }
-
+    before(function() {
+      Ironium.configure({ concurrency: 1 });
+    });
     before(Ironium.purgeQueues);
     before(function() {
-      errorPromiseQueue.eachJob(countAndFailJob);
-      return errorPromiseQueue.queueJob('job');
+      return errorQueue.queueJob('job');
     });
-    before(untilSuccessful);
+    before(Ironium.start);
+    before(done => setTimeout(done, 1500));
 
     it('should run three times until successful', function() {
       assert.equal(runs, 3);
     });
+
+    after(function() {
+      Ironium.configure({});
+      Ironium.stop();
+    });
+
+  });
+
+  describe('once', function() {
+
+    before(function() {
+      runs = 0;
+    });
+    before(Ironium.purgeQueues);
+    before(function() {
+      return errorQueue.queueJob('job');
+    });
+
+    it('should reject the promise', function() {
+      return Ironium.runOnce()
+        .catch(function(error) {
+          return error;
+        })
+        .then(function(error) {
+          assert.equal(error.message, 'fail');
+        });
+    });
+
+    after(Ironium.purgeQueues);
 
   });
 
