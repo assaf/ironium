@@ -11,7 +11,4 @@ before_install:
   - echo "START=yes" | sudo tee -a /etc/default/beanstalkd > /dev/null
   - sudo service beanstalkd restart
 notifications:
-  email:
-    on_success: always
-    on_failure: always
-
+  email: false
