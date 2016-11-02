@@ -82,14 +82,16 @@ const sendWelcomeEmail = Ironium.queue('send-welcome-email');
 // If this is a new customer, queue sending welcome email.
 customer.on('save', function(next) {
   if (this.isNew)
-    sendWelcomeEmail.queueJob(this.id, next);
+    sendWelcomeEmail.queueJob(this.id)
+      .then(() => next())
+      .catch(next);
   else
     next();
 });
 
-sendWelcomeEmail.eachJob(function(id, callback) {
+sendWelcomeEmail.eachJob(function(id) {
   // Do something to render and send email
-  callback();
+  return Promise.resolve();
 });
 ```
 
@@ -136,6 +138,12 @@ await echoQueue.queueJob(job);
 ```
 
 
+### queue.queueJobs(jobs)
+
+Same as [`queueJob`](#queuequeuejobjob) but usually more efficient if you're
+queuing multiple jobs.
+
+
 ### queue.delayJob(job, duration)
 
 Similar to [`queueJob`](#queuequeuejobjob) but delays processing of the
@@ -156,12 +164,10 @@ Processes jobs from the queue. In addition to calling this method, you need to
 either start the workers (see `start` method), or run all queued jobs once (see
 [`runOnce`](#runonce)).
 
-The job handler is a function that takes either one or two arguments.  The first
-argument to the job handler is the job itself, a JavaScript object or primitive.
+The job handler is a function that takes one argument: the job payload.
 
-The job handler can return a promise that resolves when the job
-completes, or a generator function.  Alternatively, it can inform a callback.
-The second argument to the job handler is that callback.
+The job handler must return a promise that resolves when the job
+completes.
 
 For example:
 
@@ -173,22 +179,22 @@ Ironium.queue('echo').eachJob(async function(job) {
 });
 ```
 
-Or using callbacks:
+Using vanilla promises:
 
 ```javascript
-Ironium.queue('echo').eachJob(function(job, callback) {
+Ironium.queue('echo').eachJob(function(job) {
   console.log('Echo', job.message);
-  callback();
+  return fnReturningPromise()
+    .then(anotherAsyncFunction);
 });
 ```
 
-You must use either callback, resolve promise, or return from generator to
-indicate completion, and do so within 10 minutes.  Jobs that don't complete
-within that time frame are considered to have failed, and returned to the queue.
+The promise must be resolved within 10 minutes. Jobs that don't complete within
+that time frame are considered to have failed, and returned to the queue.
 Timeouts are necessary evil, given that jobs may fail to report completion and
 the halting problem is still NP hard.
 
-If a failed job is returned to the queue, it will go into the 'delayed' state
+If a failed job is returned to the queue, it will go into the `delayed` state
 and stay there for a few minutes, before it can be picked up again.  This delay
 prevents processing bugs and transient errors (e.g. connection issues) from
 resulting in a DoS attack on your error log.
@@ -197,17 +203,18 @@ You can attach multiple handlers to the same queue, and each job will go to all
 the handlers.  If any handler fails to process the job, it will return to the
 queue.
 
-When processing webhooks, some services send valid JSON object, other services
-send text strings, so be ready to process those as well.  For example, some
-services send form encoded pairs, so you may need to handle them like this:
+When processing webhooks, some services send valid JSON objects, while other
+services send text strings, so be ready to process those as well.  For example,
+some services send form encoded pairs, so you may need to handle them like
+this:
 
 ```javascript
 const QS = require('querystring');
 
-Ironium.queue('webhook').eachJob(function(job, callback) {
+Ironium.queue('webhook').eachJob(function(job) {
   const params = QS.parse(job);
   console.log(params.message);
-  callback();
+  return Promise.resolve();
 });
 ```
 
@@ -220,8 +227,8 @@ For example:
 
 ```javascript
 source
-  .pipe( queue.stream() )
-  .pipe( process.stdout );
+  .pipe(queue.stream())
+  .pipe(process.stdout);
 ```
 
 ### queue.name
@@ -263,8 +270,8 @@ If the property `start` is specified, the job will run once at the specified
 time, and if `every` is also specified, repeatedly afterwards.  If the property
 `end` is specified, the job will stop running after that time.
 
-Just like a queued job, the scheduled job is expected to return a promise that
-resolves on completion, or a generator function, or inform a callback.
+Just like a queued job, the scheduled job handler is expected to return a
+promise resolves on completion.
 
 For example:
 
@@ -274,11 +281,6 @@ Ironium.scheduleJob('inAnHour', new Date() + ms('1h'), function() {
   return Promise.resolve();
 });
 
-Ironium.scheduleJob('everyHour', '1h', function(callback) {
-  console.log("I run every hour");
-  callback();
-});
-
 const schedule = {
   every: ms('2h'),               // Every two hours
   end:   new Date() + ms('24h'), // End in 24 hours
@@ -286,7 +288,7 @@ const schedule = {
 Ironium.scheduleJob('everyTwoForADay', schedule, async function() {
   console.log("I run every 2 hours for 24 hours");
   const customers = await Customer.findAll();
-  for (var customer of customers)
+  for (const customer of customers)
     await customer.increase('awesome');
 });
 ```
@@ -366,9 +368,9 @@ Ironium.scheduleJob('echo-foo', '24h', function() {
   return queue.queueJob('foo');
 });
 
-queue.eachJob(function(text, callback) {
+queue.eachJob(function(text) {
   echo.push(text);
-  callback();
+  return Promise.resolve();
 });
 
 
@@ -428,58 +430,6 @@ before(function() {
 This is the case for the methods `start`, `stop`, `runOnce` and `purgeQueues`.
 In addition, since these methods are bound to an instance of Ironium, you can
 pass the method directly as an argument to `before` or `after`.
-
-
-## Using Promises
-
-If you prefer, your jobs can return
-[promises](http://www.html5rocks.com/en/tutorials/es6/promises/) instead of
-using callbacks.  The job is considered complete when the promise resolves, and
-failed if the promise gets rejected.  In the case of queues, the failed job will
-return to the queue and processed again.
-
-For example:
-
-```javascript
-Ironium.queue('delayed-echo').eachJob(function(job) {
-  return Bluebird.delay(500)
-    .then(function() {
-      console.log('Echo', job.message);
-    });
-});
-```
-
-
-## Async/Await
-
-This option is available when using [Babel JS](https://babeljs.io/), and allows
-you to write code like this:
-
-```javascript
-Ironium.queue('update-name').eachJob(async function(job) {
-  const customer = await Customer.findById(job.customerID);
-
-  // At this point customer is set
-  customer.firstName = job.firstName;
-  customer.lastName  = job.lastName;
-  assert(customer.isModified());
-
-  await customer.save();
-
-  // Customer has been saved in the database
-  assert(!customer.isModified());
-});
-```
-
-An [`async
-function`](http://wiki.ecmascript.org/doku.php?id=strawman:async_functions) is a
-function that returns a promise.  Ironium will wait for the promise to resolve,
-before marking the job as complete, and will retry the job if the promise fails.
-
-
-An `await` expression waits for a promise to resolve.  In this example,
-`findById(job.customerID)` returns a promise that resolves to a customer
-record (this is an actual [Mongoose API](http://mongoosejs.com/docs/api.html)).
 
 
 ## Logging
@@ -550,7 +500,8 @@ The configuration options are:
   "host":         <hostname, optional>,
   "project_id":   <project ID from credentials settings>,
   "token":        <access token for this project>,
-  "prefix":       <Prefix all queue names>
+  "prefix":       <prefix all queue names>,
+  "concurrency":  <number of jobs processed concurrently>
 }
 ```
 
@@ -568,6 +519,9 @@ If you're running in production against an [Iron.io](https://hud.iron.io/), you
 need to set `host`, `project_id` and `token` based on your project credentials.
 This is the same format as `iron.json`.
 
+By default, Ironium will process 10 jobs concurrently. You can change this value
+using the `concurrency` option.
+
 
 ## Testing Your Code
 
@@ -576,8 +530,8 @@ localhost, and prefixes all queue names with `test-`, so they don't conflict
 with any queues used during development.
 
 [Codeship](http://codeship.io/) has Beanstalkd installed on test servers, if
-using [Travis-CI](https://travis-ci.org), you will need to install if
-specifically, see out [`.travis.yml`](.travis.yml).
+using [Travis](https://travis-ci.org), you will need to install it
+specifically, see our [`.travis.yml`](.travis.yml).
 
 
 ## Contributing

@@ -1,3 +1,14 @@
+# 4.0.0
+
+Added processing concurrency. By default, Ironium will run 10 concurrent jobs.
+This can be configured via the `concurrency` option.
+
+Multiple jobs can be queued in a single API call: `Queue#queueJobs(jobs)`.
+
+Dropped support for callbacks and generator functions. Job handlers must return
+a promise now.
+
+
 # 3.2.2
 
 Fixed bug in error handling when queuing scheduled job.
@@ -429,7 +440,7 @@ FIXED: more informative close/error messages.
 
 # 0.9.9
 
-Upgraded to Traceur 0.0.10. 
+Upgraded to Traceur 0.0.10.
 
 
 # 0.9.8
