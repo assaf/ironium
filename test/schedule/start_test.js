@@ -130,3 +130,13 @@ describe('Scheduled job with start time and interval', function() {
 
 });
 
+
+describe('Scheduled job with short interval (< 60s)', function() {
+
+  it('should fail', function() {
+    assert.throws(function() {
+      Ironium.scheduleJob('every-5s', '5s', function() { });
+    }, /Minimum interval is 60 seconds/);
+  });
+
+});

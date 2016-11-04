@@ -260,7 +260,7 @@ same job.
 The scheduled time can be a `Date`, in which case the job will run once at the
 given time.  It can be an interval, in which case the job will run repeatedly at
 the given interval.  The interval can be number (in ms), or a string that can
-takes the form of "30s", "5m", "4h", etc.
+takes the form of "90s", "5m", "4h", etc.  The minimum interval is 60 seconds.
 
 The scheduled time can also be an object with the properties `start`, `end` and
 `every`.  If the property `every` is specified, the job will run every so many
@@ -271,7 +271,7 @@ time, and if `every` is also specified, repeatedly afterwards.  If the property
 `end` is specified, the job will stop running after that time.
 
 Just like a queued job, the scheduled job handler is expected to return a
-promise resolves on completion.
+promise that resolves on job completion.
 
 For example:
 
