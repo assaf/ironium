@@ -1,3 +1,9 @@
+# 4.1.0
+
+Minimum interval for scheduled jobs is one minute. Ironium was never designed
+for short intervals; this change only makes that explicit.
+
+
 # 4.0.0
 
 Added processing concurrency. By default, Ironium will run 10 concurrent jobs.
