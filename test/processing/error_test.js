@@ -1,6 +1,7 @@
 'use strict';
 require('../helpers');
 const assert  = require('assert');
+const File    = require('fs');
 const Ironium = require('../..');
 
 
@@ -74,5 +75,49 @@ describe('Running a job with errors', function() {
 
   });
 
+});
+
+
+describe('Running a job with errors - IronMQ', function() {
+  let errorQueue;
+  let runs;
+
+  function countAndFailJob() {
+    runs++;
+    return Promise.reject(new Error('fail'));
+  }
+
+  before(function() {
+    runs = 0;
+  });
+
+  before(function() {
+    const ironMQConfig = JSON.parse(File.readFileSync('iron.json'));
+    Ironium.configure(Object.assign({}, ironMQConfig, { concurrency: 1 }));
+  });
+  before(function() {
+    errorQueue = Ironium.queue('error-other');
+    errorQueue.eachJob(countAndFailJob);
+  });
+  before(Ironium.purgeQueues);
+  before(function() {
+    return errorQueue.queueJob('job');
+  });
+  before(function(done) {
+    process.env.NODE_ENV = 'production';
+    Ironium.start();
+    setTimeout(done, 2000);
+  });
+
+  it('should return the job back to the queue with a delay', function() {
+    // Only 1 run.
+    assert.equal(runs, 1);
+  });
+
+  after(function() {
+    process.env.NODE_ENV = 'test';
+    Ironium.stop();
+    Ironium.configure({});
+  });
 });
 
