@@ -1,3 +1,8 @@
+# 4.1.1
+
+Failed jobs were not being returned to the queue with a delay when using IronMQ.
+
+
 # 4.1.0
 
 Minimum interval for scheduled jobs is one minute. Ironium was never designed
