@@ -1,3 +1,8 @@
+# 4.1.2
+
+Allow Ironium to be installed on newer versions of Node.
+
+
 # 4.1.1
 
 Failed jobs were not being returned to the queue with a delay when using IronMQ.
