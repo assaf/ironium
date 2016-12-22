@@ -8,7 +8,7 @@
     "reset": "pkill -f beanstalkl ; (echo flushdb | redis-cli -n 9)"
   },
   "engines": {
-    "node": "^4.0.0"
+    "node": ">= 4.0.0"
   },
   "main": "lib/index",
   "dependencies": {
