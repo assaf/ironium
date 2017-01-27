@@ -45,7 +45,7 @@ describe('Processing', function() {
 
     before(Ironium.start);
     before(function(done) {
-      setTimeout(done, 2000);
+      setTimeout(done, 3000);
     });
 
     it('should run jobs in sequence', function() {
