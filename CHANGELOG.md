@@ -1,3 +1,9 @@
+# 4.1.3
+
+Ironium will honor `BEANSTALKD_HOSTNAME` and `BEANSTALKD_PORT` environment
+variables if present.
+
+
 # 4.1.2
 
 Allow Ironium to be installed on newer versions of Node.
