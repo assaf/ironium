@@ -21,12 +21,12 @@
     "request": "^2.76"
   },
   "devDependencies": {
-    "eslint": "^3.7.1",
-    "husky": "^0.11.7",
-    "ioredis": "^2.3.0",
-    "mocha": "^3.0.2",
-    "nock": "^9.0.2",
-    "timekeeper": "^1.0.0"
+    "eslint": "^3.7",
+    "husky": "^0.13",
+    "ioredis": "^2.3",
+    "mocha": "^3.0",
+    "nock": "^9.0",
+    "timekeeper": "^1.0"
   },
   "homepage": "https://www.npmjs.com/package/ironium",
   "repository": {
