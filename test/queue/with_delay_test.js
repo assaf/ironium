@@ -6,13 +6,15 @@ const Ironium = require('../..');
 
 describe('Queue with delay', function() {
 
-  const captureQueue = Ironium.queue('capture');
+  let captureQueue;
 
   // Capture processed jobs here.
   const processed = [];
 
   before(function() {
+    Ironium.stop();
     Ironium.configure({ concurrency: 1 });
+    captureQueue = Ironium.queue(`capture-${Date.now()}`);
   });
 
   before(function() {
