@@ -1,8 +1,9 @@
 'use strict';
-require('../helpers');
-const assert  = require('assert');
-const Ironium = require('../..');
-const Net     = require('net');
+
+const assert    = require('assert');
+const Ironium   = require('../..');
+const Net       = require('net');
+const { reset } = require('../helpers');
 
 
 // This Beanstalk mock will close the connection when receiving
@@ -59,6 +60,7 @@ const mock = Net.createServer(function(socket) {
 
 describe('Server with errors', function() {
 
+  before(reset);
   before(function() {
     Ironium.configure({
       host: '127.0.0.1',
@@ -92,13 +94,6 @@ describe('Server with errors', function() {
         });
     });
 
-  });
-
-  after(function() {
-    Ironium.configure({
-      host: '127.0.0.1',
-      port: 11300
-    });
   });
 
 });

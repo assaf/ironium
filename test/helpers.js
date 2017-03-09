@@ -14,3 +14,12 @@ Bluebird.config({
 before(Ironium.purgeQueues);
 after(Ironium.purgeQueues);
 
+
+function reset() {
+  Ironium.stop();
+  Ironium.configure({});
+  return Bluebird.delay(50);
+}
+
+
+module.exports = { reset };

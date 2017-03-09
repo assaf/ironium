@@ -1,7 +1,8 @@
 'use strict';
-require('../helpers');
-const assert  = require('assert');
-const Ironium = require('../..');
+
+const assert    = require('assert');
+const Ironium   = require('../..');
+const { reset } = require('../helpers');
 
 
 describe('Queue with delay', function() {
@@ -11,8 +12,8 @@ describe('Queue with delay', function() {
   // Capture processed jobs here.
   const processed = [];
 
+  before(reset);
   before(function() {
-    Ironium.stop();
     Ironium.configure({ concurrency: 1 });
     captureQueue = Ironium.queue(`capture-${Date.now()}`);
   });

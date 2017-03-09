@@ -1,9 +1,10 @@
 'use strict';
-require('../helpers');
-const assert   = require('assert');
-const Bluebird = require('bluebird');
-const File     = require('fs');
-const Ironium  = require('../..');
+
+const assert    = require('assert');
+const Bluebird  = require('bluebird');
+const File      = require('fs');
+const Ironium   = require('../..');
+const { reset } = require('../helpers');
 
 
 describe('Processing', function() {
@@ -20,6 +21,7 @@ describe('Processing', function() {
     };
   }
 
+  before(reset);
   before(function() {
     ironMQConfig = JSON.parse(File.readFileSync('iron.json'));
   });
