@@ -12,6 +12,10 @@ describe('Queue with delay', function() {
   const processed = [];
 
   before(function() {
+    Ironium.configure({ concurrency: 1 });
+  });
+
+  before(function() {
     captureQueue.eachJob(function(job) {
       processed.push(job);
       return Promise.resolve();
