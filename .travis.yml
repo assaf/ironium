@@ -12,4 +12,4 @@ before_install:
   - sudo service beanstalkd restart
 notifications:
   slack:
-    secure: LE1ZVSuEC3/zt9Rbdw4dpJhh8U4sftF3Bqxq9jjuYvhcXmEkFaINjIf/FACTPdxsghrh83GOv7JKdhrrCb6UYD7mPFQHAgQfwXnfNhig0Lshpt4iFY0c8jy8CTyADHmm5YCystyuPmpv7thJ0bl/j3rxuM50pGLISe3ZvKFj/Bs=
+    secure: KTJ8Kpo7mqKmb25HBDAffZT24dL82aQEpSu90sDbYKwdJ2KRqLy0hmu9Irjvh3P9ar5WvEoXtVOl2gqQMM9XCu96Piy5pWOK7ZpjqO8pGqx5Psr+6GQBzhJrrU8BC6NHh62DqD+OL4+wWxZMNUQVlARU95flvAYG3JDjJBWToKQ=
