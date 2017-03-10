@@ -1,9 +1,10 @@
 'use strict';
-require('../helpers');
+
 const assert   = require('assert');
 const Bluebird = require('bluebird');
 const File     = require('fs');
 const Ironium  = require('../..');
+const setup    = require('../helpers');
 
 
 describe('Processing', function() {
@@ -20,6 +21,7 @@ describe('Processing', function() {
     };
   }
 
+  before(setup);
   before(function() {
     ironMQConfig = JSON.parse(File.readFileSync('iron.json'));
   });
@@ -89,46 +91,6 @@ describe('Processing', function() {
     after(function(done) {
       setTimeout(done, 100);
     });
-  });
-
-
-  describe('with concurrency - throttled', function() {
-    let processParallelQueue;
-    const chain = [];
-
-    before(function() {
-      const withLimitedConcurrency = Object.assign({}, ironMQConfig, { concurrency: 2 });
-      Ironium.configure(withLimitedConcurrency);
-      processParallelQueue = Ironium.queue(`process-parallel-${Date.now()}`);
-    });
-
-    before(function() {
-      processParallelQueue.eachJob(createHandler(chain));
-    });
-
-    before(function() {
-      const jobs = [1, 2, 3, 4, 5, 6];
-      return Bluebird.each(jobs, job => processParallelQueue.queueJob(job));
-    });
-
-    before(Ironium.start);
-    before(function(done) {
-      setTimeout(done, 4000);
-    });
-
-    it('should run jobs in parallel', function() {
-      assert(chain.join('').startsWith('12123434'), chain.join(''));
-    });
-
-    after(Ironium.stop);
-    after(function(done) {
-      setTimeout(done, 100);
-    });
-  });
-
-
-  after(function() {
-    Ironium.configure({});
   });
 
 });

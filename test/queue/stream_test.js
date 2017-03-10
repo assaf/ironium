@@ -1,7 +1,8 @@
 'use strict';
-require('../helpers');
+
 const assert  = require('assert');
 const Ironium = require('../..');
+const setup   = require('../helpers');
 const Stream  = require('stream');
 
 
@@ -28,6 +29,8 @@ describe('Stream', function() {
 
   const streamQueue = Ironium.queue('stream');
   const source      = new SourceStream(100);
+
+  before(setup);
 
   // Capture processed jobs here.
   const jobs = [];
