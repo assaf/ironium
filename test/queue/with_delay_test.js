@@ -1,7 +1,9 @@
 'use strict';
 require('../helpers');
-const assert  = require('assert');
-const Ironium = require('../..');
+const assert      = require('assert');
+const Ironium     = require('../..');
+const ms          = require('ms');
+const TimeKeeper  = require('timekeeper');
 
 
 describe('Queue with delay', function() {
@@ -19,18 +21,20 @@ describe('Queue with delay', function() {
   });
 
   before(function() {
-    return captureQueue.delayJob('delayed', '2s');
+    return captureQueue.delayJob('delayed', '2m');
   });
+
   before(Ironium.runOnce);
 
   it('should not process immediately', function() {
     assert.equal(processed.length, 0);
   });
 
-  describe('after short delay', function() {
-    before(function(done) {
-      setTimeout(done, 1500);
+  describe('after 1 minute', function() {
+    before(function() {
+      TimeKeeper.travel(Date.now() + ms('1m'));
     });
+
     before(Ironium.runOnce);
 
     it('should not process job', function() {
@@ -38,10 +42,11 @@ describe('Queue with delay', function() {
     });
   });
 
-  describe('after sufficient delay', function() {
-    before(function(done) {
-      setTimeout(done, 1000);
+  describe('after 2 minutes', function() {
+    before(function() {
+      TimeKeeper.travel(Date.now() + ms('2m'));
     });
+
     before(Ironium.runOnce);
 
     it('should process job', function() {
