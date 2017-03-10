@@ -89,6 +89,8 @@ describe('Running a job with errors - IronMQ', function() {
     return Promise.reject(new Error('fail'));
   }
 
+  before(setup);
+
   before(function() {
     runs = 0;
   });
