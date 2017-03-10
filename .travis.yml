@@ -11,4 +11,5 @@ before_install:
   - echo "START=yes" | sudo tee -a /etc/default/beanstalkd > /dev/null
   - sudo service beanstalkd restart
 notifications:
-  email: false
+  slack:
+    secure: LE1ZVSuEC3/zt9Rbdw4dpJhh8U4sftF3Bqxq9jjuYvhcXmEkFaINjIf/FACTPdxsghrh83GOv7JKdhrrCb6UYD7mPFQHAgQfwXnfNhig0Lshpt4iFY0c8jy8CTyADHmm5YCystyuPmpv7thJ0bl/j3rxuM50pGLISe3ZvKFj/Bs=
