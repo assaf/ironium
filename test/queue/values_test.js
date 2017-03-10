@@ -1,15 +1,15 @@
 'use strict';
 
-const assert    = require('assert');
-const Ironium   = require('../..');
-const { reset } = require('../helpers');
+const assert  = require('assert');
+const Ironium = require('../..');
+const setup   = require('../helpers');
 
 
 describe('Queue', function() {
   let lastJob;
   const captureQueue = Ironium.queue('capture');
 
-  before(reset);
+  before(setup);
 
   // Capture processed jobs here.
   before(function() {

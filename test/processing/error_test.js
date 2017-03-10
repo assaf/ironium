@@ -1,9 +1,9 @@
 'use strict';
 
-const assert    = require('assert');
-const File      = require('fs');
-const Ironium   = require('../..');
-const { reset } = require('../helpers');
+const assert  = require('assert');
+const File    = require('fs');
+const Ironium = require('../..');
+const setup   = require('../helpers');
 
 
 describe('Running a job with errors', function() {
@@ -21,7 +21,7 @@ describe('Running a job with errors', function() {
       return Promise.reject(new Error('fail'));
   }
 
-  before(reset);
+  before(setup);
   before(function() {
     errorQueue.eachJob(countAndFailJob);
   });

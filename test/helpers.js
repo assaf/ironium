@@ -15,11 +15,11 @@ before(Ironium.purgeQueues);
 after(Ironium.purgeQueues);
 
 
-function reset() {
+function setup() {
   Ironium.stop();
   Ironium.configure({});
   return Bluebird.delay(50);
 }
 
 
-module.exports = { reset };
+module.exports = setup;

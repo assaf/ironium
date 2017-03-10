@@ -1,9 +1,9 @@
 'use strict';
 
-const assert    = require('assert');
-const Ironium   = require('../..');
-const { reset } = require('../helpers');
-const Stream    = require('stream');
+const assert  = require('assert');
+const Ironium = require('../..');
+const setup   = require('../helpers');
+const Stream  = require('stream');
 
 
 class SourceStream extends Stream.Readable {
@@ -30,7 +30,7 @@ describe('Stream', function() {
   const streamQueue = Ironium.queue('stream');
   const source      = new SourceStream(100);
 
-  before(reset);
+  before(setup);
 
   // Capture processed jobs here.
   const jobs = [];

@@ -1,14 +1,15 @@
 'use strict';
-const assert    = require('assert');
-const Ironium   = require('../..');
-const { reset } = require('../helpers');
+
+const assert  = require('assert');
+const Ironium = require('../..');
+const setup   = require('../helpers');
 
 
 describe('Processing jobs', function() {
 
   const runMultipleQueue = Ironium.queue('run-multiple');
 
-  before(reset);
+  before(setup);
 
   describe('with three handlers', function() {
 
