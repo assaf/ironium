@@ -1,15 +1,18 @@
 'use strict';
-require('../helpers');
+
 const assert      = require('assert');
 const Ironium     = require('../..');
 const ms          = require('ms');
 const TimeKeeper  = require('timekeeper');
+const setup       = require('../helpers');
 
 
-describe('Queuing a delayed job in test enviroment', function() {
+describe('Queuing a delayed job in test environment', function() {
 
   const queue         = Ironium.queue('delayedJobQueue');
   const processedJobs = [];
+
+  before(setup);
 
   before(function() {
     queue.eachJob(function(job) {
@@ -17,49 +20,6 @@ describe('Queuing a delayed job in test enviroment', function() {
       return Promise.resolve();
     });
   });
-
-  describe('after a job delayed for 10 minutes is queued', function() {
-
-    before(function() {
-      return queue.delayJob('job', '10m');
-    });
-
-    describe('time traveling 5 minutes', function() {
-
-      before(function() {
-        TimeKeeper.travel(Date.now() + ms('5m'));
-      });
-
-      before(Ironium.runOnce);
-
-      it('should not have processed job', function() {
-        assert.equal(processedJobs.length, 0);
-      });
-
-      after(TimeKeeper.reset);
-
-    });
-
-    describe('time traveling 10 minutes', function() {
-
-      before(function() {
-        TimeKeeper.travel(Date.now() + ms('10m'));
-      });
-
-      before(Ironium.runOnce);
-
-      it('should have processed job', function() {
-        assert.equal(processedJobs[0], 'job');
-      });
-
-      after(TimeKeeper.reset);
-
-    });
-
-
-    after(() => processedJobs.splice(0, processedJobs.length));
-  });
-
 
   describe('after multiple jobs are delayed', function() {
 
