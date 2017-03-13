@@ -1,8 +1,9 @@
 'use strict';
-require('../helpers');
+
 const assert  = require('assert');
 const File    = require('fs');
 const Ironium = require('../..');
+const setup   = require('../helpers');
 
 
 describe('Running a job with errors', function() {
@@ -20,6 +21,7 @@ describe('Running a job with errors', function() {
       return Promise.reject(new Error('fail'));
   }
 
+  before(setup);
   before(function() {
     errorQueue.eachJob(countAndFailJob);
   });
@@ -87,6 +89,8 @@ describe('Running a job with errors - IronMQ', function() {
     return Promise.reject(new Error('fail'));
   }
 
+  before(setup);
+
   before(function() {
     runs = 0;
   });
@@ -106,7 +110,7 @@ describe('Running a job with errors - IronMQ', function() {
   before(function(done) {
     process.env.NODE_ENV = 'production';
     Ironium.start();
-    setTimeout(done, 2000);
+    setTimeout(done, 3000);
   });
 
   it('should return the job back to the queue with a delay', function() {
