@@ -40,9 +40,8 @@ describe('Queue with delay', function() {
 
   describe('after sufficient delay', function() {
     before(function(done) {
-      setTimeout(done, 500);
+      setTimeout(done, 1000);
     });
-
     before(Ironium.runOnce);
 
     it('should process job', function() {
