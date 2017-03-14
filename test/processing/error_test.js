@@ -1,9 +1,9 @@
 'use strict';
 
-const assert  = require('assert');
-const File    = require('fs');
-const Ironium = require('../..');
-const setup   = require('../helpers');
+const assert          = require('assert');
+const getIronMQConfig = require('../iron_mq_config');
+const Ironium         = require('../..');
+const setup           = require('../helpers');
 
 
 describe('Running a job with errors', function() {
@@ -96,8 +96,7 @@ describe('Running a job with errors - IronMQ', function() {
   });
 
   before(function() {
-    const ironMQConfig = JSON.parse(File.readFileSync('iron.json'));
-    Ironium.configure(ironMQConfig);
+    Ironium.configure(getIronMQConfig());
   });
   before(function() {
     errorQueue = Ironium.queue('error-other');

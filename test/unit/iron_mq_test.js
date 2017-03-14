@@ -1,18 +1,17 @@
 'use strict';
 
-const assert  = require('assert');
-const File    = require('fs');
-const IronMQ  = require('../../lib/iron_mq');
-
-
-const IRON_MQ = JSON.parse(File.readFileSync('iron.json'));
+const assert          = require('assert');
+const getIronMQConfig = require('../iron_mq_config');
+const IronMQ          = require('../../lib/iron_mq');
 
 
 describe('IronMQ', function() {
   let client;
 
   before(function() {
-    const config = Object.assign({}, IRON_MQ, { queue_name: `unexisting-${Date.now()}` }); // eslint-disable-line camelcase
+    const config = Object.assign(getIronMQConfig(), {
+      queue_name: `unexisting-${Date.now()}` // eslint-disable-line camelcase
+    });
     client       = new IronMQ(config);
   });
 
