@@ -1,5 +1,4 @@
 dist: trusty
-sudo: false
 language: node_js
 node_js:
   - lts/argon
@@ -8,10 +7,10 @@ node_js:
 services:
   - redis-server
 before_install:
-  - apt-get update -qq
-  - apt-get install -qq beanstalkd
-  - echo "START=yes" | tee -a /etc/default/beanstalkd > /dev/null
-  - service beanstalkd restart
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq beanstalkd
+  - echo "START=yes" | sudo tee -a /etc/default/beanstalkd > /dev/null
+  - sudo service beanstalkd restart
 notifications:
   email: false
   slack:
