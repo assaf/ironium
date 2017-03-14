@@ -97,7 +97,7 @@ describe('Running a job with errors - IronMQ', function() {
 
   before(function() {
     const ironMQConfig = JSON.parse(File.readFileSync('iron.json'));
-    Ironium.configure(Object.assign({}, ironMQConfig, { concurrency: 1 }));
+    Ironium.configure(ironMQConfig);
   });
   before(function() {
     errorQueue = Ironium.queue('error-other');
