@@ -1,3 +1,16 @@
+# 5.0.0
+
+Concurrency is now a global limit, shared by all queues.
+
+Concurrency can be configured via the `IRONIUM_CONCURRENCY` environment
+variable. Default is 50.
+
+Delayed jobs can be tested by time traveling.
+
+A scheduled job's time-to-live is equal to its interval. This better matches
+expectations on transient error conditions.
+
+
 # 4.1.3
 
 Ironium will honor `BEANSTALKD_HOSTNAME` and `BEANSTALKD_PORT` environment

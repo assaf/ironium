@@ -406,6 +406,10 @@ after(function() {
 });
 ```
 
+Both scheduled and delayed jobs can be tested by mocking `Date`, also known as
+time traveling by tools like [TimeKeeper](https://github.com/vesln/timekeeper#timekeeper).
+
+
 ### purgeQueues()
 
 Use this method when testing.  It will delete all queued jobs.
@@ -515,11 +519,11 @@ The default configuration when running in test environment (`NODE_ENV ===
 If you're running in production against a Beanstalkd, you will likely need to
 set `queues.host` and `queues.port`.
 
-If you're running in production against an [Iron.io](https://hud.iron.io/), you
+If you're running in production against [Iron.io](https://hud.iron.io/), you
 need to set `host`, `project_id` and `token` based on your project credentials.
 This is the same format as `iron.json`.
 
-By default, Ironium will process 10 jobs concurrently. You can change this value
+By default, Ironium will process 50 jobs concurrently. You can change this value
 using the `concurrency` option.
 
 
