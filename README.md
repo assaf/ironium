@@ -523,8 +523,9 @@ If you're running in production against [Iron.io](https://hud.iron.io/), you
 need to set `host`, `project_id` and `token` based on your project credentials.
 This is the same format as `iron.json`.
 
-By default, Ironium will process 50 jobs concurrently. You can change this value
-using the `concurrency` option.
+By default, Ironium will process 50 jobs concurrently. You can change this
+value using the `concurrency` option or by setting the `IRONIUM_CONCURRENCY`
+environment variable.
 
 
 ## Testing Your Code
