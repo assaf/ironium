@@ -8,7 +8,7 @@ module.exports = function getAWSConfig() {
     accessKeyId,
     secretAccessKey,
     region,
-    prefix:           process.env.TRAVIS_JOB_ID
+    prefix:           process.env.TEST_PREFIX
   };
   return configWithPrefx;
 };
