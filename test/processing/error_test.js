@@ -1,9 +1,9 @@
 'use strict';
 
-const Crypto = require('crypto');
 const assert          = require('assert');
-const getIronMQConfig = require('../iron_mq_config');
+const Crypto          = require('crypto');
 const getAWSConfig    = require('../aws_config');
+const getIronMQConfig = require('../iron_mq_config');
 const Ironium         = require('../..');
 const setup           = require('../helpers');
 
