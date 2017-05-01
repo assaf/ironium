@@ -6,7 +6,7 @@ const File = require('fs');
 module.exports = function getIronMQConfig() {
   const ironMQConfig    = JSON.parse(File.readFileSync('iron.json'));
   const configWithPrefx = Object.assign({}, ironMQConfig, {
-    prefix: process.env.TRAVIS_JOB_ID
+    prefix: process.env.TEST_PREFIX
   });
   return configWithPrefx;
 };
