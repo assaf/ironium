@@ -1,6 +1,6 @@
 # [Ironium](https://www.npmjs.com/package/ironium)
 
-Job queues and scheduled jobs for Node.js, Beanstalkd and IronMQ.
+Job queues and scheduled jobs for Node.js backed by Beanstalk/IronMQ/SQS.
 
 ![](https://rawgithub.com/assaf/ironium/master/element.svg)
 
@@ -8,11 +8,11 @@ Job queues and scheduled jobs for Node.js, Beanstalkd and IronMQ.
 ## The Why
 
 You've got a workload that runs outside the Web app's request/response cycle.
-Some jobs are queued, some are scheduled.  You decided to use Beanstalkd and/or
+Some jobs are queued, some are scheduled.  You decided to use Beanstalk and/or
 IronMQ.  Now you need a simple API to code against, that will handle all the
 run-time intricacies for you.
 
-[Beanstalkd](http://kr.github.io/beanstalkd/) is "a simple, fast work queue".
+[Beanstalk](https://kr.github.io/beanstalkd/) is "a simple, fast work queue".
 It's easy to setup (`brew install beanstalkd` on the Mac), easy to tinker with
 (`telnet localhost 11300`), and persistently reliable.
 
@@ -21,11 +21,16 @@ managed queue service with a nice UI, an excellent choice for production
 systems.  And can handle much of the [webhooks](http://www.webhooks.org/)
 workload for you.
 
-The thing is, standalone Beanstalkd is great for development and testing, I just
-don't want to manage a production server.  IronMQ is a wonderful service, but
-painful to use for development/testing.
+[SQS](https://aws.amazon.com/sqs/) is Amazon Web Services' fully managed queues
+product. It supports FIFO queues, dead-letter queues, and can be connected with
+[SNS](http://docs.aws.amazon.com/sns/latest/dg/SendMessageToSQS.html). Another
+great choice if you're into AWS.
 
-Ironium allows you to use either/both in the same project.
+The thing is, standalone Beanstalk is great for development and testing, I just
+don't want to manage a production server.  IronMQ and SQS are wonderful services,
+but painful to use for development/testing.
+
+Ironium allows you to use either/all in the same project.
 
 
 * **[API](#api)**
@@ -242,8 +247,8 @@ This name does not include the prefix.
 This method resolves to the webhook URL of the named queue.
 
 Since configuration can load asynchronously, this method returns a promise, not
-the actual URL.  The webhook URL only makes sense when using IronMQ, Beanstalkd
-does not support this feature.
+the actual URL.  The webhook URL only makes sense when using IronMQ, Beanstalk
+and SQS do not support this feature.
 
 NOTE: The webhook URL includes your project ID and access token, so be careful
 where you share it.

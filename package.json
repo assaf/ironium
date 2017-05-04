@@ -12,6 +12,7 @@
   },
   "main": "lib/index",
   "dependencies": {
+    "aws-sdk": "^2.45.0",
     "bluebird": "^3.5",
     "debug": "^2.6",
     "fivebeans": "^1.5",
