@@ -31,4 +31,18 @@ describe('Subscribe', function() {
   it('should have sent the message to the subscribed handler', function() {
     assert.equal(lastMessage.value, randomValue);
   });
+
+  describe('twice with same handler', function() {
+    it('should throw an error', function() {
+      function handler() { }
+
+      try {
+        Ironium.subscribe('foo', handler);
+        Ironium.subscribe('foo', handler);
+        throw new Error('Should have thrown');
+      } catch (error) {
+        assert.equal(error.message, 'Handler already subscribed to topic foo');
+      }
+    });
+  });
 });
