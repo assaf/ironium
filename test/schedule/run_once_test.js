@@ -136,4 +136,7 @@ describe('Scheduled job with errors', function() {
     });
   });
 
+  after(function() {
+    TimeKeeper.reset();
+  });
 });
