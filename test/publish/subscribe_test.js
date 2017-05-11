@@ -35,7 +35,9 @@ describe('Subscribe', function() {
 
   describe('twice with same handler', function() {
     it('should throw an error', function() {
-      function handler() { }
+      function handler() {
+        return Promise.resolve();
+      }
 
       try {
         Ironium.subscribe('foo', handler);
