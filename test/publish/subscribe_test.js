@@ -17,6 +17,7 @@ describe('Subscribe', function() {
   before(function() {
     Ironium.subscribe('foo', function(message) {
       lastMessage = message;
+      return Promise.resolve();
     });
   });
 
@@ -43,6 +44,45 @@ describe('Subscribe', function() {
       } catch (error) {
         assert.equal(error.message, 'Handler already subscribed to topic foo');
       }
+    });
+  });
+
+  describe('dispatch with errors', function() {
+    let lastError;
+    let lastSubject;
+    let dispatchPromise;
+
+    before(function() {
+      Ironium.onerror(function(error, subject) {
+        lastError   = error;
+        lastSubject = subject;
+      });
+
+      Ironium.subscribe('with-errors', function() {
+        return new Promise(function() {
+          throw new Error('Handler failed');
+        });
+      });
+
+      dispatchPromise = Ironium.topic('with-errors').dispatch('123', { value: randomValue });
+    });
+
+    it('should reject the promise', function() {
+      return dispatchPromise
+        .then(function() {
+          assert(false, 'Expected promise to be rejected');
+        })
+        .catch(function(error) {
+          assert.equal(error.message, 'Handler failed');
+        });
+    });
+
+    it('should report the error', function() {
+      assert.equal(lastError.message, 'Handler failed');
+    });
+
+    it('should include the topic name and message ID in the error report', function() {
+      assert.equal(lastSubject, 'with-errors#123');
     });
   });
 });
