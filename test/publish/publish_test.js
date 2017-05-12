@@ -9,7 +9,7 @@ const ms           = require('ms');
 const setup        = require('../helpers');
 
 
-describe('Publish - AWS', function() {
+(getAWSConfig.isAvailable ? describe : describe.skip)('Publish - AWS', function() {
   // We test that publish works by consuming from this queue
   // (which has to be subscribed to the topic).
   const snsSubscribedQueue = Ironium.queue('sns-foo-notification');
