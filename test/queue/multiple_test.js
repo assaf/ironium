@@ -146,7 +146,6 @@ describe('Queue multiple jobs', function() {
   });
 
   it('should queue all 11 jobs', function() {
-    console.log(jobIDs);
     assert.equal(jobIDs.length, 11);
   });
 
