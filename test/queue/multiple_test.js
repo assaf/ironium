@@ -1,8 +1,9 @@
 'use strict';
 
-const assert  = require('assert');
-const Ironium = require('../..');
-const setup   = require('../helpers');
+const assert       = require('assert');
+const getAWSConfig = require('../aws_config');
+const Ironium      = require('../..');
+const setup        = require('../helpers');
 
 
 describe('Queue multiple jobs', function() {
@@ -123,3 +124,34 @@ describe('Queue multiple jobs', function() {
 
 });
 
+
+(getAWSConfig.isAvailable ? describe : describe.skip)('Queue more than 10 jobs - SQS', function() {
+  let jobIDs;
+
+  before(setup);
+
+  before(function() {
+    Ironium.configure(getAWSConfig());
+  });
+
+  before(function() {
+    const jobs = [];
+    for (let i = 0; i < 11; i++)
+      jobs.push({ i });
+
+    return Ironium.queueJobs('foo', jobs)
+      .then(function(ids) {
+        jobIDs = ids;
+      });
+  });
+
+  it('should queue all 11 jobs', function() {
+    console.log(jobIDs);
+    assert.equal(jobIDs.length, 11);
+  });
+
+  after(function() {
+    Ironium.configure({});
+  });
+
+});
