@@ -1,8 +1,12 @@
 'use strict';
 
-const assert  = require('assert');
-const Ironium = require('../..');
-const setup   = require('../helpers');
+const assert       = require('assert');
+const Bluebird     = require('bluebird');
+const Crypto       = require('crypto');
+const getAWSConfig = require('../aws_config');
+const Ironium      = require('../..');
+const ms           = require('ms');
+const setup        = require('../helpers');
 
 
 describe('Queue with delay', function() {
@@ -57,5 +61,68 @@ describe('Queue with delay', function() {
     });
   });
 
+});
+
+
+(getAWSConfig.isAvailable ? describe : describe.skip)('Queue with delay - SQS', function() {
+  const randomJobID = Crypto.randomBytes(256).toString('hex');
+  let runs = 0;
+  let queue;
+
+  before(setup);
+
+  before(function() {
+    const config = Object.assign({}, getAWSConfig(), { concurrency: 1 });
+    Ironium.configure(config);
+    queue = Ironium.queue('foo');
+    return queue.purgeQueue();
+  });
+
+  before(function() {
+    queue.eachJob(function(job) {
+      if (job === randomJobID) {
+        runs++;
+        return Promise.resolve();
+      } else
+        return Promise.reject(new Error('Return to queue'));
+    });
+  });
+
+  before(function() {
+    return queue.delayJob(randomJobID, '2s');
+  });
+
+  before(function() {
+    Ironium.start();
+  });
+
+  it('should not process immediately', function() {
+    assert.equal(runs, 0);
+  });
+
+  describe('after short delay', function() {
+    before(function() {
+      return Bluebird.delay(ms('1.5s'));
+    });
+
+    it('should not process job', function() {
+      assert.equal(runs, 0);
+    });
+  });
+
+  describe('after sufficient delay', function() {
+    before(function() {
+      return Bluebird.delay(ms('2s'));
+    });
+
+    it('should process job', function() {
+      assert.equal(runs, 1);
+    });
+  });
+
+  after(function() {
+    Ironium.stop();
+    Ironium.configure({});
+  });
 });
 
