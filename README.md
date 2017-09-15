@@ -550,5 +550,5 @@ Ironium is written in ECMAScript 6, because future.
 
 You can run the entire test suite with `npm test`
 ([Travis](https://travis-ci.org/assaf/ironium) runs this), or specific
-files/tests with [Mocha](http://visionmedia.github.io/mocha/).
+files/tests with [Mocha](http://mochajs.org/).
 
