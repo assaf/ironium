@@ -12,22 +12,22 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "aws-sdk": "^2.45.0",
+    "aws-sdk": "^2.45",
     "bluebird": "^3.5",
-    "debug": "^2.6",
+    "debug": "^3.0",
     "fivebeans": "^1.5",
     "iron-cache": "^0.3",
-    "ms": "^0.7",
+    "ms": "^2.0",
     "pretty-hrtime": "^1.0",
     "request": "^2.81"
   },
   "devDependencies": {
-    "eslint": "^3.17",
-    "husky": "^0.13",
-    "ioredis": "^2.3",
-    "mocha": "^3.0",
+    "eslint": "^4.6",
+    "husky": "^0.14",
+    "ioredis": "^3.1",
+    "mocha": "^3.5",
     "nock": "^9.0",
-    "timekeeper": "^1.0"
+    "timekeeper": "^2.0"
   },
   "homepage": "https://www.npmjs.com/package/ironium",
   "repository": {
