@@ -13,12 +13,13 @@ describe('Processing jobs', function() {
 
   describe('with three handlers', function() {
 
-    // Count how many steps run
-    const steps = new Set();
+    // Record jobs run
+    const jobs  = [];
 
     function recordTheStep(step) {
-      return function() {
-        steps.add(step);
+      return function(job) {
+        job.step = step; // eslint-disable-line no-param-reassign
+        jobs.push(job);
         return Promise.resolve();
       };
     }
@@ -27,12 +28,18 @@ describe('Processing jobs', function() {
       runMultipleQueue.eachJob(recordTheStep('A'));
       runMultipleQueue.eachJob(recordTheStep('B'));
       runMultipleQueue.eachJob(recordTheStep('C'));
-      return runMultipleQueue.queueJob('job');
+      return runMultipleQueue.queueJob({ foo: '1' });
     });
     before(Ironium.runOnce);
 
     it('should run all three steps', function() {
-      assert.equal(steps.size, 3);
+      assert.equal(jobs.length, 3);
+    });
+
+    it('should provide each handler with a copy of the payload', function() {
+      assert.equal(jobs[0].step, 'A');
+      assert.equal(jobs[1].step, 'B');
+      assert.equal(jobs[2].step, 'C');
     });
 
   });
