@@ -10,3 +10,6 @@ module.exports = function getIronMQConfig() {
   });
   return configWithPrefx;
 };
+
+
+module.exports.isAvailable = File.existsSync('iron.json');

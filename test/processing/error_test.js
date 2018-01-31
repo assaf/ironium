@@ -82,7 +82,7 @@ describe('Running a job with errors', function() {
 });
 
 
-describe('Running a job with errors - IronMQ', function() {
+(getIronMQConfig.isAvailable ? describe : describe.skip)('Running a job with errors - IronMQ', function() {
   let errorQueue;
   let runs;
 

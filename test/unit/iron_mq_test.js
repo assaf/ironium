@@ -5,7 +5,7 @@ const getIronMQConfig = require('../iron_mq_config');
 const IronMQ          = require('../../lib/iron_mq');
 
 
-describe('IronMQ', function() {
+(getIronMQConfig.isAvailable ? describe : describe.skip)('IronMQ', function() {
   let client;
 
   before(function() {

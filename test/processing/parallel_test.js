@@ -1,10 +1,9 @@
 'use strict';
 
-const assert          = require('assert');
-const Bluebird        = require('bluebird');
-const getIronMQConfig = require('../iron_mq_config');
-const Ironium         = require('../..');
-const setup           = require('../helpers');
+const assert   = require('assert');
+const Bluebird = require('bluebird');
+const Ironium  = require('../..');
+const setup    = require('../helpers');
 
 
 describe('Processing', function() {
@@ -26,7 +25,7 @@ describe('Processing', function() {
     const chain = [];
 
     before(function() {
-      const withoutConcurrency = Object.assign(getIronMQConfig(), { concurrency: 1 });
+      const withoutConcurrency = { concurrency: 1 };
       Ironium.configure(withoutConcurrency);
       processSerialQueue = Ironium.queue(`process-serial-${Date.now()}`);
     });
@@ -60,7 +59,7 @@ describe('Processing', function() {
     const chain = [];
 
     before(function() {
-      Ironium.configure(getIronMQConfig());
+      Ironium.configure({});
       processParallelQueue = Ironium.queue(`process-parallel-${Date.now()}`);
     });
 
