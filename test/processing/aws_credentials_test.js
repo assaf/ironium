@@ -76,3 +76,46 @@ const setup        = require('../helpers');
     Ironium.configure({});
   });
 });
+
+
+describe('Processing queues - AWS credentials temporarily unavailable', function() {
+  let credentials;
+  let refreshedCredentialsCount;
+
+  before(setup);
+
+  before(function() {
+    refreshedCredentialsCount = 0;
+  });
+
+  before(function() {
+    credentials = {
+      get(callback) {
+        refreshedCredentialsCount++;
+        callback(new Error('Getting credentials timed out'));
+      }
+    };
+
+    Ironium.configure({ credentials, region: 'us-east-1' });
+  });
+
+  before(function() {
+    Ironium.eachJob('foo', Promise.resolve);
+  });
+
+  before(function(done) {
+    process.env.NODE_ENV = 'development';
+    Ironium.start();
+    setTimeout(done, 1000);
+  });
+
+  it('should continue to refresh credentials', function() {
+    assert(refreshedCredentialsCount > 1, `Expected refreshedCredentialsCount to be > 1, was ${refreshedCredentialsCount}`);
+  });
+
+  after(function() {
+    process.env.NODE_ENV = 'test';
+    Ironium.stop();
+    Ironium.configure({});
+  });
+});
