@@ -1,3 +1,17 @@
+# 6.0.0
+
+Now supporting AWS SQS.
+
+Handlers now receive their own copy of the job payload.
+
+We now debug-log the full job in case of error. When using SQS, this includes
+the receipt handle, which can be used to delete the job.
+
+Schedules now get their own queue.
+
+IronMQ still supported, but untested, unless you bring your own `iron.json`.
+
+
 # 5.0.0
 
 Concurrency is now a global limit, shared by all queues.

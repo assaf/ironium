@@ -1,6 +1,6 @@
 {
   "name": "ironium",
-  "version": "6.0.0-pre",
+  "version": "6.0.0",
   "scripts": {
     "lint": "eslint .",
     "test": "mocha",
