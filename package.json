@@ -14,7 +14,7 @@
   "dependencies": {
     "aws-sdk": "^2.45",
     "bluebird": "^3.5",
-    "debug": "^3.0",
+    "debug": "*",
     "fivebeans": "^1.5",
     "iron-cache": "^0.3",
     "ms": "^2.0",
