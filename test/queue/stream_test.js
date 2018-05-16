@@ -27,10 +27,14 @@ class SourceStream extends Stream.Readable {
 
 describe('Stream', function() {
 
-  const streamQueue = Ironium.queue('stream');
-  const source      = new SourceStream(100);
+  let streamQueue;
+  const source = new SourceStream(100);
 
   before(setup);
+
+  before(function() {
+    streamQueue = Ironium.queue('stream');
+  });
 
   // Capture processed jobs here.
   const jobs = [];

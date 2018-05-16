@@ -10,7 +10,7 @@ const setup           = require('../helpers');
 
 describe('Running a job with errors', function() {
 
-  const errorQueue = Ironium.queue('error');
+  let errorQueue;
 
   // First two runs should fail, runs ends at 3
   let runs;
@@ -25,6 +25,7 @@ describe('Running a job with errors', function() {
 
   before(setup);
   before(function() {
+    errorQueue = Ironium.queue('error');
     errorQueue.eachJob(countAndFailJob);
   });
 

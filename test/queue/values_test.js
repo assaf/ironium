@@ -7,9 +7,13 @@ const setup   = require('../helpers');
 
 describe('Queue', function() {
   let lastJob;
-  const captureQueue = Ironium.queue('capture');
+  let captureQueue;
 
   before(setup);
+
+  before(function() {
+    captureQueue = Ironium.queue('capture');
+  });
 
   // Capture processed jobs here.
   before(function() {
