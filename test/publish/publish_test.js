@@ -11,10 +11,10 @@ const setup        = require('../helpers');
 
 (getAWSConfig.isAvailable ? describe : describe.skip)('Publish - AWS', function() {
   // We test that publish works by consuming from this queue
-  // (which has to be subscribed to the topic).
-  const snsSubscribedQueue = Ironium.queue('sns-foo-notification');
-  const processedJobs      = [];
-  const randomValue        = Crypto.randomBytes(32).toString('hex');
+  // (which must be subscribed to the topic).
+  let snsSubscribedQueue;
+  const processedJobs   = [];
+  const randomValue     = Crypto.randomBytes(32).toString('hex');
 
   function processJob(notification) {
     const job = JSON.parse(notification.Message);
@@ -23,6 +23,10 @@ const setup        = require('../helpers');
   }
 
   before(setup);
+
+  before(function() {
+    snsSubscribedQueue = Ironium.queue('sns-foo-notification');
+  });
 
   before(function() {
     Ironium.configure(getAWSConfig());

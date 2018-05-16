@@ -72,11 +72,6 @@ describe('Queue with delay', function() {
   before(setup);
 
   before(function() {
-    Ironium._queues._queues.clear();
-    Ironium._scheduler._schedules.clear();
-  });
-
-  before(function() {
     const config = Object.assign({}, getAWSConfig(), { concurrency: 1 });
     Ironium.configure(config);
     queue = Ironium.queue('foo');

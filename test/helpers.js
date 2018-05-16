@@ -25,6 +25,8 @@ after(Ironium.purgeQueues);
 
 
 function setup() {
+  Ironium._queues._queues.clear();
+  Ironium._scheduler._schedules.clear();
   Ironium.stop();
   Ironium.configure({});
   return Bluebird.delay(50);

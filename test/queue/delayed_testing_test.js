@@ -9,10 +9,14 @@ const setup       = require('../helpers');
 
 describe('Queuing a delayed job in test environment', function() {
 
-  const queue         = Ironium.queue('delayedJobQueue');
+  let queue;
   const processedJobs = [];
 
   before(setup);
+
+  before(function() {
+    queue = Ironium.queue('delayedJobQueue');
+  });
 
   before(function() {
     queue.eachJob(function(job) {

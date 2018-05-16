@@ -7,9 +7,13 @@ const setup   = require('../helpers');
 
 describe('Processing jobs', function() {
 
-  const runMultipleQueue = Ironium.queue('run-multiple');
+  let runMultipleQueue;
 
   before(setup);
+
+  before(function() {
+    runMultipleQueue = Ironium.queue('run-multiple');
+  });
 
   describe('with three handlers', function() {
 

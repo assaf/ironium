@@ -8,10 +8,14 @@ const setup        = require('../helpers');
 
 describe('Queue multiple jobs', function() {
 
-  const captureQueue = Ironium.queue('capture');
-  const processed    = [];
+  let captureQueue;
+  const processed = [];
 
   before(setup);
+
+  before(function() {
+    captureQueue = Ironium.queue('capture');
+  });
 
   // Capture processed jobs here.
   before(function() {
