@@ -24,6 +24,11 @@ const setup        = require('../helpers');
   before(setup);
 
   before(function() {
+    Ironium._queues._queues.clear();
+    Ironium._scheduler._schedules.clear();
+  });
+
+  before(function() {
     runs = 0;
   });
 
