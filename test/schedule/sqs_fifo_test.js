@@ -14,6 +14,11 @@ const setup        = require('../helpers');
   before(setup);
 
   before(function() {
+    Ironium._queues._queues.clear();
+    Ironium._scheduler._schedules.clear();
+  });
+
+  before(function() {
     // FIFO queues available here.
     Ironium.configure(Object.assign({}, getAWSConfig(), { region: 'us-west-2' }));
   });
