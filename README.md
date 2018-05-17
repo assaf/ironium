@@ -533,6 +533,28 @@ value using the `concurrency` option or by setting the `IRONIUM_CONCURRENCY`
 environment variable.
 
 
+### Processing a subset of queues
+
+If you want to isolate workloads, you can tell Ironium to only process some of
+the queues.
+
+For simple whitelisting, use the `IRONIUM_QUEUES` environment variable:
+
+```
+env IRONIUM_QUEUES=queue1,queue2 npm start
+```
+
+For more advanced behavior, pass your own function in the configuration:
+
+```js
+Ironium.configure({
+  canStartQueue(queueName) {
+    return queueName.startsWith('some-prefix');
+  }
+});
+```
+
+
 ## Testing Your Code
 
 The default test configuration (`NODE_ENV === 'test'`) connects to Beanstalkd on

@@ -1,3 +1,9 @@
+# 6.1.0
+
+You can process a subset of queues in a given Ironium process.
+See README for configuration.
+
+
 # 6.0.0
 
 Now supporting AWS SQS.
