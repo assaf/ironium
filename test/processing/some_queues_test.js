@@ -1,7 +1,6 @@
 'use strict';
 
 const assert   = require('assert');
-const Bluebird = require('bluebird');
 const Ironium  = require('../..');
 const setup    = require('../helpers');
 
@@ -13,7 +12,8 @@ describe('Processing only some queues', function() {
   before(setup);
 
   before(function() {
-    Ironium.configure({ queues: [ 'some-queues-foo' ] });
+    process.env.IRONIUM_QUEUES = 'some-queues-foo';
+    Ironium.configure({});
   });
 
   before(function() {
@@ -74,6 +74,69 @@ describe('Processing only some queues', function() {
     it('should not run jobs from other queues', function() {
       assert.deepEqual(bazs, []);
     });
+  });
+
+  after(Ironium.stop);
+
+  after(function(done) {
+    setTimeout(done, 100);
+  });
+
+  after(function() {
+    process.env.IRONIUM_QUEUES = '';
+    Ironium.configure({});
+  });
+});
+
+
+describe('Processing only some queues - configure with a function', function() {
+  let bazs;
+  let quxs;
+
+  before(setup);
+
+  before(function() {
+    Ironium.configure({
+      canStartQueue: function(queueName) {
+        return queueName === 'some-queues-qux';
+      }
+    });
+  });
+
+  before(function() {
+    bazs = [];
+    quxs = [];
+
+    Ironium.eachJob('some-queues-baz', function(job) {
+      bazs.push(job);
+      return Promise.resolve();
+    });
+
+    Ironium.eachJob('some-queues-qux', function(job) {
+      quxs.push(job);
+      return Promise.resolve();
+    });
+  });
+
+  before(function() {
+    return Promise.all([
+      Ironium.queueJob('some-queues-baz', 1),
+      Ironium.queueJob('some-queues-qux', 1)
+    ]);
+  });
+
+  before(Ironium.start);
+
+  before(function(done) {
+    setTimeout(done, 1000);
+  });
+
+  it('should run jobs in the whitelisted queue', function() {
+    assert.deepEqual(quxs, [ 1 ]);
+  });
+
+  it('should not run jobs from other queues', function() {
+    assert.deepEqual(bazs, []);
   });
 
   after(Ironium.stop);
