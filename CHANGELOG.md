@@ -1,3 +1,8 @@
+# 6.1.1
+
+Fixed processing a subset of scheduled jobs.
+
+
 # 6.1.0
 
 You can process a subset of queues in a given Ironium process.
