@@ -1,9 +1,8 @@
 'use strict';
 
-const assert   = require('assert');
-const Ironium  = require('../..');
-const setup    = require('../helpers');
-const Schedule = require('../../lib/scheduler')
+const assert  = require('assert');
+const Ironium = require('../..');
+const setup   = require('../helpers');
 
 
 describe('Processing only some schedules', function() {

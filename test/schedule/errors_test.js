@@ -29,7 +29,7 @@ describe('Scheduled job with interval, failing', function() {
       TimeKeeper.travel(Date.now() + ms('5m'));
     });
     before(function() {
-      return Ironium.runOnce().catch(function() {})
+      return Ironium.runOnce().catch(function() {});
     });
 
     it('should have run scheduled job once', function() {
@@ -74,7 +74,7 @@ describe('One-off scheduled job, failing', function() {
       TimeKeeper.travel(new Date('2015-06-29T21:01:00Z'));
     });
     before(function() {
-      return Ironium.runOnce().catch(function() {})
+      return Ironium.runOnce().catch(function() {});
     });
 
     it('should have run scheduled job once', function() {

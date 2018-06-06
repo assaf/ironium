@@ -30,7 +30,7 @@ const mock = Net.createServer(function(socket) {
       switch (cmd) {
         case 'peek-ready':
         case 'peek-delayed':
-          socket.write(`NOT_FOUND\r\n`);
+          socket.write('NOT_FOUND\r\n');
           nextLine(lines.slice(1), socket);
           break;
 
