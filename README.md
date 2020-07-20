@@ -281,14 +281,14 @@ promise that resolves on job completion.
 For example:
 
 ```javascript
-Ironium.scheduleJob('inAnHour', new Date() + ms('1h'), function() {
+Ironium.scheduleJob('inAnHour', new Date().getTime() + ms('1h'), function() {
   console.log("I run once, after an hour");
   return Promise.resolve();
 });
 
 const schedule = {
-  every: ms('2h'),               // Every two hours
-  end:   new Date() + ms('24h'), // End in 24 hours
+  every: ms('2h'),                         // Every two hours
+  end:   new Date().getTime() + ms('24h'), // End in 24 hours
 };
 Ironium.scheduleJob('everyTwoForADay', schedule, async function() {
   console.log("I run every 2 hours for 24 hours");
