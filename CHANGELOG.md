@@ -1,3 +1,11 @@
+# 7.0.0
+
+Failed jobs are now retried with an exponential backoff.
+
+You can now debug a specific queue by passing `DEBUG=ironium:queues:foobar`.
+Debugging all queues now requires `DEBUG=ironium:queues:*`.
+
+
 # 6.1.1
 
 Fixed processing a subset of scheduled jobs.
