@@ -454,7 +454,9 @@ For example:
 # See processing errors
 DEBUG=ironium npm start
 # See queues and scheduling activity
-DEBUG=ironium:queues,ironium:schedules npm start
+DEBUG=ironium:queues:*,ironium:schedules npm start
+# See activity on specific queue
+DEBUG=ironium:queues:foobar npm start
 # Everything
 DEBUG=ironium:* npm start
 ```
