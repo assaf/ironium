@@ -223,6 +223,20 @@ Ironium.queue('webhook').eachJob(function(job) {
 });
 ```
 
+As of Ironium 7.1, handlers can inspect job metadata by capturing a second argument:
+
+```javascript
+Ironium.queue('echo').eachJob(function(job, metadata) {
+  const { jobID } = metadata;
+
+  // The following available when using SQS
+  const { receiveCount }  = metadata;
+  const { receiptHandle } = metadata;
+});
+
+```
+
+
 ### queue.stream()
 
 You can use this to queue jobs from a Node stream.  It returns a duplex stream
