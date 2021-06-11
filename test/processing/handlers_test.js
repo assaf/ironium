@@ -66,6 +66,13 @@ describe('Processing jobs', function() {
 
     before(Ironium.runOnce);
 
+    it('should get queue name', function() {
+      const actual   = capturedMetadata[0].queueName;
+      const expected = 'for-metadata';
+
+      assert.strictEqual(actual, expected);
+    });
+
     it('should get job ID', function() {
       const actual   = capturedMetadata[0].jobID;
       const expected = /^\d+$/;
