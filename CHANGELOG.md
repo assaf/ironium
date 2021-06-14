@@ -1,3 +1,8 @@
+# 7.1.0
+
+Handlers can now inspect job metadata by capturing a second argument.
+
+
 # 7.0.0
 
 Failed jobs are now retried with an exponential backoff.
