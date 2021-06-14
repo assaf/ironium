@@ -34,6 +34,7 @@ describe('Processing jobs', function() {
       runMultipleQueue.eachJob(recordTheStep('C'));
       return runMultipleQueue.queueJob({ foo: '1' });
     });
+
     before(Ironium.runOnce);
 
     it('should run all three steps', function() {
@@ -46,6 +47,52 @@ describe('Processing jobs', function() {
       assert.equal(jobs[2].step, 'C');
     });
 
+  });
+
+  describe('handler expecting job metadata', function() {
+    let capturedMetadata;
+
+    before(function() {
+      const queueForMetadata = Ironium.queue('for-metadata');
+      capturedMetadata = [];
+
+      queueForMetadata.eachJob(function(job, metadata) {
+        capturedMetadata.push(metadata);
+        return Promise.resolve();
+      });
+
+      return queueForMetadata.queueJob({ foo: '1' });
+    });
+
+    before(Ironium.runOnce);
+
+    it('should get queue name', function() {
+      const actual   = capturedMetadata[0].queueName;
+      const expected = 'for-metadata';
+
+      assert.strictEqual(actual, expected);
+    });
+
+    it('should get job ID', function() {
+      const actual   = capturedMetadata[0].jobID;
+      const expected = /^\d+$/;
+
+      assert.match(actual, expected);
+    });
+
+    it('should get reserve count', function() {
+      const actual   = capturedMetadata[0].receiveCount;
+      const expected = 1;
+
+      assert.strictEqual(actual, expected);
+    });
+
+    it('should get receipt handle', function() {
+      const actual   = 'receiptHandle' in capturedMetadata[0];
+      const expected = true;
+
+      assert.strictEqual(actual, expected);
+    });
   });
 
 });
