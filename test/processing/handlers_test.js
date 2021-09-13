@@ -80,7 +80,7 @@ describe('Processing jobs', function() {
       assert.match(actual, expected);
     });
 
-    it('should get reserve count', function() {
+    it('should get receive count', function() {
       const actual   = capturedMetadata[0].receiveCount;
       const expected = 1;
 

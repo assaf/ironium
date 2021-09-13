@@ -52,7 +52,7 @@ describe('Scheduled job handler arguments', function() {
         assert.match(actual, expected);
       });
 
-      it('should have the reserve count', function() {
+      it('should have the receive count', function() {
         const actual = lastJobMetadata.receiveCount;
         const expected = 1;
 
