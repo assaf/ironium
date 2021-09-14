@@ -1,3 +1,8 @@
+# 7.1.1
+
+Added job metadata to scheduled jobs.
+
+
 # 7.1.0
 
 Handlers can now inspect job metadata by capturing a second argument.
