@@ -234,6 +234,14 @@ Ironium.queue('echo').eachJob(function(job, metadata) {
   const { receiptHandle } = metadata;
 });
 
+Ironium.scheduleJob('every-10m', '10m', function(job, metadata) {
+  const { jobID } = metadata;
+
+  // The following available when using SQS
+  const { receiveCount }  = metadata;
+  const { receiptHandle } = metadata;
+});
+
 ```
 
 
